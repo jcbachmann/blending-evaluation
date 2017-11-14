@@ -14,7 +14,7 @@ class Generator:
 
 		# Blending bed parameters
 		self.length = args.length
-		self.depth = args.length
+		self.depth = args.depth
 
 		# Material flow
 		self.m3_per_second = 1.5
