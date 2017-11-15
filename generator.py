@@ -99,7 +99,7 @@ class Generator:
 						min((m3_stacked - m3_pile) / m3_afterpile * (a_max - a_min - 20) + a_min + sub * a_sub, a_max))
 			else:
 				a = a_min
-			r = a / 360 * 2 * math.pi
+			r = a / 360 * 2 * math.pi - 0.5 * math.pi
 			x = 0.5 * l * math.sin(r) + self.length / 2
 			z = 0.5 * l * math.cos(r) + self.depth / 2
 
