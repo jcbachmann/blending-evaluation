@@ -84,6 +84,7 @@ def calculate_results(args):
 					volume=in_volume,
 					ppm3=ppm3,
 					run=run,
+					dropheight=args.dropheight,
 					params=params,
 					path=args.path
 				)
@@ -143,6 +144,7 @@ if __name__ == '__main__':
 	parser.add_argument('--volumes', type=int, default=[1000], nargs='*', help='Volumes')
 	parser.add_argument('--ppm3s', type=float, default=[1.0], nargs='*', help='Particles per cubic meter')
 	parser.add_argument('--size', type=int, default=100, help='Blending bed length and depth')
+	parser.add_argument('--dropheight', type=float, default=25, help='Stacker drop height')
 	parser.add_argument('--runs', type=int, default=1, help='Runs')
 	parser.add_argument('--detailed', action='store_true', help='Use detailed simulation')
 	parser.add_argument('--visualize', action='store_true', help='Visualize simulation')
