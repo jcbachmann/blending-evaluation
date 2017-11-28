@@ -11,16 +11,11 @@ import numpy as np
 import pandas as pd
 from seaborn.palettes import color_palette
 
+from blendingsimulator import BlendingSimulator
+
 
 def execute(args, reclaim, layers):
-	with subprocess.Popen(
-			[
-				'./BlendingSimulator', '--length', str(args.length), '--depth', str(args.depth), '--dropheight',
-				str(args.depth / 2), '--reclaim', reclaim, '--parameters', '1', '--ppm3', '10'
-			],
-			stdin=subprocess.PIPE,
-			stdout=subprocess.PIPE
-	) as sim:
+	def feed(sim):
 		with subprocess.Popen(
 				[
 					'../chevron_stacker.py', '--length', str(args.length), '--depth', str(args.depth), '--material',
@@ -30,8 +25,14 @@ def execute(args, reclaim, layers):
 				stdout=sim.stdin
 		) as generator:
 			generator.wait()
-		sim.stdin.close()
-		sim.wait()
+
+	BlendingSimulator(
+		length=args.length,
+		depth=args.depth,
+		dropheight=(args.depth / 2),
+		reclaim=reclaim,
+		ppm3=10
+	).run(feed)
 
 
 def weighted_avg_and_std(values, weights):

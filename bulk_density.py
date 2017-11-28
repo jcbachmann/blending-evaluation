@@ -70,10 +70,6 @@ def load_results_from_path(path, size):
 
 
 def calculate_results(args):
-	params = ['--detailed'] if args.detailed else []
-	params += ['--visualize'] if args.visualize else []
-	params += ['--bulkdensity', str(args.bulkdensity)]
-
 	results = []
 	for in_volume in args.volumes:
 		for ppm3 in args.ppm3s:
@@ -85,7 +81,9 @@ def calculate_results(args):
 					ppm3=ppm3,
 					run=run,
 					dropheight=args.dropheight,
-					params=params,
+					detailed=args.detailed,
+					visualize=args.visualize,
+					bulkdensity=args.bulkdensity,
 					path=args.path
 				)
 				out_volume = delayed(get_height_map_volume_df)(df, args.size)

@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import os
-import subprocess
 
 import pandas as pd
 
+from blendingsimulator import BlendingSimulator
 from roundness import RoundnessEvaluator
 
 
@@ -11,12 +11,9 @@ def execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volum
 	print('processing volume %d with likelihood %f (run %d)' % (volume, likelihood, run))
 	path = '/tmp/heights-%d-%.4f-%d.txt' % (volume, likelihood, run)
 
-	with subprocess.Popen(
-			['./BlendingSimulator', '--config', 'pile.conf', '--heights', path, '--eight', str(likelihood)],
-			stdin=subprocess.PIPE,
-			stdout=subprocess.PIPE
-	) as sim:
-		sim.communicate(('0 %f %f' % (pos, volume)).encode())
+	BlendingSimulator(config='pile.conf', heights=path, eight=likelihood).run(
+		lambda sim: sim.communicate(('0 %f %f' % (pos, volume)).encode())
+	)
 
 	e = RoundnessEvaluator(dist_seg_size, angle_seg_count)
 	e.add_from_file(path)
@@ -30,19 +27,28 @@ def execute_for_bulk_density(
 		ppm3: float,
 		run: int,
 		dropheight: float,
-		params: list,
+		detailed: bool,
+		visualize: bool,
+		bulkdensity: float,
 		path: str,
 		executable: str = './BlendingSimulator'
 ):
 	print('processing volume %d with ppm3 %.1f (run %d)' % (volume, ppm3, run))
 	path += '/heights-vol%d-res%.1f-run%d.txt' % (volume, ppm3, run)
 
-	with subprocess.Popen([executable, '--length', str(size), '--depth', str(size), '--heights', path, '--ppm3',
-						   str(ppm3), '--dropheight', str(dropheight)] + params,
-						  stdin=subprocess.PIPE,
-						  stdout=subprocess.PIPE
-						  ) as sim:
-		sim.communicate(('0 %f %f %f' % (pos, pos, volume)).encode())
+	BlendingSimulator(
+		executable=executable,
+		length=size,
+		depth=size,
+		heights=path,
+		ppm3=ppm3,
+		dropheight=dropheight,
+		detailed=detailed,
+		visualize=visualize,
+		bulkdensity=bulkdensity
+	).run(
+		lambda sim: sim.communicate(('0 %f %f %f' % (pos, pos, volume)).encode())
+	)
 
 	return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
 
