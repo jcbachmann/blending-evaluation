@@ -70,9 +70,9 @@ def main(args):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='height map evaluator')
-	parser.add_argument('--length', type=float, default=300, help='Blending bed length')
-	parser.add_argument('--depth', type=float, default=50, help='Blending bed depth')
+	parser.add_argument('--length', type=float, required=True, help='Blending bed length')
+	parser.add_argument('--depth', type=float, required=True, help='Blending bed depth')
 	parser.add_argument('--material', type=str, required=True, help='Material input file')
-	parser.add_argument('--layers', type=float, default=1, help='Speed')
+	parser.add_argument('--layers', type=float, required=True, help='Speed')
 
 	main(parser.parse_args())

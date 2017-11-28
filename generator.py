@@ -154,8 +154,8 @@ def main(args):
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='height map evaluator')
-	parser.add_argument('--length', type=float, default=300, help='Blending bed length')
-	parser.add_argument('--depth', type=float, default=50, help='Blending bed depth')
+	parser.add_argument('--length', type=float, required=True, help='Blending bed length')
+	parser.add_argument('--depth', type=float, required=True, help='Blending bed depth')
 	parser.add_argument('--circular', action='store_true', help='Generate output for circular blending bed')
 
 	main(parser.parse_args())
