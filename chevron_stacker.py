@@ -42,7 +42,7 @@ class Chevron:
 				p = 1 - p
 			x = p * (max_pos - min_pos) + min_pos
 
-			sys.stdout.write('%f %f %f %f %f\n' % (t, x, z, row['volume'], row['quality']))
+			sys.stdout.write('%f %f %f %f %f\n' % (t, x, z, row['volume'], row['p1']))
 
 		sys.stdout.close()
 
