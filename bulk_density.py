@@ -24,11 +24,11 @@ def get_volume(a1, a2, c, xz_scaling):
 
 def get_height_map_volume(height_map, size):
 	length = len(height_map)
-	if length == 0:
+	if length <= 1:
 		return 0
 	width = len(height_map[0])
 	volume = 0
-	xz_scaling = size / length
+	xz_scaling = size / (length - 1)
 	for z in range(length - 1):
 		for x in range(width - 1):
 			volume += get_volume(height_map[z][x + 1], height_map[z + 1][x], height_map[z][x], xz_scaling)
