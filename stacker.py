@@ -2,6 +2,7 @@
 import argparse
 import signal
 import sys
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -100,9 +101,10 @@ class Stacker:
 		self.finish = True
 
 
-class Printer:
-	def __init__(self, header=True):
+class StackerPrinter:
+	def __init__(self, header=True, out_buffer=sys.stdout.buffer):
 		self.header = header
+		self.out_buffer = out_buffer
 
 	@staticmethod
 	def status(msg):
@@ -111,26 +113,48 @@ class Printer:
 	def out(self, timestamp, x, z, volume, parameters):
 		if self.header:
 			self.header = False
-			sys.stdout.write('%s %s %s %s %s\n' % ('timestamp', 'x', 'z', 'volume', ' '.join(parameters.index)))
-		sys.stdout.write('%f %f %f %f %s\n' % (timestamp, x, z, volume, ' '.join([str(i) for i in parameters])))
+			self.out_buffer.write(('%s %s %s %s %s\n' % ('timestamp', 'x', 'z', 'volume', ' '.join(parameters.index))).encode('utf-8'))
+		self.out_buffer.write(('%f %f %f %f %s\n' % (timestamp, x, z, volume, ' '.join([str(i) for i in parameters]))).encode('utf-8'))
 
-	@staticmethod
-	def close():
-		sys.stdout.close()
+	def close(self):
+		self.out_buffer.close()
 
 
-def main(args):
-	printer = Printer()
+def stack_with_printer(
+		length: float,
+		depth: float,
+		material: Union[str, pd.DataFrame],
+		stacker_path: Union[str, pd.DataFrame],
+		header: bool = True,
+		out_buffer=sys.stdout.buffer
+):
+	printer = StackerPrinter(header=header, out_buffer=out_buffer)
+
+	if isinstance(material, str):
+		material = read_material(material)
+
+	if isinstance(stacker_path, str):
+		stacker_path = read_path(stacker_path)
+
 	Stacker(
-		args.length,
-		args.depth,
+		length,
+		depth,
 		status=printer.status
 	).run(
-		read_material(args.material),
-		read_path(args.stacker_path),
+		material,
+		stacker_path,
 		callback=printer.out
 	)
 	printer.close()
+
+
+def main(args):
+	stack_with_printer(
+		length=args.length,
+		depth=args.depth,
+		material=args.material,
+		stacker_path=args.stacker_path
+	)
 
 
 if __name__ == '__main__':

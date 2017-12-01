@@ -3,7 +3,7 @@ import argparse
 
 import pandas as pd
 
-from stacker import Stacker, Printer, read_material
+from stacker import stack_with_printer
 
 
 def chevron_path(layers: float) -> pd.DataFrame:
@@ -15,17 +15,12 @@ def chevron_path(layers: float) -> pd.DataFrame:
 
 
 def main(args):
-	printer = Printer(header=False)
-	Stacker(
-		args.length,
-		args.depth,
-		status=printer.status
-	).run(
-		read_material(args.material),
-		chevron_path(args.layers),
-		callback=printer.out
+	stack_with_printer(
+		length=args.length,
+		depth=args.depth,
+		material=args.material,
+		stacker_path=chevron_path(args.layers)
 	)
-	printer.close()
 
 
 if __name__ == '__main__':
