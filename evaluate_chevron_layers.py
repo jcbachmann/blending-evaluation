@@ -3,7 +3,6 @@ import argparse
 import math
 import os
 import re
-import subprocess
 from multiprocessing import Pool
 
 import matplotlib
@@ -14,27 +13,25 @@ from matplotlib import gridspec
 from seaborn.palettes import color_palette
 
 from blendingsimulator import BlendingSimulator
+from chevron_stacker import chevron_path
+from stacker import stack_with_printer
 
 
-def execute(args, reclaim, layers):
-	def feed(sim):
-		with subprocess.Popen(
-				[
-					'../chevron_stacker.py', '--length', str(args.length), '--depth', str(args.depth), '--material',
-					args.material, '--layers', str(layers)
-				],
-				stdin=subprocess.PIPE,
-				stdout=sim.stdin
-		) as generator:
-			generator.wait()
-
+def simulate(args, reclaim, layers):
 	BlendingSimulator(
 		length=args.length,
 		depth=args.depth,
 		dropheight=(args.depth / 2),
 		reclaim=reclaim,
 		ppm3=10
-	).run(feed)
+	).run(lambda sim: stack_with_printer(
+		length=args.length,
+		depth=args.depth,
+		material=args.material,
+		stacker_path=chevron_path(layers),
+		header=False,
+		out_buffer=sim.stdin
+	))
 
 
 def weighted_avg_and_std(values, weights):
@@ -156,8 +153,8 @@ def main(args):
 
 	if not args.reuse:
 		p = Pool(8)
-		p.starmap(execute, [
-			(args, '%s/reclaim-layers-%.4f.csv' % (args.path, layers), layers) for layers in np.linspace(1, 100, 397)
+		p.starmap(simulate, [
+			(args, '%s/reclaim-layers-%.4f.csv' % (args.path, layers), layers) for layers in np.linspace(1, 100, 10)
 		])
 
 	reference = get_reference(args.material)
