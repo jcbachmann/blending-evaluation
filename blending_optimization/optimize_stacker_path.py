@@ -109,7 +109,7 @@ def main(args) -> None:
 
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='height map evaluator')
+	parser = argparse.ArgumentParser(description='Stacker Path Optimization')
 	parser.add_argument('--length', type=float, required=True, help='Blending bed length')
 	parser.add_argument('--depth', type=float, required=True, help='Blending bed depth')
 	parser.add_argument('--material', type=str, required=True, help='Material input file')
