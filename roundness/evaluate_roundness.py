@@ -8,7 +8,7 @@ from dask import delayed
 from dask.distributed import Client
 
 from ciglobal.ciplot import ciplot
-from execute import execute_for_roundness
+from roundness.roundness import execute_for_roundness
 
 
 def evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volume):
