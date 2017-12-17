@@ -7,15 +7,15 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from jmetal.algorithm.multiobjective.nsgaii import NSGAII
+from jmetal.component.evaluator import ParallelEvaluator
+from jmetal.core.solution import FloatSolution
+from jmetal.operator.crossover import SBX
+from jmetal.operator.mutation import Polynomial
+from jmetal.operator.selection import BinaryTournamentSelection
+from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 
 from blending_optimization.homogenization_problem import HomogenizationProblem
-from jmetalpy.jmetal.algorithm.multiobjective.nsgaii import NSGAII
-from jmetalpy.jmetal.component.evaluator import ParallelEvaluator
-from jmetalpy.jmetal.core.solution import FloatSolution
-from jmetalpy.jmetal.operator.crossover import SBX
-from jmetalpy.jmetal.operator.mutation import Polynomial
-from jmetalpy.jmetal.operator.selection import BinaryTournamentSelection
-from jmetalpy.jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
