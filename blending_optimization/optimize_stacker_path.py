@@ -88,6 +88,13 @@ def plot_optimization_result(optimization_result: OptimizationResult, problem, d
 	plt.show()
 
 
+def write_arguments_to_file(args, directory: str):
+	with open(f'{directory}/args.ini', 'w') as args_file:
+		c = configparser.ConfigParser()
+		c.read_dict({'Optimization': {str(k): str(v) for k, v in vars(args).items() if v is not None}})
+		c.write(args_file)
+
+
 def main(args) -> None:
 	datetime = time.strftime('%Y-%m-%d %H-%M-%S')
 	directory = f'{datetime} {args.length}x{args.depth} v{args.variables} {args.population_size}of{args.max_evaluations} {args.material}'
@@ -95,6 +102,7 @@ def main(args) -> None:
 		raise Exception(f'directory "{directory}" already exists')
 
 	os.makedirs(directory)
+	write_arguments_to_file(args, directory)
 
 	optimization_result, problem = optimize(
 		length=args.length,
