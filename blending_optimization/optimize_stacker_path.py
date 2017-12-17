@@ -56,7 +56,7 @@ def optimize(length: float, depth: float, variables, material, population_size: 
 	), problem
 
 
-def write_optimization_result_to_file(optimization_result: OptimizationResult, problem, directory: str = ''):
+def write_optimization_result_to_file(optimization_result: OptimizationResult, problem: HomogenizationProblem, directory: str):
 	variables = pd.DataFrame(data=[solution.variables for solution in optimization_result.result_population])
 	variables.columns = problem.get_variable_labels()
 	variables.to_csv(f'{directory}/variables.csv', sep='\t', index=False)
@@ -74,7 +74,7 @@ def write_optimization_result_to_file(optimization_result: OptimizationResult, p
 	all_objectives_df.to_csv(f'{directory}/all_objectives.csv', sep='\t', index=False)
 
 
-def plot_optimization_result(optimization_result: OptimizationResult, problem):
+def plot_optimization_result(optimization_result: OptimizationResult, problem, directory: str):
 	df = pd.DataFrame(
 		data=[solution.objectives for solution in optimization_result.result_population],
 		columns=problem.get_objective_labels()
@@ -83,6 +83,7 @@ def plot_optimization_result(optimization_result: OptimizationResult, problem):
 		for c1 in range(c0 + 1, len(df.columns)):
 			df.plot(x=df.columns[c0], y=df.columns[c1], kind='scatter')
 
+	plt.savefig(f'{directory}/optimization_result.png')
 	plt.show()
 
 
@@ -102,9 +103,8 @@ def main(args) -> None:
 		max_evaluations=args.max_evaluations
 	)
 
-	write_optimization_result_to_file(optimization_result, problem, directory=directory)
-
-	plot_optimization_result(optimization_result, problem)
+	write_optimization_result_to_file(optimization_result, problem, directory)
+	plot_optimization_result(optimization_result, problem, directory)
 
 
 if __name__ == '__main__':
