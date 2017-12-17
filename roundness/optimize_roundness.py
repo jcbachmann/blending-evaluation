@@ -7,7 +7,7 @@ import pandas as pd
 from scipy.optimize import fminbound
 
 from ciglobal.ciplot import ciplot
-from roundness import execute_for_roundness
+from roundness.roundness import execute_for_roundness
 
 
 class OptEvaluator:
