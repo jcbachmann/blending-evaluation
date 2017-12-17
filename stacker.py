@@ -116,8 +116,8 @@ class StackerPrinter:
 			self.out_buffer.write(('%s %s %s %s %s\n' % ('timestamp', 'x', 'z', 'volume', ' '.join(parameters.index))).encode('utf-8'))
 		self.out_buffer.write(('%f %f %f %f %s\n' % (timestamp, x, z, volume, ' '.join([str(i) for i in parameters]))).encode('utf-8'))
 
-	def close(self):
-		self.out_buffer.close()
+	def flush(self):
+		self.out_buffer.flush()
 
 
 def stack_with_printer(
@@ -145,7 +145,7 @@ def stack_with_printer(
 		stacker_path,
 		callback=printer.out
 	)
-	printer.close()
+	printer.flush()
 
 
 def main(args):
