@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import configparser
 import logging
 import os
 import time
@@ -109,12 +110,22 @@ def main(args) -> None:
 
 
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser(description='Stacker Path Optimization')
+	conf_parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, add_help=False)
+	conf_parser.add_argument('--args', dest='args_file', help='Specify config file', metavar='FILE')
+	conf_args, remaining_argv = conf_parser.parse_known_args()
+
+	extended_argv = []
+	if conf_args.args_file:
+		config = configparser.ConfigParser()
+		config.read(conf_args.args_file)
+		extended_argv = [e for (k, v) in config.items('Optimization') for e in [f'--{k}', v]]
+	extended_argv.extend(remaining_argv)
+
+	parser = argparse.ArgumentParser(parents=[conf_parser], description='Stacker Path Optimization')
 	parser.add_argument('--length', type=float, required=True, help='Blending bed length')
 	parser.add_argument('--depth', type=float, required=True, help='Blending bed depth')
 	parser.add_argument('--material', type=str, required=True, help='Material input file')
 	parser.add_argument('--variables', type=int, required=True, help='Amount of variables')
 	parser.add_argument('--population_size', type=int, required=True, help='Amount of individuals in population')
 	parser.add_argument('--max_evaluations', type=int, required=True, help='Maximum amount of function evaluations')
-
-	main(parser.parse_args())
+	main(parser.parse_args(extended_argv))
