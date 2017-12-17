@@ -103,7 +103,7 @@ def ciplot_scatter(data, x_col=None, split_col=None, y_col=None, log_scale=False
 		y_prediction = regression.predict(x.reshape(-1, 1))
 
 		label = str(cond) if legend_name is not None else ''
-		label += ' (coeff=%.3f, R²=%.1f)' % (regression.coef_, r2_score(y, y_prediction))
+		label += f' (coeff={regression.coef_:.3f}, R²={r2_score(y, y_prediction):.1f})'
 
 		ax.plot(x, y_prediction, color=colors[c], marker='', linestyle='-')
 		ax.plot(x, y, color=colors[c], label=label, marker='x', linestyle='')

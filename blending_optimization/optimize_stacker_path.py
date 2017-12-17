@@ -59,19 +59,19 @@ def optimize(length: float, depth: float, variables, material, population_size: 
 def write_optimization_result_to_file(optimization_result: OptimizationResult, problem, directory: str = ''):
 	variables = pd.DataFrame(data=[solution.variables for solution in optimization_result.result_population])
 	variables.columns = problem.get_variable_labels()
-	variables.to_csv(directory + '/variables.csv', sep='\t', index=False)
+	variables.to_csv(f'{directory}/variables.csv', sep='\t', index=False)
 
 	objectives = pd.DataFrame(
 		data=[solution.objectives for solution in optimization_result.result_population],
 		columns=problem.get_objective_labels()
 	)
-	objectives.to_csv(directory + '/objectives.csv', sep='\t', index=False)
+	objectives.to_csv(f'{directory}/objectives.csv', sep='\t', index=False)
 
 	all_variables_df = pd.DataFrame(data=optimization_result.all_variables, columns=problem.get_variable_labels())
-	all_variables_df.to_csv(directory + '/all_variables.csv', sep='\t', index=False)
+	all_variables_df.to_csv(f'{directory}/all_variables.csv', sep='\t', index=False)
 
 	all_objectives_df = pd.DataFrame(data=optimization_result.all_objectives, columns=problem.get_objective_labels())
-	all_objectives_df.to_csv(directory + '/all_objectives.csv', sep='\t', index=False)
+	all_objectives_df.to_csv(f'{directory}/all_objectives.csv', sep='\t', index=False)
 
 
 def plot_optimization_result(optimization_result: OptimizationResult, problem):
@@ -89,7 +89,7 @@ def plot_optimization_result(optimization_result: OptimizationResult, problem):
 def main(args) -> None:
 	directory = time.strftime('%Y-%m-%d %H-%M-%S')
 	if os.path.exists(directory):
-		raise Exception('directory "%s" already exists' % directory)
+		raise Exception(f'directory "{directory}" already exists')
 
 	os.makedirs(directory)
 

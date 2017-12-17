@@ -93,7 +93,7 @@ class HomogenizationProblem(FloatProblem):
 		return ['Quality Stdev', 'Volume Stdev']
 
 	def get_variable_labels(self) -> List[str]:
-		return ['v%d' % (i + 1) for i in range(self.number_of_variables)]
+		return [f'v{(i + 1)}' for i in range(self.number_of_variables)]
 
 	def get_all_solutions(self):
 		return self.evaluated_variables, self.evaluated_objectives

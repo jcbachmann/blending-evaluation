@@ -14,7 +14,7 @@ def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: s
 		cols_p = list(df.columns.drop(col_timestamp, col_volume))
 	required_cols = [col_timestamp, col_volume] + cols_p
 	if not set(required_cols).issubset(df.columns):
-		raise Exception('required columns (%s) not found in material file' % required_cols)
+		raise Exception(f'required columns ({required_cols}) not found in material file')
 	material = pd.DataFrame()
 	material['timestamp'] = df[col_timestamp]
 	material['volume'] = df[col_volume]
