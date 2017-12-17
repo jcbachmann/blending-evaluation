@@ -88,7 +88,8 @@ def plot_optimization_result(optimization_result: OptimizationResult, problem, d
 
 
 def main(args) -> None:
-	directory = time.strftime('%Y-%m-%d %H-%M-%S')
+	datetime = time.strftime('%Y-%m-%d %H-%M-%S')
+	directory = f'{datetime} {args.length}x{args.depth} v{args.variables} {args.population_size}of{args.max_evaluations} {args.material}'
 	if os.path.exists(directory):
 		raise Exception(f'directory "{directory}" already exists')
 
