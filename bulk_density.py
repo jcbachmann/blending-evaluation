@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 import argparse
+import os
 import re
 
 import matplotlib.pyplot as plt
+import pandas as pd
 from dask import delayed
 from dask.distributed import Client
 
+from blendingsimulator import BlendingSimulator
 from ciplot import ciplot_scatter
-from execute import *
 
 
 def get_volume(a1, a2, c, xz_scaling):
@@ -67,6 +69,49 @@ def load_results_from_path(path, size):
 			out_volume = delayed(get_height_map_volume_df)(df, size)
 			results.append([in_volume, ppm3, run, out_volume])
 	return results
+
+
+def execute_for_bulk_density(
+		pos: float,
+		size: float,
+		volume: float,
+		ppm3: float,
+		run: int,
+		dropheight: float,
+		detailed: bool,
+		visualize: bool,
+		bulkdensity: float,
+		path: str,
+		executable: str = './BlendingSimulator'
+):
+	print('processing volume %d with ppm3 %.1f (run %d)' % (volume, ppm3, run))
+	path += '/heights-vol%d-res%.1f-run%d.txt' % (volume, ppm3, run)
+
+	BlendingSimulator(
+		executable=executable,
+		length=size,
+		depth=size,
+		heights=path,
+		ppm3=ppm3,
+		dropheight=dropheight,
+		detailed=detailed,
+		visualize=visualize,
+		bulkdensity=bulkdensity
+	).run(
+		lambda sim: sim.communicate(('0 %f %f %f' % (pos, pos, volume)).encode())
+	)
+
+	return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
+
+
+def load_for_bulk_density(file: str, path: str = '/tmp'):
+	if path is None:
+		path = '/tmp'
+	path += '/%s' % file
+	if os.path.isfile(path):
+		return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
+	else:
+		return None
 
 
 def calculate_results(args):
