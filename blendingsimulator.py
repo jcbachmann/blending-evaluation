@@ -21,7 +21,7 @@ class BlendingSimulator:
 			visualize: bool = False,
 			pretty: bool = False,
 			heights: str = None,
-			reclaim: str = None,
+			reclaim: str = None
 	):
 		self.executable = executable
 		self.config = config
@@ -85,3 +85,4 @@ class BlendingSimulator:
 			observer(sim)
 			sim.stdin.close()
 			sim.wait()
+			return sim.stdout.read()
