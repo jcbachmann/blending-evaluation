@@ -3,7 +3,7 @@ import argparse
 import logging
 import os
 import time
-from typing import List
+from typing import List, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -28,7 +28,7 @@ class OptimizationResult:
 		self.all_objectives = all_objectives
 
 
-def optimize(length: float, depth: float, variables, material, population_size: int, max_evaluations: int):
+def optimize(length: float, depth: float, variables, material: Union[str, pd.DataFrame], population_size: int, max_evaluations: int):
 	problem = HomogenizationProblem(
 		length=length,
 		depth=depth,

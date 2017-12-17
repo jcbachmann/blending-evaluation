@@ -1,5 +1,5 @@
 from io import StringIO
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -52,17 +52,19 @@ def evaluate_solution(
 
 
 class HomogenizationProblem(FloatProblem):
-	def __init__(self, length: float, depth: float, material: str, number_of_variables: int = 2):
+	def __init__(self, length: float, depth: float, material: Union[str, pd.DataFrame], number_of_variables: int = 2):
 		super().__init__()
 
 		self.length = length
 		self.depth = depth
-		self.material = material
 
-		if isinstance(self.material, str):
-			self.material = read_material(self.material)
+		if isinstance(material, pd.DataFrame):
+			self.material = material
+		else:
+			self.material = read_material(material)
 
 		_, self.material_quality_stdev = weighted_avg_and_std(self.material['p_1'], self.material['volume'])
+
 		self.number_of_objectives = 2
 		self.number_of_variables = number_of_variables
 		self.number_of_constraints = 0
