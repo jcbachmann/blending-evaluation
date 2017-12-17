@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import signal
 import sys
 from typing import Union
 
@@ -45,9 +44,6 @@ class Stacker:
 	finish = False
 
 	def __init__(self, length: float, depth: float, status=None):
-		signal.signal(signal.SIGINT, self.signal_handler)
-		signal.signal(signal.SIGTERM, self.signal_handler)
-
 		# Blending bed parameters
 		self.length = length
 		self.depth = depth
@@ -96,9 +92,7 @@ class Stacker:
 			self.finish = True
 		self.status('Stacker stopped')
 
-	def signal_handler(self, _signum, _frame) -> None:
-		self.status('Stopping stacker')
-		self.finish = True
+
 
 
 class StackerPrinter:
