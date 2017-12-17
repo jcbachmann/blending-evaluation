@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import argparse
-import math
 import os
 import re
 from multiprocessing import Pool
@@ -15,6 +14,7 @@ from seaborn.palettes import color_palette
 from blendingsimulator import BlendingSimulator
 from chevron_stacker import chevron_path
 from stacker import stack_with_printer
+from cimath import weighted_avg_and_std
 
 
 def simulate(args, reclaim, layers):
@@ -32,12 +32,6 @@ def simulate(args, reclaim, layers):
 		header=False,
 		out_buffer=sim.stdin
 	))
-
-
-def weighted_avg_and_std(values, weights):
-	average = np.average(values, weights=weights)
-	variance = np.average((values - average) ** 2, weights=weights)
-	return average, math.sqrt(variance)
 
 
 def get_results(meta, data: pd.DataFrame, c_meta='layers', c_weights: str = 'volume', c_values: str = 'p_1'):
