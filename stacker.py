@@ -41,8 +41,6 @@ def read_path(filepath: str, col_path: str = 'path', col_part: str = None, col_t
 
 
 class Stacker:
-	finish = False
-
 	def __init__(self, length: float, depth: float, status=None):
 		# Blending bed parameters
 		self.length = length
@@ -53,46 +51,43 @@ class Stacker:
 
 	def run(self, material: pd.DataFrame, path: pd.DataFrame, callback) -> None:
 		self.status('Starting stacker')
-		try:
-			# Stacker path parameters
-			min_pos = self.depth / 2
-			max_pos = self.length - self.depth / 2
 
-			# Total volume in cubic meters
-			t_total = material['timestamp'].max()
-			if 'timestamp' not in path.columns:
-				# No timestamps provided - generate time stamps
-				if 'part' in path.columns:
-					# Position relative to time is known
-					path['timestamp'] = path['part'] / path['part'].max() * t_total
+		# Stacker path parameters
+		min_pos = self.depth / 2
+		max_pos = self.length - self.depth / 2
+
+		# Total volume in cubic meters
+		t_total = material['timestamp'].max()
+		if 'timestamp' not in path.columns:
+			# No timestamps provided - generate time stamps
+			if 'part' in path.columns:
+				# Position relative to time is known
+				path['timestamp'] = path['part'] / path['part'].max() * t_total
+			else:
+				n = len(path.index)
+				if n > 1:
+					path['timestamp'] = [t_total * i / (n - 1) for i in range(n)]
 				else:
-					n = len(path.index)
-					if n > 1:
-						path['timestamp'] = [t_total * i / (n - 1) for i in range(n)]
-					else:
-						path['timestamp'] = [0]
+					path['timestamp'] = [0]
 
-			z = self.depth / 2
+		material['z'] = self.depth / 2
+		material['x'] = np.interp(material['timestamp'], path['timestamp'], path['path']) * (
+				max_pos - min_pos) + min_pos
 
-			# noinspection PyTypeChecker
-			for _, row in material.iterrows():
-				if self.finish:
-					break
-
-				t = float(row['timestamp'])
-
-				# Position
-				p = np.interp([t], path['timestamp'], path['path'])[0]
-				x = p * (max_pos - min_pos) + min_pos
-
-				callback(t, x, z, row['volume'], row.drop(['timestamp', 'volume']))
-
+		try:
+			callback(material)
 		except IOError:
 			self.status('Stopping stacker due to IOError')
-			self.finish = True
+
 		self.status('Stacker stopped')
 
 
+class StrToBytesWrapper:
+	def __init__(self, bytes_buffer):
+		self.bytes_buffer = bytes_buffer
+
+	def write(self, s):
+		self.bytes_buffer.write(s.encode('utf-8'))
 
 
 class StackerPrinter:
@@ -104,11 +99,12 @@ class StackerPrinter:
 	def status(msg):
 		print("[stacker] %s" % msg, file=sys.stderr)
 
-	def out(self, timestamp, x, z, volume, parameters):
-		if self.header:
-			self.header = False
-			self.out_buffer.write(('%s %s %s %s %s\n' % ('timestamp', 'x', 'z', 'volume', ' '.join(parameters.index))).encode('utf-8'))
-		self.out_buffer.write(('%f %f %f %f %s\n' % (timestamp, x, z, volume, ' '.join([str(i) for i in parameters]))).encode('utf-8'))
+	def out(self, material):
+		first_cols = ['timestamp', 'x', 'z', 'volume']
+		col_order = first_cols
+		col_order.extend(list(set(material.columns) - set(first_cols)))
+		material = material.reindex(columns=col_order)
+		material.to_csv(StrToBytesWrapper(self.out_buffer), index=False, header=self.header, sep=' ')
 
 	def flush(self):
 		self.out_buffer.flush()
