@@ -7,7 +7,7 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from blendingsimulator import BlendingSimulator
+from blending_simulator.blending_simulator import BlendingSimulator
 
 
 def execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volume, run):

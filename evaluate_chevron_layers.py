@@ -11,9 +11,9 @@ import pandas as pd
 from matplotlib import gridspec
 from seaborn.palettes import color_palette
 
-from blendingsimulator import BlendingSimulator
-from chevron_stacker import chevron_path
-from stacker import stack_with_printer
+from blending_simulator.blending_simulator import BlendingSimulator
+from blending_simulator.chevron_stacker import chevron_path
+from blending_simulator.stacker import stack_with_printer
 from ciglobal.cimath import weighted_avg_and_std
 
 

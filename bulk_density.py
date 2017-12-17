@@ -8,7 +8,7 @@ import pandas as pd
 from dask import delayed
 from dask.distributed import Client
 
-from blendingsimulator import BlendingSimulator
+from blending_simulator.blending_simulator import BlendingSimulator
 from ciglobal.ciplot import ciplot_scatter
 
 
