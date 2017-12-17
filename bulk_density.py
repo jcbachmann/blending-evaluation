@@ -9,7 +9,7 @@ from dask import delayed
 from dask.distributed import Client
 
 from blendingsimulator import BlendingSimulator
-from ciplot import ciplot_scatter
+from ciglobal.ciplot import ciplot_scatter
 
 
 def get_volume(a1, a2, c, xz_scaling):

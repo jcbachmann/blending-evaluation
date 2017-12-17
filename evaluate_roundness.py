@@ -7,7 +7,7 @@ import pandas as pd
 from dask import delayed
 from dask.distributed import Client
 
-from ciplot import ciplot
+from ciglobal.ciplot import ciplot
 from execute import execute_for_roundness
 
 

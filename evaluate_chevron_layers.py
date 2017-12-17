@@ -14,7 +14,7 @@ from seaborn.palettes import color_palette
 from blendingsimulator import BlendingSimulator
 from chevron_stacker import chevron_path
 from stacker import stack_with_printer
-from cimath import weighted_avg_and_std
+from ciglobal.cimath import weighted_avg_and_std
 
 
 def simulate(args, reclaim, layers):

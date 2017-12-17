@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import fminbound
 
-from ciplot import ciplot
+from ciglobal.ciplot import ciplot
 from execute import execute_for_roundness
 
 
