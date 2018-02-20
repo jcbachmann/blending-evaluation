@@ -6,10 +6,10 @@ from .material_sampler import MaterialSampler
 class Plant:
     TIME_INCREMENT = 15
 
-    def __init__(self, evaluate):
+    def __init__(self, evaluate, sampler_buffer_size):
         self.material_outs = []
         self.time = 0
-        self.sampler = MaterialSampler() if evaluate else None
+        self.sampler = MaterialSampler(sampler_buffer_size) if evaluate else None
 
     def simulate_step(self):
         self.time += Plant.TIME_INCREMENT

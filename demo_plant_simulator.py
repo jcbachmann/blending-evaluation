@@ -10,7 +10,7 @@ from plant_simulator.simulated_mine import SimulatedMine
 
 class MyDemoPlant(Plant):
     def __init__(self, evaluate):
-        super().__init__(evaluate)
+        super().__init__(evaluate, 5760)
 
         # Create and link material handlers
         source_a = SimulatedMine('Great Mine', max_tph=4000, availability=0.9, q_min=0.20, q_exp=0.23, q_max=0.30)

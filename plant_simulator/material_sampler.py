@@ -5,9 +5,10 @@ from .material_handler import MaterialHandler
 
 
 class MaterialSampler:
-    def __init__(self):
+    def __init__(self, sampler_buffer_size):
         self.material_handlers = []
         self.samples = []
+        self.sampler_buffer_size = sampler_buffer_size
 
     def put(self, material_handler: MaterialHandler):
         self.material_handlers.append(material_handler)
@@ -19,6 +20,8 @@ class MaterialSampler:
             for tph, quality in material_handler_samples:
                 samples_row.extend([tph, quality])
         self.samples.append(samples_row)
+        if len(self.samples) > self.sampler_buffer_size:
+            self.samples.pop(0)
 
     def evaluate(self):
         columns = ['time']
