@@ -9,6 +9,7 @@ class MaterialSampler:
         self.material_handlers = []
         self.samples = []
         self.sampler_buffer_size = sampler_buffer_size
+        self.diff_start = 0
 
     def put(self, material_handler: MaterialHandler):
         self.material_handlers.append(material_handler)
@@ -24,13 +25,7 @@ class MaterialSampler:
             self.samples.pop(0)
 
     def evaluate(self):
-        columns = ['time']
-        for material_handler in self.material_handlers:
-            n = len(material_handler.sample())
-            for i in range(n):
-                columns.extend([f'{material_handler.label} tph {i}', f'{material_handler.label} quality {i}'])
-
-        df = pd.DataFrame(data=self.samples, columns=columns)
+        df = pd.DataFrame(data=self.samples, columns=self.get_columns())
         df = df.set_index('time')
 
         axs = df.filter(regex='.* quality').replace([0], value=[None]).plot.hist(
@@ -73,3 +68,17 @@ class MaterialSampler:
         ax.set_ylim(0, None)
 
         plt.show()
+
+    def get_diff(self):
+        df = pd.DataFrame(data=self.samples[self.diff_start:], columns=self.get_columns())
+        self.diff_start = len(self.samples)
+        return df.to_dict(orient='list')
+
+    def get_columns(self):
+        columns = ['time']
+        for material_handler in self.material_handlers:
+            n = len(material_handler.sample())
+            for i in range(n):
+                columns.extend([f'{material_handler.label} tph {i}', f'{material_handler.label} quality {i}'])
+
+        return columns

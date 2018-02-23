@@ -5,6 +5,7 @@ import random
 
 from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux
 from plant_simulator.plant import Plant
+from plant_simulator.plot_server import PlotServer
 from plant_simulator.simulated_mine import SimulatedMine
 
 
@@ -54,6 +55,11 @@ def main(args):
         random.seed(args.seed)
 
     plant = MyDemoPlant(args.evaluate)
+
+    logging.info('Starting background plot server')
+    plot_server = PlotServer(plant.get_columns())
+    plot_server.set_data_callback(plant.get_diff)
+    plot_server.serve_background()
 
     time = datetime.timedelta(0, args.max_steps * Plant.TIME_INCREMENT, 0)
     logging.info(f'Starting simulation of {args.max_steps} steps = {time}')
