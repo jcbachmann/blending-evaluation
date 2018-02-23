@@ -13,7 +13,6 @@ from bokeh.server.server import Server
 
 
 class PlotServer:
-    BUFFER_SIZE = 200
     PORT = 5001
 
     def __init__(self, columns):
