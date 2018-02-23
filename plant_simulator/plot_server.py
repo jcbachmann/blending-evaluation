@@ -84,6 +84,3 @@ class PlotServer:
     def serve_background(self):
         t = threading.Thread(target=self.serve)
         t.start()
-
-    def is_ready(self):
-        return self.doc is not None
