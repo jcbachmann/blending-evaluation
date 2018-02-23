@@ -33,7 +33,6 @@ class MaterialSource(MaterialHandler):
 class MaterialBuffer(MaterialHandler):
     def __init__(self, label, src, steps: int):
         super().__init__(label)
-        self.label = label
         self.src = src
         self.buffer = queue.Queue()
         for _ in range(steps):
@@ -141,7 +140,6 @@ class MaterialMux(MaterialHandler):
 class MaterialOut(MaterialHandler):
     def __init__(self, label, src):
         super().__init__(label)
-        self.label = label
         self.src = src
         self._sample = (0, 0)
 

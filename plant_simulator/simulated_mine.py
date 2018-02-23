@@ -8,7 +8,6 @@ class SimulatedMine(MaterialSource):
     def __init__(self, label, max_tph, availability, q_min, q_exp, q_max):
         super().__init__(label)
 
-        self.label = label
         self.max_tph = max_tph
         self.availability = availability
         self.currently_unavailable = False
