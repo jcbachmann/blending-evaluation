@@ -1,5 +1,6 @@
 bokeh
 dask
+graphviz
 jmetalpy
 matplotlib
 numpy

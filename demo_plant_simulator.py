@@ -3,7 +3,9 @@ import datetime
 import logging
 import random
 
-from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux
+from graphviz import Digraph
+
+from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux, MaterialHandler
 from plant_simulator.plant import Plant
 from plant_simulator.plot_server import PlotServer
 from plant_simulator.simulated_mine import SimulatedMine
@@ -21,9 +23,9 @@ class MyDemoPlant(Plant):
         mux = MaterialMux(
             label='Mux',
             src_x=[
-                MaterialBuffer('BSA', source_a.gen(), 4).gen(),
-                MaterialBuffer('BSB', source_b.gen(), 2).gen(),
-                MaterialBuffer('BSC', source_c.gen(), 1).gen()
+                MaterialBuffer('BSA', source_a, steps=4),
+                MaterialBuffer('BSB', source_b, steps=2),
+                MaterialBuffer('BSC', source_c, steps=1)
             ],
             weight_matrix=[
                 [1, 0.5, 0],
@@ -32,8 +34,8 @@ class MyDemoPlant(Plant):
             flip_probability=0.01
         )
 
-        out_a = MaterialOut('OA', MaterialBuffer('BOA', mux.gen(0), 1).gen())
-        out_b = MaterialOut('OB', MaterialBuffer('BOB', mux.gen(1), 2).gen())
+        out_a = MaterialOut('OA', MaterialBuffer('BOA', (mux, 0), steps=1))
+        out_b = MaterialOut('OB', MaterialBuffer('BOB', (mux, 1), steps=1))
 
         # Specify outs as simulation hooks
         self.material_outs = [out_a, out_b]
@@ -54,7 +56,10 @@ def main(args):
         logging.info(f'Setting random seed to {args.seed}')
         random.seed(args.seed)
 
+    MaterialHandler.dot = Digraph('material-flow')
+    MaterialHandler.dot.attr(rankdir='LR')
     plant = MyDemoPlant(args.evaluate)
+    MaterialHandler.dot.render()
 
     logging.info('Starting background plot server')
     plot_server = PlotServer(plant.get_columns())
