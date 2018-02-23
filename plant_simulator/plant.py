@@ -23,8 +23,8 @@ class Plant:
     def evaluate(self):
         self.sampler.evaluate()
 
-    def get_diff(self):
-        return self.sampler.get_diff()
+    def get_diff(self, start):
+        return self.sampler.get_diff(start)
 
     def get_columns(self):
         return self.sampler.get_columns()

@@ -9,7 +9,6 @@ class MaterialSampler:
         self.material_handlers = []
         self.samples = []
         self.sampler_buffer_size = sampler_buffer_size
-        self.diff_start = 0
 
     def put(self, material_handler: MaterialHandler):
         self.material_handlers.append(material_handler)
@@ -69,9 +68,8 @@ class MaterialSampler:
 
         plt.show()
 
-    def get_diff(self):
-        df = pd.DataFrame(data=self.samples[self.diff_start:], columns=self.get_columns())
-        self.diff_start = len(self.samples)
+    def get_diff(self, start):
+        df = pd.DataFrame(data=self.samples[start:], columns=self.get_columns())
         return df.to_dict(orient='list')
 
     def get_columns(self):

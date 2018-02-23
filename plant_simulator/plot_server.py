@@ -57,7 +57,8 @@ class PlotServer:
                 c += 1
 
     def update(self):
-        data = self.data_callback()
+        start = len(self.source.data['time'])
+        data = self.data_callback(start)
         data['time'] = [t * 1000 for t in data['time']]
         self.source.stream(data, 5760)
 
