@@ -41,7 +41,7 @@ class BlendingSimulator:
         self.heights = heights
         self.reclaim = reclaim
 
-    def run(self, observer):
+    def get_process_arguments(self):
         p = [self.executable]
 
         if self.config is not None:
@@ -77,8 +77,11 @@ class BlendingSimulator:
         if self.reclaim is not None:
             p.extend(['--reclaim', self.reclaim])
 
+        return p
+
+    def run(self, observer):
         with subprocess.Popen(
-                p,
+                self.get_process_arguments(),
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE
         ) as sim:
