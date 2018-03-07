@@ -49,7 +49,10 @@ class MyDemoPlant(Plant):
 
 
 def main(args):
-    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
+    )
     logging.info('Initializing')
 
     if args.seed is not None:
