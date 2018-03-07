@@ -12,7 +12,7 @@ from plant_simulator.simulated_mine import SimulatedMine
 
 
 class MyDemoPlant(Plant):
-    def __init__(self, evaluate):
+    def __init__(self, evaluate: bool):
         super().__init__(evaluate, 5760)
 
         # Create and link material handlers
@@ -40,12 +40,13 @@ class MyDemoPlant(Plant):
         # Specify outs as simulation hooks
         self.material_outs = [out_a, out_b]
 
-        # Set up sampling at interesting sampling points
-        self.sampler.put(source_a)
-        self.sampler.put(source_b)
-        self.sampler.put(source_c)
-        self.sampler.put(out_a)
-        self.sampler.put(out_b)
+        if evaluate:
+            # Set up sampling at interesting sampling points
+            self.sampler.put(source_a)
+            self.sampler.put(source_b)
+            self.sampler.put(source_c)
+            self.sampler.put(out_a)
+            self.sampler.put(out_b)
 
 
 def main(args):
@@ -64,10 +65,11 @@ def main(args):
     plant = MyDemoPlant(args.evaluate)
     MaterialHandler.dot.render()
 
-    logging.info('Starting background plot server')
-    plot_server = PlotServer(plant.get_columns())
-    plot_server.set_data_callback(plant.get_diff)
-    plot_server.serve_background()
+    if args.evaluate:
+        logging.info('Starting background plot server')
+        plot_server = PlotServer(plant.get_columns())
+        plot_server.set_data_callback(plant.get_diff)
+        plot_server.serve_background()
 
     time = datetime.timedelta(0, args.max_steps * Plant.TIME_INCREMENT, 0)
     logging.info(f'Starting simulation of {args.max_steps} steps = {time}')
@@ -82,6 +84,7 @@ def main(args):
     if args.evaluate:
         logging.info('Evaluating')
         plant.evaluate()
+
     logging.info('Done')
 
 
