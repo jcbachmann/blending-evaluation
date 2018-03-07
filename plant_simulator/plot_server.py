@@ -10,6 +10,7 @@ from bokeh.models import ColumnDataSource
 from bokeh.palettes import Category10
 from bokeh.plotting import figure
 from bokeh.server.server import Server
+from tornado.ioloop import IOLoop
 
 
 class PlotServer:
@@ -76,7 +77,7 @@ class PlotServer:
         print(f'Opening Bokeh application on http://localhost:{PlotServer.PORT}/')
         apps = {'/': Application(FunctionHandler(self.make_document))}
 
-        server = Server(apps, port=PlotServer.PORT)
+        server = Server(apps, port=PlotServer.PORT, io_loop=IOLoop())
         server.start()
 
         server.io_loop.add_callback(server.show, '/')
