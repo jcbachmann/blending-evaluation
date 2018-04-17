@@ -155,6 +155,32 @@ class MaterialMux(MaterialHandler):
             self.buffer[i].put(s)
 
 
+class MaterialDuplicator(MaterialHandler):
+    def __init__(self, label, src, count):
+        super().__init__(label, 'Mdiamond')
+        self.src_gen = self.unpack_src_gen(src)
+        self.buffer = [queue.Queue() for _ in range(count)]
+        self._sample = [(0, 0)] * count
+        self.count = count
+
+    def gen(self, i: int = 0):
+        while True:
+            if self.buffer[i].empty():
+                self.acquire_buffer()
+            tph, q = self.buffer[i].get()
+            logging.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
+            yield tph, q
+
+    def acquire_buffer(self):
+        tph, q = next(self.src_gen)
+        for i in range(self.count):
+            self.buffer[i].put((tph, q))
+            self._sample[i] = (tph, q)
+
+    def sample(self):
+        return self._sample
+
+
 class MaterialOut(MaterialHandler):
     def __init__(self, label, src):
         super().__init__(label, 'doubleoctagon')
