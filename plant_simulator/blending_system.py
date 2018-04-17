@@ -20,13 +20,13 @@ class Stockpile:
         self.reclaimer_position = 0
 
         self.simulator = {
-            'fast': lambda: ExternalBlendingSimulator(ExternalBlendingSimulatorInterface(
+            'fast': lambda: ExternalBlendingSimulator(
                 length=length,
                 depth=depth,
                 dropheight=(depth / 2),
                 reclaim='stdout',
                 ppm3=1
-            )),
+            ),
             'smooth': lambda: SmoothBlendingSimulator(length=length, sigma=10),
             'mathematical': lambda: MathematicalBlendingSimulator(length=length),
         }[simulator]()

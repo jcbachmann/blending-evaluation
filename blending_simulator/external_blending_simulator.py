@@ -116,7 +116,8 @@ class ExternalBlendingSimulatorInterface:
 
 
 class ExternalBlendingSimulator:
-    def __init__(self, sim: ExternalBlendingSimulatorInterface):
+    def __init__(self, **kwargs):
+        sim = ExternalBlendingSimulatorInterface(**kwargs)
         self.sim_popen = sim.start()
         self.stopped = False
         self.reclaimed = None
