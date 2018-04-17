@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import fminbound
 
+from blending_simulator.evaluation.roundness import execute_for_roundness
 from ciglobal.ciplot import ciplot
-from roundness.roundness import execute_for_roundness
 
 
 class OptEvaluator:

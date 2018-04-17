@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-from blending_simulator.chevron_stacker import chevron_path
+from blending_simulator.stacker.chevron_stacker import chevron_path
 
 
 class TestChevronPath(unittest.TestCase):

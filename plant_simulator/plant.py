@@ -9,7 +9,8 @@ class Plant:
     def __init__(self, evaluate, sampler_buffer_size, sample_group_size, stats_size, stats_period):
         self.material_outs = []
         self.time = 0
-        self.sampler = MaterialSampler(sampler_buffer_size, sample_group_size, stats_size, stats_period) if evaluate else None
+        self.sampler = MaterialSampler(sampler_buffer_size, sample_group_size, stats_size,
+                                       stats_period) if evaluate else None
 
     def simulate_step(self):
         self.time += Plant.TIME_INCREMENT

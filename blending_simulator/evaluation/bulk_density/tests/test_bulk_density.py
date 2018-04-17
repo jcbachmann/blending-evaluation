@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-import bulk_density
+from blending_simulator.evaluation import bulk_density
 
 
 class TestScaling(unittest.TestCase):
