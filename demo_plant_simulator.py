@@ -5,7 +5,9 @@ import random
 
 from graphviz import Digraph
 
-from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux, MaterialHandler
+from plant_simulator.blending_system import BlendingSystem
+from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux, MaterialHandler, \
+    MaterialDuplicator
 from plant_simulator.plant import Plant
 from plant_simulator.plot_server import PlotServer
 from plant_simulator.simulated_mine import SimulatedMine
@@ -24,9 +26,9 @@ class MyDemoPlant(Plant):
         mux = MaterialMux(
             label='Mux',
             src_x=[
-                MaterialBuffer('BSA', source_a, steps=4),
-                MaterialBuffer('BSB', source_b, steps=2),
-                MaterialBuffer('BSC', source_c, steps=1)
+                MaterialBuffer('Great Mine Transport', source_a, steps=4),
+                MaterialBuffer('Huge Mine Transport', source_b, steps=2),
+                MaterialBuffer('Some Mine Transport', source_c, steps=1)
             ],
             weight_matrix=[
                 [1, 0.5, 0],
@@ -35,19 +37,38 @@ class MyDemoPlant(Plant):
             flip_probability=0.01
         )
 
-        out_a = MaterialOut('OA', MaterialBuffer('BOA', (mux, 0), steps=1))
-        out_b = MaterialOut('OB', MaterialBuffer('BOB', (mux, 1), steps=1))
+        duplicator_a = MaterialDuplicator('Duplicator A', MaterialBuffer('Mux Transport A', (mux, 0), steps=1), count=3)
+        blend_a_a = BlendingSystem('A Blending Strategy A', (duplicator_a, 0), strategy='A')
+        blend_a_b = BlendingSystem('A Blending Strategy B', (duplicator_a, 1), strategy='B')
+        # blend_a_a = BlendingSystem('A Blending Simulator Fast', (duplicator_a, 0), simulator='fast')
+        # blend_a_b = BlendingSystem('A Blending Simulator Simple', (duplicator_a, 1), simulator='mathematical')
+
+        duplicator_b = MaterialDuplicator('Duplicator B', MaterialBuffer('Mux Transport B', (mux, 1), steps=2), count=3)
+        blend_b_a = BlendingSystem('B Blending Strategy A', (duplicator_b, 0), strategy='A')
+        blend_b_b = BlendingSystem('B Blending Strategy B', (duplicator_b, 1), strategy='B')
+
+        out_a_blend_a = MaterialOut('Out A Blending Strategy A', blend_a_a)
+        out_a_blend_b = MaterialOut('Out A Blending Strategy B', blend_a_b)
+        out_a_no_blend = MaterialOut('Out A No Blending', (duplicator_a, 2))
+
+        out_b_blend_a = MaterialOut('Out B Blending Strategy A', blend_b_a)
+        out_b_blend_b = MaterialOut('Out B Blending Strategy B', blend_b_b)
+        out_b_no_blend = MaterialOut('Out B No Blending', (duplicator_b, 2))
 
         # Specify outs as simulation hooks
-        self.material_outs = [out_a, out_b]
+        self.material_outs = [
+            out_a_blend_a, out_a_blend_b, out_a_no_blend,
+            out_b_blend_a, out_b_blend_b, out_b_no_blend
+        ]
 
         if evaluate:
             # Set up sampling at interesting sampling points
-            self.sampler.put('Great', source_a)
-            self.sampler.put('Huge', source_b)
-            self.sampler.put('Some', source_c)
-            self.sampler.put('Out A', out_a)
-            self.sampler.put('Out B', out_b)
+            self.sampler.put('Out A, Strategy A', out_a_blend_a)
+            self.sampler.put('Out A, Strategy B', out_a_blend_b)
+            self.sampler.put('Out A, No Blending', out_a_no_blend)
+            self.sampler.put('Out B, Strategy A', out_b_blend_a)
+            self.sampler.put('Out B, Strategy B', out_b_blend_b)
+            self.sampler.put('Out B, No Blending', out_b_no_blend)
 
 
 def main(args):
