@@ -19,7 +19,7 @@ class Stockpile:
         self.reclaimed_buffer = None
         self.reclaimer_position = 0
 
-        self.sim_interface = {
+        self.simulator = {
             'fast': lambda: ExternalBlendingSimulator(ExternalBlendingSimulatorInterface(
                 length=length,
                 depth=depth,
@@ -38,7 +38,7 @@ class Stockpile:
             self.stack_time_end = timestamp
 
         volume = tons
-        self.sim_interface.stack(timestamp, pos, self.depth / 2, volume, [q])
+        self.simulator.stack(timestamp, pos, self.depth / 2, volume, [q])
         self.stacked_tons += tons
 
         if self.stacked_tons >= self.max_tons:
@@ -51,7 +51,7 @@ class Stockpile:
         self._stacking_finished = True
 
         if self.reclaimed_buffer is None:
-            self.reclaimed_buffer = self.sim_interface.reclaim()
+            self.reclaimed_buffer = self.simulator.reclaim()
 
         if self.reclaimer_position < self.length:
             old_pos = self.reclaimer_position
