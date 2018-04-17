@@ -13,7 +13,8 @@ from plant_simulator.simulated_mine import SimulatedMine
 
 class MyDemoPlant(Plant):
     def __init__(self, evaluate: bool):
-        super().__init__(evaluate, 5760)
+        super().__init__(evaluate, sampler_buffer_size=57600, sample_group_size=1,
+                         stats_size=int(2 * 3600 / (Plant.TIME_INCREMENT * 6)), stats_period=1800)
 
         # Create and link material handlers
         source_a = SimulatedMine('Great Mine', max_tph=4000, availability=0.9, q_min=0.20, q_exp=0.23, q_max=0.30)
@@ -42,11 +43,11 @@ class MyDemoPlant(Plant):
 
         if evaluate:
             # Set up sampling at interesting sampling points
-            self.sampler.put(source_a)
-            self.sampler.put(source_b)
-            self.sampler.put(source_c)
-            self.sampler.put(out_a)
-            self.sampler.put(out_b)
+            self.sampler.put('Great', source_a)
+            self.sampler.put('Huge', source_b)
+            self.sampler.put('Some', source_c)
+            self.sampler.put('Out A', out_a)
+            self.sampler.put('Out B', out_b)
 
 
 def main(args):
@@ -68,7 +69,7 @@ def main(args):
     if args.evaluate:
         logging.info('Starting background plot server')
         plot_server = PlotServer(plant.get_columns())
-        plot_server.set_data_callback(plant.get_diff)
+        plot_server.set_data_callback(plant.get_diff_live, plant.get_diff_stats)
         plot_server.serve_background()
 
     time = datetime.timedelta(0, args.max_steps * Plant.TIME_INCREMENT, 0)
