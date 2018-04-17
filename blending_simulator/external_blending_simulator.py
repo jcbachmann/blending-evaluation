@@ -4,7 +4,7 @@ import subprocess
 from typing import List
 
 
-class BlendingSimulator:
+class ExternalBlendingSimulatorInterface:
     def __init__(
             self,
             executable='./BlendingSimulator',
@@ -115,8 +115,8 @@ class BlendingSimulator:
         return sim_popen.stdout.read()
 
 
-class BlendingSimulatorInterface:
-    def __init__(self, sim: BlendingSimulator):
+class ExternalBlendingSimulator:
+    def __init__(self, sim: ExternalBlendingSimulatorInterface):
         self.sim_popen = sim.start()
         self.stopped = False
         self.reclaimed = None
@@ -133,7 +133,7 @@ class BlendingSimulatorInterface:
         if not self.stopped:
             logging.info('Stopping blending simulator')
             self.stopped = True
-            out = BlendingSimulator.stop(self.sim_popen).decode()
+            out = ExternalBlendingSimulatorInterface.stop(self.sim_popen).decode()
             data = [[float(element) for element in line.split('\t')] for line in out.split('\n')[1:-1]]
             self.reclaimed = [[d[0], d[1], d[2:]] for d in data]
 

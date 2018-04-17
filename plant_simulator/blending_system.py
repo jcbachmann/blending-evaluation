@@ -1,6 +1,6 @@
 import logging
 
-from blending_simulator.blending_simulator import BlendingSimulator, BlendingSimulatorInterface
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface, ExternalBlendingSimulator
 from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
 from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
 from .material_handler import MaterialHandler
@@ -20,7 +20,7 @@ class Stockpile:
         self.reclaimer_position = 0
 
         self.sim_interface = {
-            'fast': lambda: BlendingSimulatorInterface(BlendingSimulator(
+            'fast': lambda: ExternalBlendingSimulator(ExternalBlendingSimulatorInterface(
                 length=length,
                 depth=depth,
                 dropheight=(depth / 2),

@@ -7,14 +7,14 @@ import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from blending_simulator.blending_simulator import BlendingSimulator
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
 
 
 def execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volume, run):
     print('processing volume %d with likelihood %f (run %d)' % (volume, likelihood, run))
     path = '/tmp/heights-%d-%.4f-%d.txt' % (volume, likelihood, run)
 
-    BlendingSimulator(config='pile.conf', heights=path, eight=likelihood).run(
+    ExternalBlendingSimulatorInterface(config='pile.conf', heights=path, eight=likelihood).run(
         lambda sim: sim.communicate(('0 %f %f' % (pos, volume)).encode())
     )
 

@@ -11,14 +11,14 @@ import pandas as pd
 from matplotlib import gridspec
 from seaborn.palettes import color_palette
 
-from blending_simulator.blending_simulator import BlendingSimulator
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
 from blending_simulator.stacker import stack_with_printer
 from blending_simulator.stacker.chevron_stacker import chevron_path
 from ciglobal.cimath import weighted_avg_and_std
 
 
 def simulate(args, reclaim, layers):
-    BlendingSimulator(
+    ExternalBlendingSimulatorInterface(
         length=args.length,
         depth=args.depth,
         dropheight=(args.depth / 2),

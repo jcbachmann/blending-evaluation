@@ -8,7 +8,7 @@ import pandas as pd
 from dask import delayed
 from dask.distributed import Client
 
-from blending_simulator.blending_simulator import BlendingSimulator
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
 from ciglobal.ciplot import ciplot_scatter
 
 
@@ -87,7 +87,7 @@ def execute_for_bulk_density(
     print('processing volume %d with ppm3 %.1f (run %d)' % (volume, ppm3, run))
     path += '/heights-vol%d-res%.1f-run%d.txt' % (volume, ppm3, run)
 
-    BlendingSimulator(
+    ExternalBlendingSimulatorInterface(
         executable=executable,
         length=size,
         depth=size,

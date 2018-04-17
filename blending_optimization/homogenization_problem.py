@@ -6,7 +6,7 @@ import pandas as pd
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 
-from blending_simulator.blending_simulator import BlendingSimulator
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
 from blending_simulator.stacker import read_material, stack_with_printer
 from ciglobal.cimath import weighted_avg_and_std, stdev
 
@@ -18,7 +18,7 @@ def evaluate_solution(
         raw_quality_stdev: float,
         stacker_path_list: [float]
 ) -> [float, float]:
-    out = BlendingSimulator(
+    out = ExternalBlendingSimulatorInterface(
         length=length,
         depth=depth,
         dropheight=(depth / 2),
