@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import logging
 import subprocess
-from typing import List
+from typing import List, Union
 
 
 class ExternalBlendingSimulatorInterface:
@@ -122,15 +122,15 @@ class ExternalBlendingSimulator:
         self.stopped = False
         self.reclaimed = None
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, quality: List[float]):
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         if self.stopped:
             raise Exception('Can not call stack on blending simulator where reclaiming has started')
 
         self.sim_popen.stdin.write(
-            (' '.join([str(timestamp), str(x), str(z), str(volume)] + [str(q) for q in quality]) + '\n').encode('utf-8')
-        )
+            (' '.join([str(timestamp), str(x), str(z), str(volume)] + [str(p) for p in parameter]) + '\n').encode(
+                'utf-8'))
 
-    def reclaim(self):
+    def reclaim(self) -> List[List[Union[float, List[float]]]]:
         if not self.stopped:
             logging.info('Stopping blending simulator')
             self.stopped = True

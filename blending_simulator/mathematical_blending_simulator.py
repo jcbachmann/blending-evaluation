@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from blending_simulator.mathematical_blending import mathematical_blending
 
@@ -11,12 +11,12 @@ class MathematicalBlendingSimulator:
         self.volumes = []
         self.qualities = []
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, quality: List[float]):
         self.positions.append(max(0, min(int(x / self.length * self.buffer_size), self.buffer_size - 1)))
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         self.volumes.append(volume)
-        self.qualities.append(quality[0])
+        self.qualities.append(parameter[0])  # TODO
 
-    def reclaim(self):
+    def reclaim(self) -> List[List[Union[float, List[float]]]]:
         volumes, qualities = mathematical_blending.calculate_blended_output(
             time_slots=len(self.positions),
             in_volumes=self.volumes,

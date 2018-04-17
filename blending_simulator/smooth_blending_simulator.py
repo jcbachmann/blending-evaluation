@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 
@@ -14,9 +14,9 @@ class SmoothBlendingSimulator:
         self.sigma = sigma
         self.buffer = [[i / self.buffer_size * length, 0, 0] for i in range(self.buffer_size)]
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, quality: List[float]):
         first = max(int((x - 2 * self.sigma) / self.length * self.buffer_size), 0)
         last = min(int((x + 2 * self.sigma) / self.length * self.buffer_size), self.buffer_size - 1)
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
 
         norm_sum = 0
         for i in range(first, last + 1):
@@ -27,7 +27,7 @@ class SmoothBlendingSimulator:
             g = gaussian(i * self.length / self.buffer_size - x, self.sigma)
             v = volume * g / norm_sum
             elem[1] += v
-            elem[2] += v * quality[0]
+            elem[2] += v * parameter[0]
 
-    def reclaim(self):
+    def reclaim(self) -> List[List[Union[float, List[float]]]]:
         return [[b[0], b[1], [b[2] / b[1] if b[1] > 0 else 0]] for b in self.buffer]
