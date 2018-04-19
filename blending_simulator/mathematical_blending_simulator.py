@@ -5,7 +5,7 @@ from blending_simulator.mathematical_blending import mathematical_blending
 
 
 class MathematicalBlendingSimulator(BlendingSimulator):
-    def __init__(self, bed_size_x: float, buffer_size: int = 15, **kwargs):
+    def __init__(self, bed_size_x: float, buffer_size: int, **kwargs):
         super().__init__(bed_size_x, 0)
         self.buffer_size = buffer_size
         self.positions = []

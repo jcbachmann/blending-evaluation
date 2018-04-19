@@ -33,7 +33,8 @@ class Stockpile:
                 sigma_x=10
             ),
             'mathematical': lambda: MathematicalBlendingSimulator(
-                bed_size_x=length
+                bed_size_x=length,
+                buffer_size=80
             ),
         }[simulator]()
 
