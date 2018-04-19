@@ -1,18 +1,21 @@
 def calculate_blended_output(time_slots, in_volumes, in_qualities, positions, bed_width):
     out_volumes = [0] * bed_width
-    out_parameter_sums = [0] * bed_width
+    parameter_count = len(in_qualities[0]) if len(in_qualities) > 0 else 1
+    out_parameter_sums = [[0] * parameter_count for i in range(bed_width)]
 
     for i in range(time_slots):
         volume = in_volumes[i]
-        parameter = in_qualities[i]
+        parameters = in_qualities[i]
         position = positions[i]
 
         out_volumes[position] += volume
-        out_parameter_sums[position] += parameter * volume
+        for j in range(parameter_count):
+            out_parameter_sums[position][j] += parameters[j] * volume
 
-    out_qualities = [0] * bed_width
+    out_qualities = [[0] * parameter_count for i in range(bed_width)]
     for position in range(bed_width):
         if out_volumes[position] > 0:
-            out_qualities[position] = out_parameter_sums[position] / out_volumes[position]
+            for j in range(parameter_count):
+                out_qualities[position][j] = out_parameter_sums[position][j] / out_volumes[position]
 
     return out_volumes, out_qualities

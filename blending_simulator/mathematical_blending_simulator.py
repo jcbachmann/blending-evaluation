@@ -14,7 +14,7 @@ class MathematicalBlendingSimulator:
         self.positions.append(max(0, min(int(x / self.length * self.buffer_size), self.buffer_size - 1)))
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         self.volumes.append(volume)
-        self.qualities.append(parameter[0])  # TODO
+        self.qualities.append(parameter)
 
     def reclaim(self) -> List[List[Union[float, List[float]]]]:
         volumes, qualities = mathematical_blending.calculate_blended_output(
@@ -27,5 +27,5 @@ class MathematicalBlendingSimulator:
         return [[p, v, q] for p, v, q in zip(
             [i / self.buffer_size * self.length for i in range(self.buffer_size)],
             volumes,
-            [[q] for q in qualities]
+            qualities
         )]
