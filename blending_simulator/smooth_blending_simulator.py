@@ -10,23 +10,23 @@ def gaussian(x, sigma):
 
 
 class SmoothBlendingSimulator(BlendingSimulator):
-    def __init__(self, bed_size_x: float, buffer_size: int = 80, sigma: float = None, **kwargs):
+    def __init__(self, bed_size_x: float, buffer_size: int, sigma_x: float, **kwargs):
         super().__init__(bed_size_x, 0)
         self.buffer_size = buffer_size
-        self.sigma = sigma
+        self.sigma_x = sigma_x
         self.buffer = [[i / self.buffer_size * bed_size_x, 0, 0] for i in range(self.buffer_size)]
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
-        first = max(int((x - 2 * self.sigma) / self.bed_size_x * self.buffer_size), 0)
-        last = min(int((x + 2 * self.sigma) / self.bed_size_x * self.buffer_size), self.buffer_size - 1)
+        first = max(0, min(int((x - 2 * self.sigma_x) / self.bed_size_x * self.buffer_size), self.buffer_size - 1))
+        last = max(0, min(int((x + 2 * self.sigma_x) / self.bed_size_x * self.buffer_size), self.buffer_size - 1))
 
         norm_sum = 0
         for i in range(first, last + 1):
-            norm_sum += gaussian(i * self.bed_size_x / self.buffer_size - x, self.sigma)
+            norm_sum += gaussian(i * self.bed_size_x / self.buffer_size - x, self.sigma_x)
 
         for i in range(first, last + 1):
             elem = self.buffer[i]
-            g = gaussian(i * self.bed_size_x / self.buffer_size - x, self.sigma)
+            g = gaussian(i * self.bed_size_x / self.buffer_size - x, self.sigma_x)
             v = volume * g / norm_sum
             elem[1] += v
             elem[2] += v * parameter[0]
