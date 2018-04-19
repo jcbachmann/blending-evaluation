@@ -26,7 +26,7 @@ class MathematicalBlendingSimulator(BlendingSimulator):
             bed_width=self.buffer_size
         )
         return [[p, v, q] for p, v, q in zip(
-            [i / self.buffer_size * self.bed_size_x for i in range(self.buffer_size)],
+            [(i + 1) / self.buffer_size * self.bed_size_x for i in range(self.buffer_size)],
             volumes,
             qualities
         )]

@@ -14,7 +14,7 @@ class SmoothBlendingSimulator(BlendingSimulator):
         super().__init__(bed_size_x, 0)
         self.buffer_size = buffer_size
         self.sigma_x = sigma_x
-        self.buffer = [[i / self.buffer_size * bed_size_x, 0, 0] for i in range(self.buffer_size)]
+        self.buffer = [[(i + 1) / self.buffer_size * bed_size_x, 0, 0] for i in range(self.buffer_size)]
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         first = max(0, min(int((x - 2 * self.sigma_x) / self.bed_size_x * self.buffer_size), self.buffer_size - 1))
