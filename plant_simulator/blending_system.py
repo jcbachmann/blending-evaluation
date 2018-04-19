@@ -1,6 +1,6 @@
 import logging
 
-from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface, ExternalBlendingSimulator
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulator
 from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
 from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
 from .material_handler import MaterialHandler
@@ -21,14 +21,14 @@ class Stockpile:
 
         self.simulator = {
             'fast': lambda: ExternalBlendingSimulator(
-                length=length,
-                depth=depth,
+                bed_size_x=length,
+                bed_size_z=depth,
                 dropheight=(depth / 2),
                 reclaim='stdout',
                 ppm3=1
             ),
-            'smooth': lambda: SmoothBlendingSimulator(length=length, sigma=10),
-            'mathematical': lambda: MathematicalBlendingSimulator(length=length),
+            'smooth': lambda: SmoothBlendingSimulator(bed_size_x=length, sigma=10),
+            'mathematical': lambda: MathematicalBlendingSimulator(bed_size_x=length),
         }[simulator]()
 
     def stack(self, timestamp, pos, tons, q):

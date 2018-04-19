@@ -2,29 +2,31 @@ from typing import List, Union
 
 import numpy as np
 
+from blending_simulator.blending_simulator import BlendingSimulator
+
 
 def gaussian(x, sigma):
     return np.exp(-np.power(x / sigma, 2.) / 2.)
 
 
-class SmoothBlendingSimulator:
-    def __init__(self, length: float, buffer_size: int = 80, sigma: float = None):
-        self.length = length
+class SmoothBlendingSimulator(BlendingSimulator):
+    def __init__(self, bed_size_x: float, buffer_size: int = 80, sigma: float = None, **kwargs):
+        super().__init__(bed_size_x, 0)
         self.buffer_size = buffer_size
         self.sigma = sigma
-        self.buffer = [[i / self.buffer_size * length, 0, 0] for i in range(self.buffer_size)]
+        self.buffer = [[i / self.buffer_size * bed_size_x, 0, 0] for i in range(self.buffer_size)]
 
-        first = max(int((x - 2 * self.sigma) / self.length * self.buffer_size), 0)
-        last = min(int((x + 2 * self.sigma) / self.length * self.buffer_size), self.buffer_size - 1)
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
+        first = max(int((x - 2 * self.sigma) / self.bed_size_x * self.buffer_size), 0)
+        last = min(int((x + 2 * self.sigma) / self.bed_size_x * self.buffer_size), self.buffer_size - 1)
 
         norm_sum = 0
         for i in range(first, last + 1):
-            norm_sum += gaussian(i * self.length / self.buffer_size - x, self.sigma)
+            norm_sum += gaussian(i * self.bed_size_x / self.buffer_size - x, self.sigma)
 
         for i in range(first, last + 1):
             elem = self.buffer[i]
-            g = gaussian(i * self.length / self.buffer_size - x, self.sigma)
+            g = gaussian(i * self.bed_size_x / self.buffer_size - x, self.sigma)
             v = volume * g / norm_sum
             elem[1] += v
             elem[2] += v * parameter[0]

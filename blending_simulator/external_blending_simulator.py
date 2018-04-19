@@ -3,6 +3,8 @@ import logging
 import subprocess
 from typing import List, Union
 
+from blending_simulator.blending_simulator import BlendingSimulator
+
 
 class ExternalBlendingSimulatorInterface:
     def __init__(
@@ -115,8 +117,9 @@ class ExternalBlendingSimulatorInterface:
         return sim_popen.stdout.read()
 
 
-class ExternalBlendingSimulator:
-    def __init__(self, **kwargs):
+class ExternalBlendingSimulator(BlendingSimulator):
+    def __init__(self, bed_size_x: float, bed_size_z: float, **kwargs):
+        super().__init__(bed_size_x, bed_size_z)
         sim = ExternalBlendingSimulatorInterface(**kwargs)
         self.sim_popen = sim.start()
         self.stopped = False
