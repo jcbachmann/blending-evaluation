@@ -27,8 +27,14 @@ class Stockpile:
                 reclaim='stdout',
                 ppm3=1
             ),
-            'smooth': lambda: SmoothBlendingSimulator(bed_size_x=length, buffer_size=80, sigma_x=10),
-            'mathematical': lambda: MathematicalBlendingSimulator(bed_size_x=length),
+            'smooth': lambda: SmoothBlendingSimulator(
+                bed_size_x=length,
+                buffer_size=80,
+                sigma_x=10
+            ),
+            'mathematical': lambda: MathematicalBlendingSimulator(
+                bed_size_x=length
+            ),
         }[simulator]()
 
     def stack(self, timestamp, pos, tons, q):
