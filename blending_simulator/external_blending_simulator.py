@@ -120,7 +120,13 @@ class ExternalBlendingSimulatorInterface:
 class ExternalBlendingSimulator(BlendingSimulator):
     def __init__(self, bed_size_x: float, bed_size_z: float, **kwargs):
         super().__init__(bed_size_x, bed_size_z)
-        sim = ExternalBlendingSimulatorInterface(**kwargs)
+        sim = ExternalBlendingSimulatorInterface(
+            length=bed_size_x,
+            depth=bed_size_z,
+            dropheight=0.5 * bed_size_z,
+            reclaim='stdout',
+            **kwargs
+        )
         self.sim_popen = sim.start()
         self.stopped = False
         self.reclaimed = None
