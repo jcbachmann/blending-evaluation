@@ -144,7 +144,7 @@ def prepare_dst(dst: str, dry_run: bool):
 
 def process_reference(reference: ReferenceMeta, material: MaterialMeta, deposition: DepositionMeta, dst: str,
                       sim_type: type, sim_params: dict, dry_run: bool):
-    logging.debug(f'Processing reference "{reference}" with material "{material}" and deposition "{deposition}"')
+    logging.info(f'Processing reference "{reference}" with material "{material}" and deposition "{deposition}"')
 
     logging.debug('Creating simulator')
     sim_params['bed_size_x'] = deposition.bed_size_x
@@ -226,6 +226,8 @@ def process_data(references: Dict[str, ReferenceMeta], materials: Dict[str, Mate
         process_reference(reference, materials[reference.material], depositions[reference.deposition],
                           dst, sim_type,
                           sim_params, dry_run)
+
+    logging.info('Processing finished')
 
 
 def prepare_simulator(sim_type_str: str, sim_params_str: str) -> Tuple[type, dict]:
