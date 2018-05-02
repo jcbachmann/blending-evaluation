@@ -92,20 +92,10 @@ class ExternalBlendingSimulatorInterface:
         sim_popen = subprocess.Popen(
             self.get_process_arguments(),
             stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE
-            # stderr=subprocess.PIPE,
-            # bufsize=1000000
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
-        # t = threading.Thread(target=partial(self.log_errors, sim_popen))
-        # t.start()
         return sim_popen
-
-    @staticmethod
-    def log_errors(sim_popen: subprocess.Popen):
-        logging.debug('Starting popen reader')
-        for line in sim_popen.stderr:
-            logging.debug(f'Simulator: {line.decode().strip()}')
-        logging.debug('Popen reader stopped')
 
     @staticmethod
     def stop(sim_popen: subprocess.Popen):
@@ -113,6 +103,11 @@ class ExternalBlendingSimulatorInterface:
         sim_popen.stdin.close()
         logging.debug('Waiting for simulator')
         sim_popen.wait()
+
+        logging.debug('Simulator log:')
+        for line in sim_popen.stderr:
+            logging.debug(f'- {line.decode().strip()}')
+
         logging.debug('Reading simulator output')
         return sim_popen.stdout.read()
 
