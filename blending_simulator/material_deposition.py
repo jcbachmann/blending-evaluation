@@ -179,7 +179,36 @@ class MaterialDeposition:
         self.material = material
         self.deposition = deposition
 
-        self.data = pd.DataFrame(material.data.copy())
-        # TODO resample material times
-        self.data['x'] = np.interp(material.data['timestamp'], deposition.data['timestamp'], deposition.data['x'])
-        self.data['z'] = np.interp(material.data['timestamp'], deposition.data['timestamp'], deposition.data['z'])
+        self.data = MaterialDeposition.prepare(material.data, deposition.data)
+
+    @staticmethod
+    def prepare(material_df: pd.DataFrame, deposition_df: pd.DataFrame, t_diff_max: float = 15):
+        # Copy material data
+        data = pd.DataFrame()
+
+        for index, row in material_df.iterrows():
+            if 'timestamp' in data.columns:
+                t_last = data['timestamp'].max()
+            else:
+                t_last = 0
+            t_curr = row['timestamp']
+            sub_steps = int((t_curr - t_last) / t_diff_max)
+            t_per_step = (t_curr - t_last) / sub_steps
+            volume_per_step = row['volume'] / sub_steps
+            parameter = row['parameter']
+            sub_rows = {
+                'timestamp': [],
+                'volume': [],
+                'parameter': []
+            }
+            for step in range(sub_steps):
+                sub_rows['timestamp'].append(t_last + (step + 1) * t_per_step)
+                sub_rows['volume'].append(volume_per_step)
+                sub_rows['parameter'].append(parameter)
+
+            data = data.append(pd.DataFrame(sub_rows))
+
+        data['x'] = np.interp(data['timestamp'], deposition_df['timestamp'], deposition_df['x'])
+        data['z'] = np.interp(data['timestamp'], deposition_df['timestamp'], deposition_df['z'])
+
+        return data
