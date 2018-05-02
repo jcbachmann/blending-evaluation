@@ -26,10 +26,15 @@ class BlendingSimulator:
 
         # call self.stack for every material-deposition row
         param_cols = material_deposition.material.get_parameter_columns()
-        material_deposition.data.apply(
-            lambda row: self.stack(row.timestamp, row.x, row.z, row.volume, row.filter(param_cols).values),
-            axis=1
-        )
+        material_deposition_data = material_deposition.data.filter(
+            ['timestamp', 'x', 'z', 'volume']
+        ).to_dict(orient='records')
+        material_deposition_parameters = material_deposition.data.filter(param_cols).to_dict(orient='split')['data']
+        for i, p in enumerate(material_deposition_parameters):
+            material_deposition_data[i]['parameter'] = p
+
+        for row in material_deposition_data:
+            self.stack(**row)
 
         # reclaim stacked material
         data_list = self.reclaim()
