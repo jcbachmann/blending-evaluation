@@ -102,18 +102,18 @@ class ExternalBlendingSimulatorInterface:
 
     @staticmethod
     def log_errors(sim_popen: subprocess.Popen):
-        logging.info('Starting popen reader')
+        logging.debug('Starting popen reader')
         for line in sim_popen.stderr:
-            logging.info(f'Simulator: {line.decode().strip()}')
-        logging.info('Popen reader stopped')
+            logging.debug(f'Simulator: {line.decode().strip()}')
+        logging.debug('Popen reader stopped')
 
     @staticmethod
     def stop(sim_popen: subprocess.Popen):
-        logging.info('Closing stdin')
+        logging.debug('Closing stdin')
         sim_popen.stdin.close()
-        logging.info('Waiting for simulator')
+        logging.debug('Waiting for simulator')
         sim_popen.wait()
-        logging.info('Reading simulator output')
+        logging.debug('Reading simulator output')
         return sim_popen.stdout.read()
 
 
@@ -141,7 +141,7 @@ class ExternalBlendingSimulator(BlendingSimulator):
 
     def reclaim(self) -> List[List[Union[float, List[float]]]]:
         if not self.stopped:
-            logging.info('Stopping blending simulator')
+            logging.debug('Stopping blending simulator')
             self.stopped = True
             out = ExternalBlendingSimulatorInterface.stop(self.sim_popen).decode()
             data = [[float(element) for element in line.split('\t')] for line in out.split('\n')[1:-1]]
