@@ -353,12 +353,11 @@ def main(args: argparse.Namespace):
     logging.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
     for sim_identifier in sim_identifiers:
         # Prepare output directory
-        if args.dst is None:
-            args.dst = os.path.join('.', timestamp_str + ' ' + sim_identifier)
-        prepare_dst(args.dst, args.dry_run)
+        dst = os.path.join(args.dst, timestamp_str + ' ' + sim_identifier)
+        prepare_dst(dst, args.dry_run)
 
         # Processing
-        process_data(references, materials, depositions, args.dst, simulators[sim_identifier], args.dry_run)
+        process_data(references, materials, depositions, dst, simulators[sim_identifier], args.dry_run)
 
 
 if __name__ == '__main__':
@@ -368,7 +367,7 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     parser.add_argument('--path', default='.', help='Simulator benchmark path')
     parser.add_argument('--src', default='./benchmark', help='Path with reference configuration files')
-    parser.add_argument('--dst', default=None, help='Path where results will be stored')
+    parser.add_argument('--dst', default='.', help='Path where results will be stored')
     parser.add_argument('--dry_run', action='store_true', help='Do not write files')
     parser.add_argument('--sim', nargs='+', help='Which simulator is used to calculate results')
 
