@@ -39,7 +39,7 @@ class ReferenceMeta:
         # copy data read from json file
         self.material = meta_dict['material']
         self.deposition = meta_dict['deposition']
-        if meta_dict['reclaimed_path'] is not None:
+        if 'reclaimed_path' in meta_dict and meta_dict['reclaimed_path'] is not None:
             self.reclaimed_path = meta_dict['reclaimed_path']
         else:
             self.reclaimed_path = None
