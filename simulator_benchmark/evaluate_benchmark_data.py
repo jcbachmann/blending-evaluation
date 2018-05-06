@@ -17,8 +17,11 @@ SIMULATOR_JSON = 'simulator.json'
 SIMULATOR_PARAMS_JSON = 'simulator_params.json'
 SIMULATOR_TYPE = {
     'mathematical': MathematicalBlendingSimulator,
+    'MathematicalBlendingSimulator': MathematicalBlendingSimulator,
     'smooth': SmoothBlendingSimulator,
+    'SmoothBlendingSimulator': SmoothBlendingSimulator,
     'external': ExternalBlendingSimulator,
+    'ExternalBlendingSimulator': ExternalBlendingSimulator,
 }
 
 
