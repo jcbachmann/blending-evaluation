@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulator
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
@@ -80,6 +80,53 @@ class ReferenceMeta:
         return self.reclaimed_material_meta
 
 
+class SimulatorMeta:
+    """
+    Object managing a simulator
+    """
+
+    def __init__(self, identifier: str, path: str, meta_dict: dict):
+        """
+        :param identifier: unique identifier of this simulator
+        :param path: directory where meta.json and parameters for this simulator are stored
+        :param meta_dict: dict parsed from json file
+        """
+        self.identifier = identifier
+        self.path = path
+
+        # copy data read from json file
+        self.type = meta_dict['type']
+        self.params = meta_dict['params']
+
+        # original data read from json file and stored in dict
+        self.meta_dict = meta_dict
+
+        # params from params file stored in dict
+        self.params_dict = None
+
+    def __str__(self) -> str:
+        return self.identifier
+
+    def get_type(self):
+        return SIMULATOR_TYPE[self.type]
+
+    def to_dict(self) -> dict:
+        """
+        Write all relevant meta information about this reference into a dict.
+        :return: dict with relevant meta information about this reference
+        """
+        return {
+            'type': self.type,
+            'params': self.params
+        }
+
+    def get_params(self) -> Dict:
+        if self.params_dict is None:
+            self.params_dict = json.load(open(os.path.join(self.path, self.params)))
+
+        return self.params_dict
+
+
 def list_managed_dirs(path: str) -> List[str]:
     logging.debug(f'Listing managed directories for path "{path}"')
     return [
@@ -117,6 +164,20 @@ def read_references(path: str) -> Dict[str, ReferenceMeta]:
     return create_instance_for_each_managed_dir(path, ReferenceMeta)
 
 
+def read_simulators(path: str) -> Dict[str, SimulatorMeta]:
+    logging.debug('Reading references')
+    return create_instance_for_each_managed_dir(path, SimulatorMeta)
+
+
+def get_identifier(i: str):
+    # Split by slashes and get last non-empty
+    return [s for s in i.split(os.path.sep) if s][-1]
+
+
+def get_sim_identifiers(sim_args: str):
+    return [get_identifier(sim_arg) for sim_arg in sim_args]
+
+
 def validate_references(references: Dict[str, ReferenceMeta], materials: Dict[str, MaterialMeta],
                         depositions: Dict[str, DepositionMeta]):
     logging.debug('Validating references')
@@ -127,6 +188,17 @@ def validate_references(references: Dict[str, ReferenceMeta], materials: Dict[st
         if reference.deposition not in depositions:
             raise ValueError(f'Deposition "{reference.deposition}" not found in depositions')
     logging.info('References validated')
+
+
+def validate_simulators(sim_identifiers: List[str], simulators: Dict[str, SimulatorMeta]):
+    logging.debug('Validating simulators')
+    for sim_identifier in sim_identifiers:
+        if sim_identifier not in simulators:
+            raise ValueError(f'Simulator identifier "{sim_identifier}" not found in simulators')
+        if simulators[sim_identifier].type not in SIMULATOR_TYPE:
+            raise ValueError(
+                f'Simulator type "{simulators[sim_identifier]}" not found for identifier "{sim_identifier}"')
+    logging.info('Simulators validated')
 
 
 def prepare_dst(dst: str, dry_run: bool):
@@ -146,13 +218,14 @@ def prepare_dst(dst: str, dry_run: bool):
 
 
 def process_reference(reference: ReferenceMeta, material: MaterialMeta, deposition: DepositionMeta, dst: str,
-                      sim_type: type, sim_params: dict, dry_run: bool):
+                      simulator_meta: SimulatorMeta, dry_run: bool):
     logging.info(f'Processing reference "{reference}" with material "{material}" and deposition "{deposition}"')
 
     logging.debug('Creating simulator')
+    sim_params = simulator_meta.get_params().copy()
     sim_params['bed_size_x'] = deposition.bed_size_x
     sim_params['bed_size_z'] = deposition.bed_size_z
-    sim = sim_type(**sim_params)
+    sim = simulator_meta.get_type()(**sim_params)
 
     logging.debug('Combining material and deposition')
     material_deposition = MaterialDeposition(material.get_material(), deposition.get_deposition())
@@ -209,42 +282,28 @@ def process_reference(reference: ReferenceMeta, material: MaterialMeta, depositi
 
 
 def process_data(references: Dict[str, ReferenceMeta], materials: Dict[str, MaterialMeta],
-                 depositions: Dict[str, DepositionMeta], dst: str, sim_type: type, sim_params: dict, dry_run: bool):
-    logging.info(f'Processing data with simulator "{sim_type.__name__}"')
+                 depositions: Dict[str, DepositionMeta], dst: str, simulator_meta: SimulatorMeta, dry_run: bool):
+    logging.info(f'Processing data with simulator "{simulator_meta.type}"')
 
     logging.debug('Writing simulator type and parameters to destination directory')
     if not dry_run:
-        json.dump(
-            {'simulator_type': sim_type.__name__},
-            open(os.path.join(dst, SIMULATOR_JSON), 'w'),
-            indent=4
-        )
-        json.dump(
-            sim_params,
-            open(os.path.join(dst, SIMULATOR_PARAMS_JSON), 'w'),
-            indent=4
-        )
+        json.dump({'simulator': simulator_meta.identifier}, open(os.path.join(dst, SIMULATOR_JSON), 'w'), indent=4)
 
     for _, reference in references.items():
-        process_reference(reference, materials[reference.material], depositions[reference.deposition],
-                          dst, sim_type,
-                          sim_params, dry_run)
+        process_reference(reference, materials[reference.material], depositions[reference.deposition], dst,
+                          simulator_meta, dry_run)
 
     logging.info('Processing finished')
 
 
-def prepare_simulator(sim_type_str: str, sim_params_str: str) -> Tuple[type, dict]:
-    logging.debug(f'Acquiring simulator type for "{sim_type_str}"')
+def prepare_simulator(simulator_meta: SimulatorMeta):
+    logging.debug(f'Acquiring simulator type for "{simulator_meta.type}"')
 
     # Acquire simulator type
-    sim_type = SIMULATOR_TYPE[sim_type_str]
+    sim_type = simulator_meta.get_type()
 
     # Read simulator parameters
-    if sim_params_str is not None:
-        logging.debug(f'Loading simulator parameters from "{sim_params_str}"')
-        sim_params = json.load(open(sim_params_str))
-    else:
-        sim_params = {}
+    sim_params = simulator_meta.get_params()
 
     sim_params_copy = sim_params.copy()
     sim_params_copy['bed_size_x'] = 10
@@ -258,14 +317,15 @@ def prepare_simulator(sim_type_str: str, sim_params_str: str) -> Tuple[type, dic
     logging.debug('Testing deletion of simulator')
     del sim
 
-    return sim_type, sim_params
-
 
 def main(args: argparse.Namespace):
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
     )
+
+    timestamp_str = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+    logging.info(f'Starting evaluation with timestamp {timestamp_str}')
 
     # Initialization
     materials = read_materials(os.path.join(args.path, 'material'))
@@ -280,16 +340,25 @@ def main(args: argparse.Namespace):
     # Make sure everything will work out
     validate_references(references, materials, depositions)
 
+    simulators = read_simulators(os.path.join(args.path, 'simulator'))
+    logging.info(f'{len(simulators)} simulators read')
+
+    sim_identifiers = get_sim_identifiers(args.sim)
+
     # Make sure simulation will work properly
-    sim_type, sim_params = prepare_simulator(args.sim, args.sim_params)
+    validate_simulators(sim_identifiers, simulators)
+    for sim_identifier in sim_identifiers:
+        prepare_simulator(simulators[sim_identifier])
 
-    # Prepare output directory
-    if args.dst is None:
-        args.dst = os.path.join('.', datetime.now().strftime('%Y-%m-%d %H-%M-%S') + ' ' + args.sim)
-    prepare_dst(args.dst, args.dry_run)
+    logging.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
+    for sim_identifier in sim_identifiers:
+        # Prepare output directory
+        if args.dst is None:
+            args.dst = os.path.join('.', timestamp_str + ' ' + sim_identifier)
+        prepare_dst(args.dst, args.dry_run)
 
-    # Processing
-    process_data(references, materials, depositions, args.dst, sim_type, sim_params, args.dry_run)
+        # Processing
+        process_data(references, materials, depositions, args.dst, simulators[sim_identifier], args.dry_run)
 
 
 if __name__ == '__main__':
@@ -301,7 +370,6 @@ if __name__ == '__main__':
     parser.add_argument('--src', default='./benchmark', help='Path with reference configuration files')
     parser.add_argument('--dst', default=None, help='Path where results will be stored')
     parser.add_argument('--dry_run', action='store_true', help='Do not write files')
-    parser.add_argument('--sim', help='Which simulator is used to calculate results')
-    parser.add_argument('--sim_params', default=None, help='JSON file with parameters passed to the simulator')
+    parser.add_argument('--sim', nargs='+', help='Which simulator is used to calculate results')
 
     main(parser.parse_args())
