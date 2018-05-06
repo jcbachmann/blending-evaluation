@@ -202,15 +202,15 @@ def validate_simulators(sim_identifiers: List[str], simulators: Dict[str, Simula
 
 
 def prepare_dst(dst: str, dry_run: bool):
-    logging.debug('Preparing destination directory')
+    logging.debug(f'Preparing destination directory "{dst}"')
     if os.path.exists(dst):
         if os.path.isdir(dst):
             if len(os.listdir(dst)) > 0:
-                raise IOError('Destination path is not empty')
+                raise IOError(f'Destination path "{dst}" is not empty')
             else:
-                logging.debug('Destination path already exists and is empty')
+                logging.debug(f'Destination path "{dst}" already exists and is empty')
         else:
-            raise IOError('Destination path is not a directory')
+            raise IOError(f'Destination path "{dst}" is not a directory')
     else:
         logging.debug(f'Creating destination path "{dst}"')
         if not dry_run:
