@@ -11,6 +11,8 @@ from blending_simulator.external_blending_simulator import ExternalBlendingSimul
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
 from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
 from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
+from simulator_benchmark.reference_meta import ReferenceMeta
+from simulator_benchmark.simulator_meta import SimulatorMeta
 
 META_JSON = 'meta.json'
 DATA_CSV = 'data.csv'
@@ -25,108 +27,6 @@ SIMULATOR_TYPE = {
     'external': ExternalBlendingSimulator,
     'ExternalBlendingSimulator': ExternalBlendingSimulator,
 }
-
-
-class ReferenceMeta:
-    """
-    Object managing a reference evaluation - the result of a simulation of a material-deposition combination
-    """
-
-    def __init__(self, identifier: str, path: str, meta_dict: dict):
-        """
-        :param identifier: unique identifier of this reference
-        :param path: directory where meta.json and data for this reference are stored
-        :param meta_dict: dict parsed from json file
-        """
-        self.identifier = identifier
-        self.path = path
-
-        # copy data read from json file
-        self.material = meta_dict['material']
-        self.deposition = meta_dict['deposition']
-        if 'reclaimed_path' in meta_dict and meta_dict['reclaimed_path'] is not None:
-            self.reclaimed_path = meta_dict['reclaimed_path']
-        else:
-            self.reclaimed_path = None
-
-        # original data read from json file and stored in dict
-        self.meta_dict = meta_dict
-
-        # data buffer
-        self.reclaimed_material_meta = None
-
-    def __str__(self) -> str:
-        return self.identifier
-
-    def to_dict(self) -> dict:
-        """
-        Write all relevant meta information about this reference into a dict.
-        :return: dict with relevant meta information about this reference
-        """
-        return {
-            'material': self.material,
-            'deposition': self.deposition,
-            'reclaimed_path': self.reclaimed_path
-        }
-
-    def get_reclaimed_material_meta(self) -> MaterialMeta:
-        if self.reclaimed_material_meta is None:
-            reclaimed_path = os.path.join(self.path, self.reclaimed_path)
-            meta = json.load(open(os.path.join(reclaimed_path, META_JSON)))
-            self.reclaimed_material_meta = MaterialMeta(
-                'reclaimed material for ' + self.identifier,
-                reclaimed_path,
-                meta
-            )
-
-        return self.reclaimed_material_meta
-
-
-class SimulatorMeta:
-    """
-    Object managing a simulator
-    """
-
-    def __init__(self, identifier: str, path: str, meta_dict: dict):
-        """
-        :param identifier: unique identifier of this simulator
-        :param path: directory where meta.json and parameters for this simulator are stored
-        :param meta_dict: dict parsed from json file
-        """
-        self.identifier = identifier
-        self.path = path
-
-        # copy data read from json file
-        self.type = meta_dict['type']
-        self.params = meta_dict['params']
-
-        # original data read from json file and stored in dict
-        self.meta_dict = meta_dict
-
-        # params from params file stored in dict
-        self.params_dict = None
-
-    def __str__(self) -> str:
-        return self.identifier
-
-    def get_type(self):
-        return SIMULATOR_TYPE[self.type]
-
-    def to_dict(self) -> dict:
-        """
-        Write all relevant meta information about this reference into a dict.
-        :return: dict with relevant meta information about this reference
-        """
-        return {
-            'type': self.type,
-            'params': self.params
-        }
-
-    def get_params(self) -> Dict:
-        if self.params_dict is None:
-            self.params_dict = json.load(open(os.path.join(self.path, self.params)))
-
-        return self.params_dict
 
 
 def list_managed_dirs(path: str) -> List[str]:
