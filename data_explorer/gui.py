@@ -96,7 +96,8 @@ class MainWindow(QMainWindow):
             for main_figure in main_figures:
                 add_main_figure(main_figure)
         else:
-            add_main_figure(main_figures)
+            if main_figures is not None:
+                add_main_figure(main_figures)
 
         vertical_splitter = QSplitter(Qt.Horizontal)
 
