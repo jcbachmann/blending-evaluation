@@ -2,7 +2,18 @@ import json
 import os
 from typing import Dict
 
-from simulator_benchmark.evaluate_benchmark_data import SIMULATOR_TYPE
+from blending_simulator.external_blending_simulator import ExternalBlendingSimulator
+from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
+from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
+
+SIMULATOR_TYPE = {
+    'mathematical': MathematicalBlendingSimulator,
+    'MathematicalBlendingSimulator': MathematicalBlendingSimulator,
+    'smooth': SmoothBlendingSimulator,
+    'SmoothBlendingSimulator': SmoothBlendingSimulator,
+    'external': ExternalBlendingSimulator,
+    'ExternalBlendingSimulator': ExternalBlendingSimulator,
+}
 
 
 class SimulatorMeta:

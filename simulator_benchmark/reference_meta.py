@@ -2,7 +2,6 @@ import json
 import os
 
 from blending_simulator.material_deposition import MaterialMeta
-from simulator_benchmark.evaluate_benchmark_data import META_JSON
 
 
 class ReferenceMeta:
@@ -47,10 +46,10 @@ class ReferenceMeta:
             'reclaimed_path': self.reclaimed_path
         }
 
-    def get_reclaimed_material_meta(self) -> MaterialMeta:
+    def get_reclaimed_material_meta(self, meta_json: str) -> MaterialMeta:
         if self.reclaimed_material_meta is None:
             reclaimed_path = os.path.join(self.path, self.reclaimed_path)
-            meta = json.load(open(os.path.join(reclaimed_path, META_JSON)))
+            meta = json.load(open(os.path.join(reclaimed_path, meta_json)))
             self.reclaimed_material_meta = MaterialMeta(
                 'reclaimed material for ' + self.identifier,
                 reclaimed_path,

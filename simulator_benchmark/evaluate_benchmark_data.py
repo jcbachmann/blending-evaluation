@@ -7,26 +7,15 @@ import os
 from datetime import datetime
 from typing import Dict, List
 
-from blending_simulator.external_blending_simulator import ExternalBlendingSimulator
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
-from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
-from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
 from simulator_benchmark.reference_meta import ReferenceMeta
-from simulator_benchmark.simulator_meta import SimulatorMeta
+from simulator_benchmark.simulator_meta import SimulatorMeta, SIMULATOR_TYPE
 
 META_JSON = 'meta.json'
 DATA_CSV = 'data.csv'
 RECLAIMED_MATERIAL_DIR = 'material'
 SIMULATOR_JSON = 'simulator.json'
 SIMULATOR_PARAMS_JSON = 'simulator_params.json'
-SIMULATOR_TYPE = {
-    'mathematical': MathematicalBlendingSimulator,
-    'MathematicalBlendingSimulator': MathematicalBlendingSimulator,
-    'smooth': SmoothBlendingSimulator,
-    'SmoothBlendingSimulator': SmoothBlendingSimulator,
-    'external': ExternalBlendingSimulator,
-    'ExternalBlendingSimulator': ExternalBlendingSimulator,
-}
 
 
 def list_managed_dirs(path: str) -> List[str]:
