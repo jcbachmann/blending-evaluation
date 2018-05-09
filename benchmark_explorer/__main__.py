@@ -2,10 +2,12 @@
 
 import argparse
 import os
+from typing import List
 
 from benchmark_explorer import testlets
 from benchmark_explorer.evaluation import Evaluation
 from data_explorer import app
+from data_explorer.testlet import Testlet
 from simulator_benchmark.evaluate_benchmark_data import read_references, get_identifier
 
 
@@ -19,15 +21,19 @@ def main(args):
     standard = read_evaluation(args.standard)
     evaluations = [read_evaluation(s) for s in args.evaluations]
 
+    static_testlets: List[Testlet] = [
+        testlets.MaterialIdentifierTestlet(),
+        testlets.DepositionIdentifierTestlet()
+    ]
+
+    dynamic_testlets: List[Testlet] = [
+        testlets.CorrelationTestlet(e) for e in evaluations
+    ]
+
     app.execute(
         path=os.path.abspath(args.path),
         entry_list=[s for _, s in standard.references.items()],
-        testlet_list=[
-                         testlets.MaterialIdentifierTestlet(),
-                         testlets.DepositionIdentifierTestlet()
-                     ] + [
-                         testlets.CorrelationTestlet(e) for e in evaluations
-                     ],
+        testlet_list=static_testlets + dynamic_testlets,
         label='Benchmark Explorer',
         verbose=args.verbose
     )
