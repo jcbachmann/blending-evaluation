@@ -5,7 +5,7 @@ import random
 
 from graphviz import Digraph
 
-from plant_simulator.blending_system import BlendingSystem
+from plant_simulator.blending_system.blending_system import BlendingSystem
 from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux, MaterialHandler, \
     MaterialDuplicator
 from plant_simulator.plant import Plant
@@ -38,37 +38,23 @@ class MyDemoPlant(Plant):
         )
 
         duplicator_a = MaterialDuplicator('Duplicator A', MaterialBuffer('Mux Transport A', (mux, 0), steps=1), count=3)
-        blend_a_a = BlendingSystem('A Blending Strategy A', (duplicator_a, 0), strategy='A')
-        blend_a_b = BlendingSystem('A Blending Strategy B', (duplicator_a, 1), strategy='B')
-        # blend_a_a = BlendingSystem('A Blending Simulator Fast', (duplicator_a, 0), simulator='fast')
-        # blend_a_b = BlendingSystem('A Blending Simulator Simple', (duplicator_a, 1), simulator='mathematical')
+        blend_a_chevron_50 = BlendingSystem('Blending Strategy B', (duplicator_a, 1), strategy='Chevron',
+                                            strategy_params={'layers': 50, 'by': 'mass'})
+        blend_a_pile = BlendingSystem('A Blending Strategy A', (duplicator_a, 0), strategy='Pile')
 
-        duplicator_b = MaterialDuplicator('Duplicator B', MaterialBuffer('Mux Transport B', (mux, 1), steps=2), count=3)
-        blend_b_a = BlendingSystem('B Blending Strategy A', (duplicator_b, 0), strategy='A')
-        blend_b_b = BlendingSystem('B Blending Strategy B', (duplicator_b, 1), strategy='B')
-
-        out_a_blend_a = MaterialOut('Out A Blending Strategy A', blend_a_a)
-        out_a_blend_b = MaterialOut('Out A Blending Strategy B', blend_a_b)
-        out_a_no_blend = MaterialOut('Out A No Blending', (duplicator_a, 2))
-
-        out_b_blend_a = MaterialOut('Out B Blending Strategy A', blend_b_a)
-        out_b_blend_b = MaterialOut('Out B Blending Strategy B', blend_b_b)
-        out_b_no_blend = MaterialOut('Out B No Blending', (duplicator_b, 2))
+        out_a_chevron_50 = MaterialOut('Out A Chevron 50', blend_a_chevron_50)
+        out_a_pile = MaterialOut('Out A Pile', blend_a_pile)
+        out_b = MaterialOut('Out B', (mux, 1))
 
         # Specify outs as simulation hooks
         self.material_outs = [
-            out_a_blend_a, out_a_blend_b, out_a_no_blend,
-            out_b_blend_a, out_b_blend_b, out_b_no_blend
+            out_a_chevron_50, out_a_pile, out_b
         ]
 
         if evaluate:
             # Set up sampling at interesting sampling points
-            self.sampler.put('Out A, Strategy A', out_a_blend_a)
-            self.sampler.put('Out A, Strategy B', out_a_blend_b)
-            self.sampler.put('Out A, No Blending', out_a_no_blend)
-            self.sampler.put('Out B, Strategy A', out_b_blend_a)
-            self.sampler.put('Out B, Strategy B', out_b_blend_b)
-            self.sampler.put('Out B, No Blending', out_b_no_blend)
+            self.sampler.put('Chevron 50', out_a_chevron_50)
+            self.sampler.put('Pile', out_a_pile)
 
 
 def main(args):
