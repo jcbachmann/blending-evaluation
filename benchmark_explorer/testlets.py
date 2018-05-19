@@ -19,7 +19,7 @@ def get_correlation(standard_reference: ReferenceMeta, evaluation_reference: Ref
     b = evaluation_material.data.copy()
 
     if len(a.index) != len(b.index):
-        raise ValueError('Index length does not match')
+        raise ValueError('Index length does not match') # TODO
 
     return pearsonr(a['parameter'].values, b['parameter'].values)[0]
 
