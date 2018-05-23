@@ -14,7 +14,7 @@ from plant_simulator.simulated_mine import SimulatedMine
 
 
 class MyDemoPlant(Plant):
-    def __init__(self, evaluate: bool):
+    def __init__(self, evaluate: bool, path: str):
         super().__init__(evaluate, sampler_buffer_size=57600, sample_group_size=1,
                          stats_size=int(2 * 3600 / (Plant.TIME_INCREMENT * 6)), stats_period=1800)
 
@@ -78,7 +78,7 @@ def main(args):
         MaterialHandler.dot = Digraph('material-flow')
         MaterialHandler.dot.attr(rankdir='LR')
 
-    plant = MyDemoPlant(args.evaluate)
+    plant = MyDemoPlant(args.evaluate, args.path)
 
     if args.graph:
         MaterialHandler.dot.render()
@@ -113,5 +113,6 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose logging')
     parser.add_argument('--seed', type=int, default=None, help='Random seed')
     parser.add_argument('--graph', action='store_true', help='Render graph of plant layout to PDF')
+    parser.add_argument('--path', type=str, default='.', help='Path where output data is stored')
 
     main(parser.parse_args())
