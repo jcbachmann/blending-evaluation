@@ -43,7 +43,7 @@ class MyDemoPlant(Plant):
 
         duplicator_a = MaterialDuplicator('Duplicator A',
                                           src=MaterialBuffer('Mux Transport A', src=(mux, 0), steps=1, plant=self),
-                                          count=3, plant=self)
+                                          count=2, plant=self)
         blend_a_chevron_50 = BlendingSystem('Blending Strategy B', src=(duplicator_a, 1), strategy='Chevron',
                                             strategy_params={'layers': 50, 'by': 'mass'}, plant=self)
         blend_a_pile = BlendingSystem('A Blending Strategy A', src=(duplicator_a, 0), strategy='Pile', plant=self)
