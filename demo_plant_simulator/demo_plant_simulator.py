@@ -6,6 +6,7 @@ import random
 from graphviz import Digraph
 
 from plant_simulator.blending_system.blending_system import BlendingSystem
+from plant_simulator.material_dumper import MaterialDumper
 from plant_simulator.material_handler import MaterialBuffer, MaterialOut, MaterialMux, MaterialHandler, \
     MaterialDuplicator
 from plant_simulator.plant import Plant
@@ -41,8 +42,11 @@ class MyDemoPlant(Plant):
             plant=self
         )
 
+        mux_a = MaterialDumper('A Before Blending', src=(mux, 0), path=path, plant=self)
+        mux_b = MaterialDumper('B Before Blending', src=(mux, 1), path=path, plant=self)
+
         duplicator_a = MaterialDuplicator('Duplicator A',
-                                          src=MaterialBuffer('Mux Transport A', src=(mux, 0), steps=1, plant=self),
+                                          src=MaterialBuffer('Mux Transport A', src=mux_a, steps=1, plant=self),
                                           count=2, plant=self)
         blend_a_chevron_50 = BlendingSystem('Blending Strategy B', src=(duplicator_a, 1), strategy='Chevron',
                                             strategy_params={'layers': 50, 'by': 'mass'}, plant=self)
@@ -50,7 +54,7 @@ class MyDemoPlant(Plant):
 
         out_a_chevron_50 = MaterialOut('Out A Chevron 50', src=blend_a_chevron_50, plant=self)
         out_a_pile = MaterialOut('Out A Pile', src=blend_a_pile, plant=self)
-        out_b = MaterialOut('Out B', src=(mux, 1), plant=self)
+        out_b = MaterialOut('Out B', src=mux_b, plant=self)
 
         # Specify outs as simulation hooks
         self.material_outs = [
