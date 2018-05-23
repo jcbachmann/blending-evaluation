@@ -9,8 +9,9 @@ import numpy as np
 class MaterialHandler:
     dot = None
 
-    def __init__(self, label: str, shape=None):
+    def __init__(self, label: str, plant, shape=None):
         self.label = label
+        self.plant = plant
         if MaterialHandler.dot is not None:
             MaterialHandler.dot.attr('node', shape=shape if shape else 'ellipse')
             MaterialHandler.dot.node(label, label)
@@ -39,8 +40,8 @@ class MaterialHandler:
 
 
 class MaterialSource(MaterialHandler):
-    def __init__(self, label: str):
-        super().__init__(label, 'doublecircle')
+    def __init__(self, label: str, plant):
+        super().__init__(label, plant, 'doublecircle')
 
     def sample(self):
         pass
@@ -50,8 +51,8 @@ class MaterialSource(MaterialHandler):
 
 
 class MaterialBuffer(MaterialHandler):
-    def __init__(self, label, src, steps: int):
-        super().__init__(label + ' [' + str(steps) + ']', 'cds')
+    def __init__(self, label, plant, src, steps: int):
+        super().__init__(label + ' [' + str(steps) + ']', plant, 'cds')
         self.src_gen = self.unpack_src_gen(src)
         self.buffer = queue.Queue()
         for _ in range(steps):
@@ -73,8 +74,8 @@ class MaterialBuffer(MaterialHandler):
 
 
 class MaterialJoiner(MaterialHandler):
-    def __init__(self, label, src_x):
-        super().__init__(label, 'trapezium')
+    def __init__(self, label, plant, src_x):
+        super().__init__(label, plant, 'trapezium')
         self.src_gens = self.unpack_src_gen(src_x)
         self._sample = (0, 0)
 
@@ -92,8 +93,8 @@ class MaterialJoiner(MaterialHandler):
 
 
 class MaterialSplitter(MaterialHandler):
-    def __init__(self, label, src, weights):
-        super().__init__(label, 'invtrapezium')
+    def __init__(self, label, plant, src, weights):
+        super().__init__(label, plant, 'invtrapezium')
         self.src_gen = self.unpack_src_gen(src)
         self.weights = weights
         self.buffer = [queue.Queue() for _ in range(len(weights))]
@@ -118,8 +119,8 @@ class MaterialSplitter(MaterialHandler):
 
 
 class MaterialMux(MaterialHandler):
-    def __init__(self, label: str, src_x, weight_matrix, flip_probability: float = 0):
-        super().__init__(label, 'pentagon')
+    def __init__(self, label: str, plant, src_x, weight_matrix, flip_probability: float = 0):
+        super().__init__(label, plant, 'pentagon')
         self.src_gens = self.unpack_src_gen(src_x)
         self.weight_matrix = weight_matrix
         self.flip_probability = flip_probability
@@ -156,8 +157,8 @@ class MaterialMux(MaterialHandler):
 
 
 class MaterialDuplicator(MaterialHandler):
-    def __init__(self, label, src, count):
-        super().__init__(label, 'Mdiamond')
+    def __init__(self, label, plant, src, count):
+        super().__init__(label, plant, 'Mdiamond')
         self.src_gen = self.unpack_src_gen(src)
         self.buffer = [queue.Queue() for _ in range(count)]
         self._sample = [(0, 0)] * count
@@ -182,8 +183,8 @@ class MaterialDuplicator(MaterialHandler):
 
 
 class MaterialOut(MaterialHandler):
-    def __init__(self, label, src):
-        super().__init__(label, 'doubleoctagon')
+    def __init__(self, label, plant, src):
+        super().__init__(label, plant, 'doubleoctagon')
         self.src_gen = self.unpack_src_gen(src)
         self._sample = (0, 0)
 

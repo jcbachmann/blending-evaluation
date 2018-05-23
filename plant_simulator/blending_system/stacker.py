@@ -14,16 +14,15 @@ class Stacker:
         self.strategy = DEPOSITION_STRATEGIES[strategy](**strategy_params)
         self.last_pos = None
 
-    def stack(self, tons, q):
-        timestamp = 0  # TODO
-        new_pos = self.strategy.get_pos(timestamp, self.stockpile)
+    def stack(self, time, tons, q):
+        new_pos = self.strategy.get_pos(time, self.stockpile)
         if self.last_pos is not None:
             dx = new_pos[0] - self.last_pos[0]
             dz = new_pos[1] - self.last_pos[1]
             speed = math.sqrt(dx * dx + dz * dz) / Plant.TIME_INCREMENT
             if speed > self.max_speed:
                 raise ValueError(f'Stacker speed too high: {speed:.2f} > {self.max_speed:.2f}')
-        self.stockpile.stack(timestamp, new_pos[0], new_pos[1], tons, q)
+        self.stockpile.stack(time, new_pos[0], new_pos[1], tons, q)
         self.last_pos = new_pos
 
     def stacking_finished(self):

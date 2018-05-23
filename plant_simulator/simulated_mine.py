@@ -5,8 +5,8 @@ from .material_handler import MaterialSource
 
 
 class SimulatedMine(MaterialSource):
-    def __init__(self, label, max_tph, availability, q_min, q_exp, q_max):
-        super().__init__(label)
+    def __init__(self, label, plant, max_tph, availability, q_min, q_exp, q_max):
+        super().__init__(label, plant)
 
         self.max_tph = max_tph
         self.availability = availability

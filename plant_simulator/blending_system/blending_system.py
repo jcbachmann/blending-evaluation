@@ -8,10 +8,10 @@ from .stockpile import Stockpile
 
 
 class BlendingSystem(MaterialHandler):
-    def __init__(self, label, src, length: float = 600, depth: float = 50, max_stacker_speed: float = 0.5,
+    def __init__(self, label, plant, src, length: float = 600, depth: float = 50, max_stacker_speed: float = 0.5,
                  max_reclaimer_speed: float = 0.005, strategy: str = 'A', strategy_params=None,
                  simulator: str = 'fast'):
-        super().__init__(label, 'cylinder')
+        super().__init__(label, plant, 'cylinder')
 
         self.src_gen = self.unpack_src_gen(src)
         self._sample = (0, 0)
@@ -37,7 +37,7 @@ class BlendingSystem(MaterialHandler):
             self.stacker.stockpile = Stockpile(length=0.5 * self.length, depth=self.depth, simulator=self.simulator)
             self.stacker.last_pos = None
 
-        self.stacker.stack(tph * Plant.TIME_INCREMENT / 3600, q)
+        self.stacker.stack(self.plant.time, tph * Plant.TIME_INCREMENT / 3600, q)
         tons, q = self.reclaimer.reclaim()
         return tons * 3600 / Plant.TIME_INCREMENT, q
 
