@@ -26,14 +26,17 @@ class MaterialHandler:
 
     def unpack_src_gen(self, src):
         if isinstance(src, MaterialHandler):
-            MaterialHandler.dot.edge(src.label, self.label)
+            if MaterialHandler.dot is not None:
+                MaterialHandler.dot.edge(src.label, self.label)
             return src.gen()
         elif isinstance(src, tuple):
-            MaterialHandler.dot.edge(src[0].label, self.label)
+            if MaterialHandler.dot is not None:
+                MaterialHandler.dot.edge(src[0].label, self.label)
             return src[0].gen(src[1])
         elif isinstance(src, list):
-            for s in src:
-                MaterialHandler.dot.edge((s if isinstance(s, MaterialHandler) else s[0]).label, self.label)
+            if MaterialHandler.dot is not None:
+                for s in src:
+                    MaterialHandler.dot.edge((s if isinstance(s, MaterialHandler) else s[0]).label, self.label)
             return [(s.gen() if isinstance(s, MaterialHandler) else s[0]) for s in src]
         else:
             raise Exception('Invalid source type passed to MaterialHandler.unpack')

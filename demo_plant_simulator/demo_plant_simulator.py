@@ -74,10 +74,14 @@ def main(args):
         logging.info(f'Setting random seed to {args.seed}')
         random.seed(args.seed)
 
-    MaterialHandler.dot = Digraph('material-flow')
-    MaterialHandler.dot.attr(rankdir='LR')
+    if args.graph:
+        MaterialHandler.dot = Digraph('material-flow')
+        MaterialHandler.dot.attr(rankdir='LR')
+
     plant = MyDemoPlant(args.evaluate)
-    MaterialHandler.dot.render()
+
+    if args.graph:
+        MaterialHandler.dot.render()
 
     if args.evaluate:
         logging.info('Starting background plot server')
@@ -108,5 +112,6 @@ if __name__ == '__main__':
     parser.add_argument('--evaluate', action='store_true', help='Evaluate material sampling')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose logging')
     parser.add_argument('--seed', type=int, default=None, help='Random seed')
+    parser.add_argument('--graph', action='store_true', help='Render graph of plant layout to PDF')
 
     main(parser.parse_args())
