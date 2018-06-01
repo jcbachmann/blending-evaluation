@@ -87,13 +87,32 @@ def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: S
     # TODO v3 Store prediction
 
     # Compute deposition
-    deposition = compute_deposition(identifier, material_meta)
+    deposition_meta = compute_deposition(identifier, material_meta)
 
     # Process material with computed deposition and selected simulator
-    core.process(identifier, material_meta, deposition, simulator_meta, dst, dry_run, computed_deposition=True)
+    core.process(identifier, material_meta, deposition_meta, simulator_meta, dst, dry_run, computed_deposition=True)
 
     # Write material deposition
-    # TODO
+    deposition_directory = os.path.join(dst, identifier, core.COMPUTED_DEPOSITION_DIR)
+
+    logging.debug(f'Creating directory "{deposition_directory}"')
+    if not dry_run:
+        os.mkdir(deposition_directory)
+
+    deposition_meta_file = os.path.join(deposition_directory, BenchmarkData.META_JSON)
+    logging.debug(f'Writing reclaimed material meta to "{deposition_meta_file}"')
+    if not dry_run:
+        json.dump(
+            deposition_meta.to_dict(),
+            open(deposition_meta_file, 'w'),
+            indent=4
+        )
+
+    deposition = deposition_meta.get_deposition()
+    data_file = os.path.join(deposition_directory, core.DATA_CSV)
+    logging.debug(f'Writing material data to "{data_file}"')
+    if not dry_run:
+        deposition.data.to_csv(data_file, sep='\t', index=False)
 
 
 def main(args: argparse.Namespace):

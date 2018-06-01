@@ -171,6 +171,18 @@ class DepositionMeta:
 
         return self.data
 
+    def to_dict(self):
+        return {
+            'label': self.label,
+            'description': self.description,
+            'category': self.category,
+            'time': self.time,
+            'data': self.data_file,
+            'bed_size_x': self.bed_size_x,
+            'bed_size_z': self.bed_size_z,
+            'reclaim_x_per_s': self.reclaim_x_per_s
+        }
+
 
 class MaterialDeposition:
     """
