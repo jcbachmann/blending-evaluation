@@ -3,7 +3,7 @@ import logging
 import os
 
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
-from .core import Benchmark
+from .data import BenchmarkData
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
 
@@ -81,7 +81,7 @@ def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta,
         'reclaimed_path': RECLAIMED_MATERIAL_DIR
     })
 
-    meta_file = os.path.join(directory, Benchmark.META_JSON)
+    meta_file = os.path.join(directory, BenchmarkData.META_JSON)
     logging.debug(f'Writing reference meta to "{meta_file}"')
     if not dry_run:
         json.dump(
@@ -104,7 +104,7 @@ def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta,
     if not dry_run:
         os.mkdir(reclaimed_material_path)
 
-    reclaimed_material_meta_file = os.path.join(reclaimed_material_path, Benchmark.META_JSON)
+    reclaimed_material_meta_file = os.path.join(reclaimed_material_path, BenchmarkData.META_JSON)
     logging.debug(f'Writing reclaimed material meta to "{reclaimed_material_meta_file}"')
     if not dry_run:
         json.dump(

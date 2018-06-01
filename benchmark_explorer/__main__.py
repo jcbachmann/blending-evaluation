@@ -4,7 +4,7 @@ import argparse
 import os
 from typing import List
 
-from benchmark.core import Benchmark
+from benchmark.data import BenchmarkData
 from benchmark.helpers import get_identifier
 from benchmark_explorer import testlets
 from benchmark_explorer.evaluation import Evaluation
@@ -14,7 +14,7 @@ from data_explorer.testlet import Testlet
 
 def read_evaluation(evaluation_path: str) -> Evaluation:
     evaluation = Evaluation(get_identifier(evaluation_path), evaluation_path)
-    evaluation.references = Benchmark.read_references(evaluation_path)
+    evaluation.references = BenchmarkData.read_references(evaluation_path)
     return evaluation
 
 

@@ -8,14 +8,14 @@ from datetime import datetime
 from typing import Dict
 
 from benchmark import helpers
-from benchmark.core import Benchmark
+from benchmark.data import BenchmarkData
 from benchmark.processing import prepare_simulator, prepare_dst, SIMULATOR_JSON, process
 from benchmark.reference_meta import ReferenceMeta
 
 
-def process_data(benchmark: Benchmark, references: Dict[str, ReferenceMeta], dst: str, sim_identifier: str,
+def process_data(benchmark_data: BenchmarkData, references: Dict[str, ReferenceMeta], dst: str, sim_identifier: str,
                  dry_run: bool):
-    simulator_meta = benchmark.simulators[sim_identifier]
+    simulator_meta = benchmark_data.simulators[sim_identifier]
     logging.info(f'Processing data with simulator "{simulator_meta.type}"')
 
     logging.debug('Writing simulator type and parameters to destination directory')
@@ -25,8 +25,8 @@ def process_data(benchmark: Benchmark, references: Dict[str, ReferenceMeta], dst
     for _, reference in references.items():
         process(
             reference.identifier,
-            benchmark.materials[reference.material],
-            benchmark.depositions[reference.deposition],
+            benchmark_data.materials[reference.material],
+            benchmark_data.depositions[reference.deposition],
             simulator_meta,
             dst,
             dry_run,
@@ -46,20 +46,20 @@ def main(args: argparse.Namespace):
     logging.info(f'Starting evaluation with timestamp {timestamp_str}')
 
     # Initialization
-    benchmark = Benchmark()
-    benchmark.read_base(args.path)
-    references = Benchmark.read_references(args.src)
+    benchmark_data = BenchmarkData()
+    benchmark_data.read_base(args.path)
+    references = BenchmarkData.read_references(args.src)
 
     # Make sure everything will work out
-    benchmark.validate_references(references)
+    benchmark_data.validate_references(references)
 
     # Parse simulator identifiers (strip away everything but the part after the last slash)
     sim_identifiers = helpers.get_identifiers(args.sim)
 
     # Make sure simulation will work properly
-    benchmark.validate_simulators(sim_identifiers)
+    benchmark_data.validate_simulators(sim_identifiers)
     for sim_identifier in sim_identifiers:
-        prepare_simulator(benchmark.simulators[sim_identifier])
+        prepare_simulator(benchmark_data.simulators[sim_identifier])
 
     logging.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
     for sim_identifier in sim_identifiers:
@@ -68,7 +68,7 @@ def main(args: argparse.Namespace):
         prepare_dst(dst, args.dry_run)
 
         # Processing
-        process_data(benchmark, references, dst, sim_identifier, args.dry_run)
+        process_data(benchmark_data, references, dst, sim_identifier, args.dry_run)
 
 
 if __name__ == '__main__':
