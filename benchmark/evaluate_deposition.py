@@ -12,6 +12,7 @@ import pandas as pd
 from benchmark import core, helpers
 from benchmark.data import BenchmarkData
 from benchmark.simulator_meta import SimulatorMeta
+from blending_optimization.optimize_stacker_path import optimize
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, Deposition
 
 
@@ -37,8 +38,50 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
     deposition.label = f'{identifier} - Chevron {chevron_layers} layers'
 
 
+def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition: DepositionMeta,
+                             chevron_layers: int, starting_side: int = 0) -> None:
+    """
+    Optimize the deposition regarding the material information provided
+    :param identifier: identifier of this deposition computation
+    :param material_meta: material description to current knowledge which will be stacked
+    :param deposition: deposition meta to which the deposition data will be added
+    :param chevron_layers: amount of layers for Chevron stacking for speed determination
+    :param starting_side: set 0 for same side as reclaimer or 1 for opposite side
+    """
+    material = material_meta.get_material()
+
+    optimization_material = pd.DataFrame({
+        'timestamp': material.data['timestamp'],
+        'volume': material.data['volume'],
+        'p_1': material.data[material.get_parameter_columns()[0]]
+    })
+
+    # TODO use same simulator?
+    optimization_result, problem = optimize(
+        length=deposition.bed_size_x,
+        depth=deposition.bed_size_z,
+        variables=chevron_layers + 1,
+        material=optimization_material,
+        population_size=10,
+        max_evaluations=250
+    )
+
+    result_population = optimization_result.result_population
+    result_population.sort(key=lambda s: s.objectives[0])
+    chosen_solution = result_population[5]
+
+    core_length = deposition.bed_size_x - deposition.bed_size_z
+
+    deposition_data = pd.DataFrame({
+        'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
+        'x': [0.5 * deposition.bed_size_z + core_length * p for p in chosen_solution.variables],
+        'z': [0.5 * deposition.bed_size_z] * (chevron_layers + 1),
+    })
+    deposition.data = Deposition(data=deposition_data, meta=deposition)
+    deposition.label = f'{identifier} - Chevron {chevron_layers} layers'
+
+
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
-    # TODO v2 Optimized deposition based on full knowledge - only one optimization before stacking
     # TODO v3 Optimized deposition based on prediction - only one optimization before stacking
     # TODO v4 Optimized deposition based on prediction - optimize every 5 simulation minutes
 
@@ -70,7 +113,7 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     })
 
     # Currently fixed amount of layers for Chevron stacking
-    set_chevron_deposition(identifier, material_meta, deposition, chevron_layers=60)
+    set_optimized_deposition(identifier, material_meta, deposition, chevron_layers=60)
 
     return deposition
 
