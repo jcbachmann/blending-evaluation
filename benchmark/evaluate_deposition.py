@@ -1,0 +1,134 @@
+#!/usr/bin/env python
+
+import argparse
+import json
+import logging
+import math
+import os
+from datetime import datetime
+
+import pandas as pd
+
+from benchmark import core, helpers
+from benchmark.data import BenchmarkData
+from benchmark.simulator_meta import SimulatorMeta
+from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, Deposition
+
+
+def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
+    # TODO v1 Chevron deposition with fixed amount of layers
+    # TODO v2 Optimized deposition based on full knowledge - only one optimization before stacking
+    # TODO v3 Optimized deposition based on prediction - only one optimization before stacking
+    # TODO v4 Optimized deposition based on prediction - optimize every 5 simulation minutes
+
+    # Assumptions:
+    # - maximum stockpile height 20m
+    # - angle of repose: 45 degrees
+    max_stockpile_height = 20
+
+    # To allow flexibility for optimization the required space is overestimated by 25%
+    max_volume = material_meta.volume * 1.25
+
+    # Compute the core length of the stockpile by matching the maximum volume with the cone + core volume
+    core_length = (max_volume - math.pi * math.pow(max_stockpile_height, 3) / 3) / math.pow(max_stockpile_height, 2)
+    bed_size_x = core_length + 2 * max_stockpile_height
+    bed_size_z = 2 * max_stockpile_height
+
+    # Use as much time for reclaiming, as for stacking
+    reclaim_x_per_s = bed_size_x / material_meta.time
+
+    deposition = DepositionMeta(identifier, path='', meta_dict={
+        'label': f'Computed {identifier}',
+        'description': f'Computed deposition for {identifier}',
+        'category': 'computed',
+        'time': material_meta.time,
+        'data': core.DATA_CSV,
+        'bed_size_x': bed_size_x,
+        'bed_size_z': bed_size_z,
+        'reclaim_x_per_s': reclaim_x_per_s
+    })
+
+    deposition_data = pd.DataFrame({
+        'timestamp': [0],
+        'x': [0.5 * bed_size_x],
+        'z': [0.5 * bed_size_z],
+    })
+    deposition.data = Deposition(data=deposition_data, meta=deposition)
+
+    return deposition
+
+
+def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: SimulatorMeta, dst: str, dry_run: bool):
+    logging.info(f'Processing data with simulator "{simulator_meta.type}"')
+
+    logging.debug('Writing simulator type and parameters to destination directory')
+    if not dry_run:
+        json.dump({'simulator': str(simulator_meta)}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
+
+    # Determine prediction from material curve
+    # TODO v3 Determine prediction from material curve
+    # TODO v3 Store prediction
+
+    # Compute deposition
+    deposition = compute_deposition(identifier, material_meta)
+
+    # Process material with computed deposition and selected simulator
+    core.process(identifier, material_meta, deposition, simulator_meta, dst, dry_run, computed_deposition=True)
+
+    # Write material deposition
+    # TODO
+
+
+def main(args: argparse.Namespace):
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
+    )
+
+    timestamp_str = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+    logging.info(f'Starting evaluation with timestamp {timestamp_str}')
+
+    # Initialization
+    benchmark = BenchmarkData()
+    benchmark.read_base(args.path)
+
+    # Parse and validate material
+    material_identifier = helpers.get_identifier(args.material)
+    benchmark.validate_material(material_identifier)
+    material_meta = benchmark.materials[material_identifier]
+
+    # Parse and validate simulator
+    sim_identifier = helpers.get_identifier(args.sim)
+    benchmark.validate_simulator(sim_identifier)
+    simulator_meta = benchmark.simulators[sim_identifier]
+    core.prepare_simulator(simulator_meta)
+
+    # Prepare output directory
+    identifier = f'{timestamp_str} {material_identifier} {sim_identifier}'
+    dst = os.path.join(args.dst, identifier)
+    core.prepare_dst(dst, args.dry_run)
+
+    # Processing
+    process_data(
+        identifier=identifier,
+        material_meta=material_meta,
+        simulator_meta=simulator_meta,
+        dst=dst,
+        dry_run=args.dry_run
+    )
+
+    logging.info('Processing finished')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Determine deposition and evaluate data for a given material curve'
+    )
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
+    parser.add_argument('--path', default='.', help='Simulator benchmark path')
+    parser.add_argument('--dst', default='.', help='Path where results will be stored')
+    parser.add_argument('--dry_run', action='store_true', help='Do not write files')
+    parser.add_argument('--sim', type=str, required=True, help='Simulator identifier')
+    parser.add_argument('--material', type=str, required=True, help='Material curve identifier')
+
+    main(parser.parse_args())
