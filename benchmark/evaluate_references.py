@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Dict
 
 from benchmark import helpers
-from benchmark.benchmark import Benchmark
+from benchmark.core import Benchmark
 from benchmark.processing import prepare_simulator, prepare_dst, SIMULATOR_JSON, process
 from benchmark.reference_meta import ReferenceMeta
 

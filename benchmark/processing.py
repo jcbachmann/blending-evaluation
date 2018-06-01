@@ -2,10 +2,10 @@ import json
 import logging
 import os
 
-from benchmark.benchmark import Benchmark
-from benchmark.reference_meta import ReferenceMeta
-from benchmark.simulator_meta import SimulatorMeta
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
+from .core import Benchmark
+from .reference_meta import ReferenceMeta
+from .simulator_meta import SimulatorMeta
 
 DATA_CSV = 'data.csv'
 RECLAIMED_MATERIAL_DIR = 'material'

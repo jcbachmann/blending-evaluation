@@ -4,7 +4,7 @@ import argparse
 import os
 from typing import List
 
-from benchmark.benchmark import Benchmark
+from benchmark.core import Benchmark
 from benchmark.helpers import get_identifier
 from benchmark_explorer import testlets
 from benchmark_explorer.evaluation import Evaluation
