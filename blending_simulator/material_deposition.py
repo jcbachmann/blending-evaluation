@@ -116,8 +116,14 @@ class Deposition:
 
     REQUIRED_COLUMNS = ['timestamp', 'x', 'z']
 
-    def __init__(self, data_file: str, meta):
-        self.data = read_data_file(data_file)
+    def __init__(self, meta, data_file: str = None, data=None):
+        if data_file is not None:
+            self.data = read_data_file(data_file)
+        elif data is not None:
+            self.data = data
+        else:
+            raise ValueError('Deposition requires data_file or data to be not None')
+
         check_required_columns(self.data, Deposition.REQUIRED_COLUMNS)
         self.meta = meta
 
@@ -161,7 +167,7 @@ class DepositionMeta:
         :return: Deposition object containing data for this deposition
         """
         if self.data is None:
-            self.data = Deposition(os.path.join(self.path, self.data_file), meta=self)
+            self.data = Deposition(data_file=os.path.join(self.path, self.data_file), meta=self)
 
         return self.data
 
