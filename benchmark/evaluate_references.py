@@ -19,11 +19,11 @@ def process_data(benchmark_data: BenchmarkData, references: Dict[str, ReferenceM
 
     logging.debug('Writing simulator type and parameters to destination directory')
     if not dry_run:
-        json.dump({'simulator': simulator_meta.identifier}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
+        json.dump({'simulator': str(simulator_meta)}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
 
     for _, reference in references.items():
         core.process(
-            reference.identifier,
+            str(reference),
             benchmark_data.materials[reference.material],
             benchmark_data.depositions[reference.deposition],
             simulator_meta,
