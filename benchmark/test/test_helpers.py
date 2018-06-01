@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-from simulator_benchmark.helpers import get_identifier, get_identifiers
+from benchmark.helpers import get_identifier, get_identifiers
 
 
 class TestHelpers(unittest.TestCase):

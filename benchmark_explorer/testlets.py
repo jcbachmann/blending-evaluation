@@ -5,7 +5,7 @@ from scipy.stats import pearsonr
 from benchmark_explorer.evaluation import Evaluation
 from data_explorer.rating import RaterColorScale, Rater
 from data_explorer.testlet import Testlet
-from simulator_benchmark.reference_meta import ReferenceMeta
+from benchmark.reference_meta import ReferenceMeta
 
 
 def red_to_green(p):

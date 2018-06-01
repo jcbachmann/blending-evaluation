@@ -8,7 +8,7 @@ from benchmark_explorer import testlets
 from benchmark_explorer.evaluation import Evaluation
 from data_explorer import app
 from data_explorer.testlet import Testlet
-from simulator_benchmark.evaluate_benchmark_data import read_references, get_identifier
+from benchmark.evaluate_benchmark_data import read_references, get_identifier
 
 
 def read_evaluation(evaluation_path: str) -> Evaluation:

@@ -7,11 +7,11 @@ import os
 from datetime import datetime
 from typing import Dict
 
+from benchmark import helpers
+from benchmark.benchmark import Benchmark
+from benchmark.reference_meta import ReferenceMeta
+from benchmark.simulator_meta import SimulatorMeta
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
-from simulator_benchmark import helpers
-from simulator_benchmark.benchmark import Benchmark
-from simulator_benchmark.reference_meta import ReferenceMeta
-from simulator_benchmark.simulator_meta import SimulatorMeta
 
 DATA_CSV = 'data.csv'
 RECLAIMED_MATERIAL_DIR = 'material'
