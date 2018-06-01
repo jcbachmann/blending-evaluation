@@ -8,23 +8,15 @@ from datetime import datetime
 from typing import Dict
 
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
-from .benchmark import Benchmark
-from .reference_meta import ReferenceMeta
-from .simulator_meta import SimulatorMeta
+from simulator_benchmark import helpers
+from simulator_benchmark.benchmark import Benchmark
+from simulator_benchmark.reference_meta import ReferenceMeta
+from simulator_benchmark.simulator_meta import SimulatorMeta
 
 DATA_CSV = 'data.csv'
 RECLAIMED_MATERIAL_DIR = 'material'
 SIMULATOR_JSON = 'simulator.json'
 SIMULATOR_PARAMS_JSON = 'simulator_params.json'
-
-
-def get_identifier(i: str):
-    # Split by slashes and get last non-empty
-    return [s for s in i.split(os.path.sep) if s][-1]
-
-
-def get_sim_identifiers(sim_args: str):
-    return [get_identifier(sim_arg) for sim_arg in sim_args]
 
 
 def prepare_dst(dst: str, dry_run: bool):
@@ -169,7 +161,7 @@ def main(args: argparse.Namespace):
     benchmark.validate_references(references)
 
     # Parse simulator identifiers (strip away everything but the part after the last slash)
-    sim_identifiers = get_sim_identifiers(args.sim)
+    sim_identifiers = helpers.get_identifiers(args.sim)
 
     # Make sure simulation will work properly
     benchmark.validate_simulators(sim_identifiers)

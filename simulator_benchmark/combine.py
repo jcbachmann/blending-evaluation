@@ -5,12 +5,9 @@ import json
 import logging
 import os
 
+from .helpers import get_identifier
+
 META_JSON = 'meta.json'
-
-
-def get_identifier(i: str):
-    # Split by slashes and get last non-empty
-    return [s for s in i.split(os.path.sep) if s][-1]
 
 
 def add_combination(material: str, deposition: str, dst: str):
