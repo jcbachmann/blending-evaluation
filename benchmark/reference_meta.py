@@ -23,6 +23,10 @@ class ReferenceMeta:
         # copy data read from json file
         self.material = meta_dict['material']
         self.deposition = meta_dict['deposition']
+        if 'deposition_path' in meta_dict and meta_dict['deposition_path'] is not None:
+            self.deposition_path = meta_dict['deposition_path']
+        else:
+            self.deposition_path = None
         if 'reclaimed_path' in meta_dict and meta_dict['reclaimed_path'] is not None:
             self.reclaimed_path = meta_dict['reclaimed_path']
         else:
@@ -45,6 +49,7 @@ class ReferenceMeta:
         return {
             'material': self.material,
             'deposition': self.deposition,
+            'deposition_path': self.deposition_path,
             'reclaimed_path': self.reclaimed_path
         }
 
