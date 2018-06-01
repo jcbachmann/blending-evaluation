@@ -7,7 +7,7 @@ from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
-from blending_simulator.stacker import read_material, stack_with_printer
+from blending_simulator.stacker.stacker import stack_with_printer, read_material
 from ciglobal.cimath import weighted_avg_and_std, stdev
 
 
