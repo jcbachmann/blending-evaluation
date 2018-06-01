@@ -77,7 +77,7 @@ class Benchmark:
         if self.simulators[sim_identifier].type not in SIMULATOR_TYPE:
             raise ValueError(
                 f'Simulator type "{self.simulators[sim_identifier]}" not found for identifier "{sim_identifier}"')
-        logging.info(f'Simulators identifier "{sim_identifier}" validated')
+        logging.info(f'Simulator identifier "{sim_identifier}" validated')
 
     def validate_material(self, material_identifier: str):
         logging.debug(f'Validating material identifier "{material_identifier}"')
