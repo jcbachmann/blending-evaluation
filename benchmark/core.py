@@ -3,6 +3,7 @@ import logging
 import os
 
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
+from ciglobal import cimath
 from .data import BenchmarkData
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
@@ -49,6 +50,35 @@ def prepare_dst(dst: str, dry_run: bool):
         logging.debug(f'Creating destination path "{dst}"')
         if not dry_run:
             os.makedirs(dst)
+
+
+def compute_sigma(material_meta: MaterialMeta):
+    logging.debug(f'Computing standard deviation sigma for material parameters of "{material_meta}"')
+
+    material = material_meta.get_material()
+    parameter_columns = material.get_parameter_columns()
+    sigmas = {}
+
+    for parameter_column in parameter_columns:
+        mean, sigma = cimath.weighted_avg_and_std(
+            values=material.data[parameter_column].values,
+            weights=material.data['volume'].values
+        )
+
+        logging.debug(f'{material_meta} - {parameter_column}: sigma = {sigma}')
+        sigmas[parameter_column] = sigma
+
+    return sigmas
+
+
+def compute_sigma_reduction(material_before: MaterialMeta, material_after: MaterialMeta):
+    sigmas_before = compute_sigma(material_before)
+    sigmas_after = compute_sigma(material_after)
+
+    logging.info(f'Sigma reduction ratios for "{material_before}" -> "{material_after}":')
+    for parameter, sigma_before in sigmas_before.items():
+        reduction = sigma_before / sigmas_after[parameter]
+        logging.info(f'{parameter}\t1:{reduction:.2f}')
 
 
 def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta, simulator_meta: SimulatorMeta,
@@ -99,6 +129,7 @@ def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta,
         'volume': reclaimed_material.data.volume.sum(),
         'data': DATA_CSV
     })
+    reclaimed_material_meta.data = reclaimed_material
 
     logging.debug(f'Creating directory "{reclaimed_material_path}"')
     if not dry_run:
@@ -117,3 +148,5 @@ def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta,
     logging.debug(f'Writing material data to "{data_file}"')
     if not dry_run:
         reclaimed_material.data.to_csv(data_file, sep='\t', index=False)
+
+    compute_sigma_reduction(material, reclaimed_material_meta)
