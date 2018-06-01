@@ -113,7 +113,7 @@ def main(args: argparse.Namespace):
     # Initialization
     benchmark = Benchmark()
     benchmark.read_base(args.path)
-    references = benchmark.read_references(args.src)
+    references = Benchmark.read_references(args.src)
 
     # Make sure everything will work out
     benchmark.validate_references(references)
