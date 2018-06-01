@@ -62,12 +62,28 @@ class Benchmark:
     def validate_simulators(self, sim_identifiers: List[str]):
         logging.debug('Validating simulators')
         for sim_identifier in sim_identifiers:
+            logging.debug(f'Validating simulator identifier "{sim_identifier}"')
             if sim_identifier not in self.simulators:
                 raise ValueError(f'Simulator identifier "{sim_identifier}" not found in simulators')
             if self.simulators[sim_identifier].type not in SIMULATOR_TYPE:
                 raise ValueError(
                     f'Simulator type "{self.simulators[sim_identifier]}" not found for identifier "{sim_identifier}"')
         logging.info('Simulators validated')
+
+    def validate_simulator(self, sim_identifier: str):
+        logging.debug(f'Validating simulator identifier "{sim_identifier}"')
+        if sim_identifier not in self.simulators:
+            raise ValueError(f'Simulator identifier "{sim_identifier}" not found in simulators')
+        if self.simulators[sim_identifier].type not in SIMULATOR_TYPE:
+            raise ValueError(
+                f'Simulator type "{self.simulators[sim_identifier]}" not found for identifier "{sim_identifier}"')
+        logging.info(f'Simulators identifier "{sim_identifier}" validated')
+
+    def validate_material(self, material_identifier: str):
+        logging.debug(f'Validating material identifier "{material_identifier}"')
+        if material_identifier not in self.materials:
+            raise ValueError(f'Material "{material_identifier}" not found in materials')
+        logging.info(f'Material identifier "{material_identifier}" validated')
 
     @staticmethod
     def list_managed_dirs(path: str) -> List[str]:
