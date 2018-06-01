@@ -7,9 +7,8 @@ import os
 from datetime import datetime
 from typing import Dict
 
-from benchmark import helpers
+from benchmark import core, helpers
 from benchmark.data import BenchmarkData
-from benchmark.processing import prepare_simulator, prepare_dst, SIMULATOR_JSON, process
 from benchmark.reference_meta import ReferenceMeta
 
 
@@ -20,10 +19,10 @@ def process_data(benchmark_data: BenchmarkData, references: Dict[str, ReferenceM
 
     logging.debug('Writing simulator type and parameters to destination directory')
     if not dry_run:
-        json.dump({'simulator': simulator_meta.identifier}, open(os.path.join(dst, SIMULATOR_JSON), 'w'), indent=4)
+        json.dump({'simulator': simulator_meta.identifier}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
 
     for _, reference in references.items():
-        process(
+        core.process(
             reference.identifier,
             benchmark_data.materials[reference.material],
             benchmark_data.depositions[reference.deposition],
@@ -59,13 +58,13 @@ def main(args: argparse.Namespace):
     # Make sure simulation will work properly
     benchmark_data.validate_simulators(sim_identifiers)
     for sim_identifier in sim_identifiers:
-        prepare_simulator(benchmark_data.simulators[sim_identifier])
+        core.prepare_simulator(benchmark_data.simulators[sim_identifier])
 
     logging.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
     for sim_identifier in sim_identifiers:
         # Prepare output directory
         dst = os.path.join(args.dst, timestamp_str + ' ' + sim_identifier)
-        prepare_dst(dst, args.dry_run)
+        core.prepare_dst(dst, args.dry_run)
 
         # Processing
         process_data(benchmark_data, references, dst, sim_identifier, args.dry_run)
