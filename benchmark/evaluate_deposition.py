@@ -16,7 +16,6 @@ from blending_simulator.material_deposition import MaterialMeta, DepositionMeta,
 
 
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
-    # TODO v1 Chevron deposition with fixed amount of layers
     # TODO v2 Optimized deposition based on full knowledge - only one optimization before stacking
     # TODO v3 Optimized deposition based on prediction - only one optimization before stacking
     # TODO v4 Optimized deposition based on prediction - optimize every 5 simulation minutes
@@ -48,10 +47,14 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
         'reclaim_x_per_s': reclaim_x_per_s
     })
 
+    # Currently fixed amount of layers for Chevron stacking
+    chevron_layers = 60
+    starting_side = 0  # set 0 for same side as reclaimer or 1 for opposite side
+
     deposition_data = pd.DataFrame({
-        'timestamp': [0],
-        'x': [0.5 * bed_size_x],
-        'z': [0.5 * bed_size_z],
+        'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
+        'x': [0.5 * bed_size_z + core_length * float((l + starting_side) % 2) for l in range(0, chevron_layers + 1)],
+        'z': [0.5 * bed_size_z] * (chevron_layers + 1),
     })
     deposition.data = Deposition(data=deposition_data, meta=deposition)
 
