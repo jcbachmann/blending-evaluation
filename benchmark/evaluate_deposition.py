@@ -15,6 +15,28 @@ from benchmark.simulator_meta import SimulatorMeta
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, Deposition
 
 
+def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition: DepositionMeta,
+                           chevron_layers: int, starting_side: int = 0) -> None:
+    """
+    Set the deposition to traditional Chevron stacking in layers
+    :param identifier: identifier of this deposition computation
+    :param material_meta: material description to current knowledge which will be stacked
+    :param deposition: deposition meta to which the deposition data will be added
+    :param chevron_layers: amount of layers for Chevron stacking
+    :param starting_side: set 0 for same side as reclaimer or 1 for opposite side
+    """
+    core_length = deposition.bed_size_x - deposition.bed_size_z
+
+    deposition_data = pd.DataFrame({
+        'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
+        'x': [0.5 * deposition.bed_size_z + core_length * float((l + starting_side) % 2) for l in
+              range(0, chevron_layers + 1)],
+        'z': [0.5 * deposition.bed_size_z] * (chevron_layers + 1),
+    })
+    deposition.data = Deposition(data=deposition_data, meta=deposition)
+    deposition.label = f'{identifier} - Chevron {chevron_layers} layers'
+
+
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
     # TODO v2 Optimized deposition based on full knowledge - only one optimization before stacking
     # TODO v3 Optimized deposition based on prediction - only one optimization before stacking
@@ -48,15 +70,7 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     })
 
     # Currently fixed amount of layers for Chevron stacking
-    chevron_layers = 60
-    starting_side = 0  # set 0 for same side as reclaimer or 1 for opposite side
-
-    deposition_data = pd.DataFrame({
-        'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
-        'x': [0.5 * bed_size_z + core_length * float((l + starting_side) % 2) for l in range(0, chevron_layers + 1)],
-        'z': [0.5 * bed_size_z] * (chevron_layers + 1),
-    })
-    deposition.data = Deposition(data=deposition_data, meta=deposition)
+    set_chevron_deposition(identifier, material_meta, deposition, chevron_layers=60)
 
     return deposition
 
