@@ -3,6 +3,11 @@ import os
 
 from benchmark.simulator_meta import SimulatorMeta
 
+DATA_CSV = 'data.csv'
+RECLAIMED_MATERIAL_DIR = 'material'
+COMPUTED_DEPOSITION_DIR = 'deposition'
+SIMULATOR_JSON = 'simulator.json'
+
 
 def prepare_simulator(simulator_meta: SimulatorMeta):
     logging.debug(f'Acquiring simulator type for "{simulator_meta.type}"')

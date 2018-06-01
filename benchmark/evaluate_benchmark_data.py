@@ -9,15 +9,10 @@ from typing import Dict
 
 from benchmark import helpers
 from benchmark.benchmark import Benchmark
-from benchmark.processing import prepare_simulator, prepare_dst
+from benchmark.processing import prepare_simulator, prepare_dst, RECLAIMED_MATERIAL_DIR, DATA_CSV, SIMULATOR_JSON
 from benchmark.reference_meta import ReferenceMeta
 from benchmark.simulator_meta import SimulatorMeta
 from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
-
-DATA_CSV = 'data.csv'
-RECLAIMED_MATERIAL_DIR = 'material'
-SIMULATOR_JSON = 'simulator.json'
-SIMULATOR_PARAMS_JSON = 'simulator_params.json'
 
 
 def process_reference(reference: ReferenceMeta, material: MaterialMeta, deposition: DepositionMeta, dst: str,
