@@ -4,16 +4,17 @@ import argparse
 import os
 from typing import List
 
+from benchmark.benchmark import Benchmark
+from benchmark.helpers import get_identifier
 from benchmark_explorer import testlets
 from benchmark_explorer.evaluation import Evaluation
 from data_explorer import app
 from data_explorer.testlet import Testlet
-from benchmark.evaluate_benchmark_data import read_references, get_identifier
 
 
 def read_evaluation(evaluation_path: str) -> Evaluation:
     evaluation = Evaluation(get_identifier(evaluation_path), evaluation_path)
-    evaluation.references = read_references(evaluation_path)
+    evaluation.references = Benchmark.read_references(evaluation_path)
     return evaluation
 
 
