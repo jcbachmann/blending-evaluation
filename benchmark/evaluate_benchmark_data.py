@@ -9,74 +9,8 @@ from typing import Dict
 
 from benchmark import helpers
 from benchmark.benchmark import Benchmark
-from benchmark.processing import prepare_simulator, prepare_dst, RECLAIMED_MATERIAL_DIR, DATA_CSV, SIMULATOR_JSON
+from benchmark.processing import prepare_simulator, prepare_dst, SIMULATOR_JSON, process
 from benchmark.reference_meta import ReferenceMeta
-from benchmark.simulator_meta import SimulatorMeta
-from blending_simulator.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
-
-
-def process_reference(reference: ReferenceMeta, material: MaterialMeta, deposition: DepositionMeta, dst: str,
-                      simulator_meta: SimulatorMeta, dry_run: bool):
-    logging.info(f'Processing reference "{reference}" with material "{material}" and deposition "{deposition}"')
-
-    logging.debug('Creating simulator')
-    sim_params = simulator_meta.get_params().copy()
-    sim_params['bed_size_x'] = deposition.bed_size_x
-    sim_params['bed_size_z'] = deposition.bed_size_z
-    sim = simulator_meta.get_type()(**sim_params)
-
-    logging.debug('Combining material and deposition')
-    material_deposition = MaterialDeposition(material.get_material(), deposition.get_deposition())
-    logging.debug(f'Material and deposition combined:\n{material_deposition.data.describe()}')
-
-    logging.debug('Stacking and reclaiming material')
-    reclaimed_material = sim.stack_reclaim(material_deposition, x_per_s=deposition.reclaim_x_per_s)
-    logging.debug(f'Reclaimed material:\n{reclaimed_material.data.describe()}')
-
-    directory = os.path.join(dst, reference.identifier)
-    logging.debug(f'Creating directory "{directory}"')
-    if not dry_run:
-        os.mkdir(directory)
-
-    reclaimed_reference = ReferenceMeta(reference.identifier, directory, reference.meta_dict)
-    reclaimed_reference.reclaimed_path = RECLAIMED_MATERIAL_DIR
-
-    meta_file = os.path.join(directory, Benchmark.META_JSON)
-    logging.debug(f'Writing reference meta to "{meta_file}"')
-    if not dry_run:
-        json.dump(
-            reclaimed_reference.to_dict(),
-            open(meta_file, 'w'),
-            indent=4
-        )
-
-    reclaimed_material_path = os.path.join(directory, reclaimed_reference.reclaimed_path)
-    reclaimed_material_meta = MaterialMeta(reference.identifier, reclaimed_material_path, {
-        'label': 'Reclaimed ' + reference.identifier,
-        'description': 'Reclaimed material from reference ' + reference.identifier,
-        'category': 'reclaimed',
-        'time': reclaimed_material.data.timestamp.max(),
-        'volume': reclaimed_material.data.volume.sum(),
-        'data': DATA_CSV
-    })
-
-    logging.debug(f'Creating directory "{reclaimed_material_path}"')
-    if not dry_run:
-        os.mkdir(reclaimed_material_path)
-
-    reclaimed_material_meta_file = os.path.join(reclaimed_material_path, Benchmark.META_JSON)
-    logging.debug(f'Writing reclaimed material meta to "{reclaimed_material_meta_file}"')
-    if not dry_run:
-        json.dump(
-            reclaimed_material_meta.to_dict(),
-            open(reclaimed_material_meta_file, 'w'),
-            indent=4
-        )
-
-    data_file = os.path.join(reclaimed_material_path, DATA_CSV)
-    logging.debug(f'Writing material data to "{data_file}"')
-    if not dry_run:
-        reclaimed_material.data.to_csv(data_file, sep='\t', index=False)
 
 
 def process_data(benchmark: Benchmark, references: Dict[str, ReferenceMeta], dst: str, sim_identifier: str,
@@ -89,13 +23,14 @@ def process_data(benchmark: Benchmark, references: Dict[str, ReferenceMeta], dst
         json.dump({'simulator': simulator_meta.identifier}, open(os.path.join(dst, SIMULATOR_JSON), 'w'), indent=4)
 
     for _, reference in references.items():
-        process_reference(
-            reference,
+        process(
+            reference.identifier,
             benchmark.materials[reference.material],
             benchmark.depositions[reference.deposition],
-            dst,
             simulator_meta,
-            dry_run
+            dst,
+            dry_run,
+            computed_deposition=False
         )
 
     logging.info('Processing finished')
