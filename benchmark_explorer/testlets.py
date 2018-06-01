@@ -2,10 +2,10 @@ import math
 
 from scipy.stats import pearsonr
 
+from benchmark.reference_meta import ReferenceMeta
 from benchmark_explorer.evaluation import Evaluation
 from data_explorer.rating import RaterColorScale, Rater
 from data_explorer.testlet import Testlet
-from benchmark.reference_meta import ReferenceMeta
 
 
 def red_to_green(p):
@@ -19,7 +19,7 @@ def get_correlation(standard_reference: ReferenceMeta, evaluation_reference: Ref
     b = evaluation_material.data.copy()
 
     if len(a.index) != len(b.index):
-        raise ValueError('Index length does not match') # TODO
+        raise ValueError('Index length does not match')  # TODO
 
     return pearsonr(a['parameter'].values, b['parameter'].values)[0]
 
