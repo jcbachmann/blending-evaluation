@@ -1,3 +1,4 @@
+import random
 from io import StringIO
 from typing import List, Union
 
@@ -99,6 +100,21 @@ class HomogenizationProblem(FloatProblem):
 
     def get_all_solutions(self):
         return self.evaluated_variables, self.evaluated_objectives
+
+    def create_solution(self) -> FloatSolution:
+        new_solution = FloatSolution(
+            self.number_of_variables,
+            self.number_of_objectives,
+            self.number_of_constraints,
+            self.lower_bound,
+            self.upper_bound
+        )
+
+        new_solution.variables = [random.uniform(self.lower_bound[i] * 1.0, self.upper_bound[i] * 1.0) for i in
+                                  range(self.number_of_variables)] if random.random() < 0.8 else [i % 2 for i in range(
+            self.number_of_variables)]
+
+        return new_solution
 
     def get_new_solutions(self, start: int):
         new_solutions = self.evaluated_objectives[start:]
