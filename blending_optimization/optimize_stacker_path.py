@@ -18,6 +18,7 @@ from jmetal.util.observable import Observer
 
 from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
+from blending_optimization.plot_server import PlotServer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,6 +61,9 @@ def optimize(length: float, depth: float, variables, material: Union[str, pd.Dat
     )
 
     algorithm.observable.register(MyObserver())
+
+    plot_server = PlotServer(problem.get_new_solutions)
+    plot_server.serve_background()
 
     algorithm.run()
     all_variables, all_objectives = problem.get_all_solutions()

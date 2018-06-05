@@ -99,3 +99,11 @@ class HomogenizationProblem(FloatProblem):
 
     def get_all_solutions(self):
         return self.evaluated_variables, self.evaluated_objectives
+
+    def get_new_solutions(self, start: int):
+        new_solutions = self.evaluated_objectives[start:]
+
+        return {
+            'f1': [o[0] for o in new_solutions],
+            'f2': [o[1] for o in new_solutions]
+        }
