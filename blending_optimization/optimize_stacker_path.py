@@ -14,6 +14,7 @@ from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
 from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
+from jmetal.util.observable import Observer
 
 from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
@@ -27,6 +28,16 @@ class OptimizationResult:
         self.result_population = result_population
         self.all_variables = all_variables
         self.all_objectives = all_objectives
+
+
+class MyObserver(Observer):
+    def update(self, *args, **kwargs):
+        evaluations = kwargs['evaluations']
+        population = kwargs['population']
+        computing_time = kwargs['computing time']
+        cps = evaluations / computing_time if computing_time > 0 else '-'
+        logging.info(
+            f'{evaluations} evaluations after {computing_time:.1f}s @{cps:.2f}cps, best fitness: {str(population[0].objectives)}')
 
 
 def optimize(length: float, depth: float, variables, material: Union[str, pd.DataFrame], population_size: int,
@@ -47,6 +58,8 @@ def optimize(length: float, depth: float, variables, material: Union[str, pd.Dat
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
         evaluator=ParallelEvaluator(processes=8)
     )
+
+    algorithm.observable.register(MyObserver())
 
     algorithm.run()
     all_variables, all_objectives = problem.get_all_solutions()
