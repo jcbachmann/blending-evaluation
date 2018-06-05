@@ -8,7 +8,6 @@ from typing import List, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.component.evaluator import ParallelEvaluator
 from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
@@ -17,6 +16,7 @@ from jmetal.operator.selection import BinaryTournamentSelection
 from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 
 from blending_optimization.homogenization_problem import HomogenizationProblem
+from blending_optimization.hpsea import HPSEA
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def optimize(length: float, depth: float, variables, material: Union[str, pd.Dat
         material=material
     )
 
-    algorithm = NSGAII[FloatSolution, List[FloatSolution]](
+    algorithm = HPSEA[FloatSolution, List[FloatSolution]](
         problem=problem,
         population_size=population_size,
         max_evaluations=max_evaluations,
