@@ -62,13 +62,13 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         depth=deposition.bed_size_z,
         variables=chevron_layers + 1,
         material=optimization_material,
-        population_size=10,
-        max_evaluations=250
+        population_size=100,
+        max_evaluations=5000
     )
 
     result_population = optimization_result.result_population
     result_population.sort(key=lambda s: s.objectives[0])
-    chosen_solution = result_population[5]
+    chosen_solution = result_population[0]
 
     core_length = deposition.bed_size_x - deposition.bed_size_z
 
