@@ -11,11 +11,11 @@ from blending_simulator.external_blending_simulator import ExternalBlendingSimul
 
 
 def execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volume, run):
-    print('processing volume %d with likelihood %f (run %d)' % (volume, likelihood, run))
-    path = '/tmp/heights-%d-%.4f-%d.txt' % (volume, likelihood, run)
+    print(f'processing volume {volume} with likelihood {likelihood} (run {run})')
+    path = f'/tmp/heights-{volume}-{likelihood:.4f}-{run}.txt'
 
     ExternalBlendingSimulatorInterface(config='pile.conf', heights=path, eight=likelihood).run(
-        lambda sim: sim.communicate(('0 %f %f' % (pos, volume)).encode())
+        lambda sim: sim.communicate((f'0 {pos} {volume}').encode())
     )
 
     e = RoundnessEvaluator(dist_seg_size, angle_seg_count)
@@ -142,7 +142,7 @@ class RoundnessEvaluator:
             plt.plot(
                 [x * self.dist_seg_size for x in range(len(shape) + 1)],
                 [entry[1] / entry[0] if entry[0] > 0 else None for entry in shape] + [0],
-                label='Shape %.1f°' % (i * 45 / 2) if c == 0 else None,
+                label=f'Shape {i * 45 / 2:.1f}°' if c == 0 else None,
                 linestyle='-' if i == 0 else '--' if i == 1 else ':',
                 color=color_map(c),
                 alpha=0.5

@@ -86,7 +86,7 @@ def minimize_brute_force(func, x_start, x_stop, args, x_tol, f_tol):
         x_start = x_opt - 0.5 * x_range
         x_stop = x_start + x_range
 
-    print('Optimum found: f(%f) = %f' % (x_opt, f_opt))
+    print(f'Optimum found: f({x_opt}) = {f_opt}')
 
     return x_opt
 

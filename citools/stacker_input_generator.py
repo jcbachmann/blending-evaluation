@@ -55,14 +55,14 @@ class Generator:
 
             if red_part > blue_part:
                 if red_part > yellow_part:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t, x, z, m3_this_time, 1, 0, 0))
+                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 1 0 0\n')
                 else:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t, x, z, m3_this_time, 0, 0, 1))
+                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 0 0 1\n')
             else:
                 if blue_part > yellow_part:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t, x, z, m3_this_time, 0, 1, 0))
+                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 0 1 0\n')
                 else:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t, x, z, m3_this_time, 0, 0, 1))
+                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 0 0 1\n')
 
             t += self.t_diff
             m3_total -= m3_this_time
@@ -111,14 +111,14 @@ class Generator:
 
             if red_part > blue_part:
                 if red_part > yellow_part:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t_mat, x, z, m3_this_time, 1, 0, 0))
+                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 1 0 0\n')
                 else:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t_mat, x, z, m3_this_time, 0, 0, 1))
+                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 0 0 1\n')
             else:
                 if blue_part > yellow_part:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t_mat, x, z, m3_this_time, 0, 1, 0))
+                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 0 1 0\n')
                 else:
-                    sys.stdout.write('%f %f %f %f %f %f %f\n' % (t_mat, x, z, m3_this_time, 0, 0, 1))
+                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 0 0 1\n')
 
             t_mat += self.t_diff
             if m3_stacked > m3_pile:

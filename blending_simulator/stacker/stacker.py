@@ -98,7 +98,7 @@ class StackerPrinter:
 
     @staticmethod
     def status(msg):
-        print("[stacker] %s" % msg, file=sys.stderr)
+        print(f'[stacker] {msg}', file=sys.stderr)
 
     def out(self, material):
         first_cols = ['timestamp', 'x', 'z', 'volume']

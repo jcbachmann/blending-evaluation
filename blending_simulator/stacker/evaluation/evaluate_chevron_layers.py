@@ -36,14 +36,14 @@ def simulate(args, reclaim, layers):
 
 def get_results(meta, data: pd.DataFrame, c_meta='layers', c_weights: str = 'volume', c_values: str = 'p_1'):
     minvol = 0.75 * data[c_weights].sum() / len(data.index)
-    larger = data.query('%s>=%f' % (c_weights, minvol))
+    larger = data.query(f'{c_weights}>={minvol}')
     lbound = larger[c_values].min()
     mean, std = weighted_avg_and_std(data[c_values], weights=data[c_weights])
     lstd = mean - std
     ustd = mean + std
     ubound = larger[c_values].max()
 
-    smaller = data.query('%s<%f' % (c_weights, minvol)).query('%s>0' % c_weights)
+    smaller = data.query(f'{c_weights}<{minvol}').query(f'{c_weights}>0')
     if len(smaller.index) > 0:
         lbound = min(lbound, np.average(smaller[c_values], weights=smaller[c_weights]))
         ubound = max(ubound, np.average(smaller[c_values], weights=smaller[c_weights]))
@@ -148,7 +148,7 @@ def main(args):
     if not args.reuse:
         p = Pool(8)
         p.starmap(simulate, [
-            (args, '%s/reclaim-layers-%.4f.csv' % (args.path, layers), layers) for layers in np.linspace(1, 100, 10)
+            (args, f'{args.path}/reclaim-layers-{layers:.4f}.csv', layers) for layers in np.linspace(1, 100, 10)
         ])
 
     reference = get_reference(args.material)

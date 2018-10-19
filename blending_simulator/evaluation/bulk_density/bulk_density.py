@@ -84,8 +84,8 @@ def execute_for_bulk_density(
         path: str,
         executable: str = './BlendingSimulator'
 ):
-    print('processing volume %d with ppm3 %.1f (run %d)' % (volume, ppm3, run))
-    path += '/heights-vol%d-res%.1f-run%d.txt' % (volume, ppm3, run)
+    print(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
+    path += f'/heights-vol{volume}-res{ppm3:.1f}-run{run}.txt'
 
     ExternalBlendingSimulatorInterface(
         executable=executable,
@@ -98,7 +98,7 @@ def execute_for_bulk_density(
         visualize=visualize,
         bulkdensity=bulkdensity
     ).run(
-        lambda sim: sim.communicate(('0 %f %f %f' % (pos, pos, volume)).encode())
+        lambda sim: sim.communicate(f'0 {pos} {pos} {volume}'.encode())
     )
 
     return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
@@ -107,7 +107,7 @@ def execute_for_bulk_density(
 def load_for_bulk_density(file: str, path: str = '/tmp'):
     if path is None:
         path = '/tmp'
-    path += '/%s' % file
+    path += f'/{file}'
     if os.path.isfile(path):
         return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
     else:
