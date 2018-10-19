@@ -71,12 +71,13 @@ class Stacker:
                 else:
                     path['timestamp'] = [0]
 
-        material['z'] = self.depth / 2
-        material['x'] = np.interp(material['timestamp'], path['timestamp'], path['path']) * (
+        out_material = material.copy()
+        out_material['z'] = self.depth / 2
+        out_material['x'] = np.interp(out_material['timestamp'], path['timestamp'], path['path']) * (
                 max_pos - min_pos) + min_pos
 
         try:
-            callback(material)
+            callback(out_material)
         except IOError:
             self.status('Stopping stacker due to IOError')
 
@@ -100,12 +101,11 @@ class StackerPrinter:
     def status(msg):
         print(f'[stacker] {msg}', file=sys.stderr)
 
-    def out(self, material):
+    def out(self, material: pd.DataFrame):
         first_cols = ['timestamp', 'x', 'z', 'volume']
-        col_order = first_cols
+        col_order = first_cols.copy()
         col_order.extend(list(set(material.columns) - set(first_cols)))
-        material = material.reindex(columns=col_order)
-        material.to_csv(StrToBytesWrapper(self.out_buffer), index=False, header=self.header, sep=' ')
+        material.to_csv(StrToBytesWrapper(self.out_buffer), index=False, columns=col_order, header=self.header, sep=' ')
 
     def flush(self):
         self.out_buffer.flush()
