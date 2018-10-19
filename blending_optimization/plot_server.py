@@ -44,7 +44,7 @@ class PlotServer:
             new_data = self.data_callback(start)
             source.stream(new_data, 50000)
 
-        doc.add_periodic_callback(update, 50)
+        doc.add_periodic_callback(update, 500)
 
     def serve(self):
         print(f'Opening Bokeh application on http://localhost:{PlotServer.PORT}/')
