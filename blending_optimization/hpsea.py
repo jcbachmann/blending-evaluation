@@ -5,7 +5,6 @@ from jmetal.component.evaluator import SequentialEvaluator, Evaluator
 from jmetal.core.operator import Mutation, Crossover, Selection
 from jmetal.core.problem import Problem
 from jmetal.operator.selection import RankingAndCrowdingDistanceSelection
-from jmetal.util.observable import Observable, DefaultObservable
 
 S = TypeVar('S')
 R = TypeVar(List[S])
@@ -19,7 +18,6 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
                  mutation: Mutation[S],
                  crossover: Crossover[S, S],
                  selection: Selection[List[S], S],
-                 observable: Observable = DefaultObservable(),
                  evaluator: Evaluator[S] = SequentialEvaluator[S](),
                  offspring_size: int = 20):
         super(HPSEA, self).__init__(
@@ -29,7 +27,6 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
             mutation,
             crossover,
             selection,
-            observable,
             evaluator)
         self.offspring_size = offspring_size
 
@@ -73,7 +70,8 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
         self.evaluations += self.offspring_size
 
         observable_data = {'evaluations': self.evaluations,
+                           'computing time': self.get_current_computing_time(),
                            'population': self.population,
-                           'computing time': self.get_current_computing_time()}
+                           'reference_front': self.problem.reference_front}
 
         self.observable.notify_all(**observable_data)

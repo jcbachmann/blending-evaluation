@@ -8,13 +8,13 @@ from typing import List, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from jmetal.component.evaluator import ParallelEvaluator
+from jmetal.component import RankingAndCrowdingDistanceComparator
+from jmetal.component.evaluator import MapEvaluator
+from jmetal.component.observer import Observer
 from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
-from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
-from jmetal.util.observable import Observer
 
 from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
@@ -57,7 +57,7 @@ def optimize(length: float, depth: float, variables, material: Union[str, pd.Dat
         mutation=Polynomial(1.0 / problem.number_of_variables, distribution_index=20),
         crossover=SBX(1.0, distribution_index=20),
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-        evaluator=ParallelEvaluator(processes=8)
+        evaluator=MapEvaluator(processes=8)
     )
 
     algorithm.observable.register(MyObserver())

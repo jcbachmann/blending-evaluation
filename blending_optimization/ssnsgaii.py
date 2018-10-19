@@ -5,7 +5,6 @@ from jmetal.component.evaluator import SequentialEvaluator, Evaluator
 from jmetal.core.operator import Mutation, Crossover, Selection
 from jmetal.core.problem import Problem
 from jmetal.operator.selection import RankingAndCrowdingDistanceSelection
-from jmetal.util.observable import Observable, DefaultObservable
 
 S = TypeVar('S')
 R = TypeVar(List[S])
@@ -19,7 +18,6 @@ class SSNSGAII(GenerationalGeneticAlgorithm[S, R]):
                  mutation: Mutation[S],
                  crossover: Crossover[S, S],
                  selection: Selection[List[S], S],
-                 observable: Observable = DefaultObservable(),
                  evaluator: Evaluator[S] = SequentialEvaluator[S]()):
         super(SSNSGAII, self).__init__(
             problem,
@@ -28,7 +26,6 @@ class SSNSGAII(GenerationalGeneticAlgorithm[S, R]):
             mutation,
             crossover,
             selection,
-            observable,
             evaluator)
 
     def selection(self, population: List[S]):
