@@ -41,7 +41,7 @@ class MyObserver(Observer):
             f'{evaluations} evaluations after {computing_time:.1f}s @{cps:.2f}cps, best fitness: {str(population[0].objectives)}')
 
 
-def optimize(length: float, depth: float, variables, material: Union[str, pd.DataFrame], population_size: int,
+def optimize(length: float, depth: float, variables: int, material: Union[str, pd.DataFrame], population_size: int,
              max_evaluations: int):
     problem = HomogenizationProblem(
         length=length,
