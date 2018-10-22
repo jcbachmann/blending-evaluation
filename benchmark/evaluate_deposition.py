@@ -74,7 +74,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         'z': [0.5 * deposition.bed_size_z] * (chevron_layers + 1),
     })
     deposition.data = Deposition(data=deposition_data, meta=deposition)
-    deposition.label = f'{identifier} - Chevron {chevron_layers} layers'
+    deposition.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
 
 
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
