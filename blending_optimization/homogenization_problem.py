@@ -1,5 +1,4 @@
 import random
-from io import StringIO
 from typing import List
 
 import numpy as np
@@ -7,8 +6,8 @@ import pandas as pd
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 
-from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
-from blending_simulator.stacker.stacker import stack_with_printer
+from blending_simulator.bsl_blending_simulator import BslBlendingSimulator
+from blending_simulator.material_deposition import MaterialDeposition, Material, Deposition
 from ciglobal.cimath import weighted_avg_and_std, stdev
 
 
@@ -16,40 +15,29 @@ def evaluate_solution(
         length: float,
         depth: float,
         material: pd.DataFrame,
-        raw_quality_stdev: float,
-        stacker_path_list: [float]
+        deposition: pd.DataFrame,
+        material_quality_stdev: float,
+        total_material_volume: float
 ) -> [float, float]:
-    out = ExternalBlendingSimulatorInterface(
-        length=length,
-        depth=depth,
-        dropheight=(depth / 2),
-        reclaim='stdout',
-        ppm3=1
-    ).run(lambda sim: stack_with_printer(
-        length=length,
-        depth=depth,
-        material=material,
-        stacker_path=pd.DataFrame(data=stacker_path_list, columns=['path']),
-        header=False,
-        out_buffer=sim.stdin
-    ))
-
-    df = pd.read_csv(StringIO(out.decode('utf-8')), delimiter='\t', index_col=None)
+    sim = BslBlendingSimulator(bed_size_x=length, bed_size_z=depth, ppm3=0.125)
+    reclaimed_material = sim.stack_reclaim(material_deposition=MaterialDeposition(
+        material=Material(data=material),
+        deposition=Deposition(None, data=deposition)
+    ), x_per_s=0.5)
+    reclaimed_data = reclaimed_material.data
 
     # TODO make work with more parameters
-    quality_average, quality_stdev = weighted_avg_and_std(df['p_1'], df['volume'])
+    quality_average, quality_stdev = weighted_avg_and_std(reclaimed_data['p_1'], reclaimed_data['volume'])
 
     # TODO make work with xz_scaling != 1
-    central_reclaim_volumes = df['volume'].values[int(depth):int(length - depth)]
-    central_reclaim_volumes[0] += df['volume'].values[:int(depth)].sum()
-    central_reclaim_volumes[-1] += df['volume'].values[int(length - depth):].sum()
-    l = len(central_reclaim_volumes)
-    split_volume = df['volume'].sum() / (l / 2)
-    bad_case_volumes = np.array([split_volume if i < l / 2 else 0 for i in range(l)])
-    worst_case_volume_stdev = stdev(bad_case_volumes)
-    volume_stdev = stdev(central_reclaim_volumes) / worst_case_volume_stdev
+    offset = 0.1 * depth
+    central_reclaim_volumes = reclaimed_data['volume'].values[int(offset):int(length - depth - offset)]
+    central_reclaim_volumes[0] += reclaimed_data['volume'].values[:int(offset)].sum()
+    central_reclaim_volumes[-1] += reclaimed_data['volume'].values[int(length - depth - offset):].sum()
+    volume_stdev = stdev(central_reclaim_volumes)
+    worst_case_volume_stdev = stdev(np.array([total_material_volume / len(central_reclaim_volumes), 0]))
 
-    return [quality_stdev / raw_quality_stdev, volume_stdev]
+    return [quality_stdev / material_quality_stdev, volume_stdev / worst_case_volume_stdev]
 
 
 class HomogenizationProblem(FloatProblem):
@@ -60,7 +48,9 @@ class HomogenizationProblem(FloatProblem):
         self.depth = depth
         self.material = material
 
+        # TODO make work with more parameters
         _, self.material_quality_stdev = weighted_avg_and_std(self.material['p_1'], self.material['volume'])
+        self.total_material_volume = material['volume'].sum()
 
         self.number_of_objectives = 2
         self.number_of_variables = number_of_variables
@@ -73,12 +63,21 @@ class HomogenizationProblem(FloatProblem):
         FloatSolution.upper_bound = self.upper_bound
 
     def evaluate(self, solution: FloatSolution) -> None:
+        min_pos = self.depth / 2
+        max_pos = self.length - self.depth / 2
+        deposition = pd.DataFrame(data={
+            'x': [elem * (max_pos - min_pos) + min_pos for elem in solution.variables],
+            'z': [self.depth / 2] * self.number_of_variables,
+            'timestamp': np.linspace(0, self.material['timestamp'].values[-1], self.number_of_variables)
+        })
+
         solution.objectives = evaluate_solution(
-            self.length,
-            self.depth,
-            self.material,
-            self.material_quality_stdev,
-            solution.variables
+            length=self.length,
+            depth=self.depth,
+            material=self.material,
+            deposition=deposition,
+            material_quality_stdev=self.material_quality_stdev,
+            total_material_volume=self.total_material_volume
         )
 
     @staticmethod
