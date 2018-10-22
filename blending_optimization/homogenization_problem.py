@@ -72,9 +72,6 @@ class HomogenizationProblem(FloatProblem):
         FloatSolution.lower_bound = self.lower_bound
         FloatSolution.upper_bound = self.upper_bound
 
-        self.evaluated_variables = []
-        self.evaluated_objectives = []
-
     def evaluate(self, solution: FloatSolution) -> None:
         solution.objectives = evaluate_solution(
             self.length,
@@ -84,18 +81,12 @@ class HomogenizationProblem(FloatProblem):
             solution.variables
         )
 
-        self.evaluated_variables.append(solution.variables)
-        self.evaluated_objectives.append(solution.objectives)
-
     @staticmethod
     def get_objective_labels() -> List[str]:
         return ['Quality Stdev', 'Volume Stdev']
 
     def get_variable_labels(self) -> List[str]:
         return [f'v{(i + 1)}' for i in range(self.number_of_variables)]
-
-    def get_all_solutions(self):
-        return self.evaluated_variables, self.evaluated_objectives
 
     def create_solution(self) -> FloatSolution:
         new_solution = FloatSolution(
@@ -111,11 +102,3 @@ class HomogenizationProblem(FloatProblem):
             self.number_of_variables)]
 
         return new_solution
-
-    def get_new_solutions(self, start: int):
-        new_solutions = self.evaluated_objectives[start:]
-
-        return {
-            'f1': [o[0] for o in new_solutions],
-            'f2': [o[1] for o in new_solutions]
-        }
