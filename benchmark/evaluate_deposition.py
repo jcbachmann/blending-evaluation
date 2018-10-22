@@ -50,19 +50,14 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     """
     material = material_meta.get_material()
 
-    optimization_material = pd.DataFrame({
-        'timestamp': material.data['timestamp'],
-        'volume': material.data['volume'],
-        'p_1': material.data[material.get_parameter_columns()[0]]
-    })
-
     # TODO respect starting side
     # TODO use same simulator?
     optimization_result, problem = optimize(
         length=deposition.bed_size_x,
         depth=deposition.bed_size_z,
         variables=chevron_layers + 1,
-        material=optimization_material,
+        material=material.data,
+        parameter_columns=material.get_parameter_columns(),
         population_size=100,
         max_evaluations=5000
     )

@@ -55,13 +55,14 @@ class MyEvaluatorObserver(EvaluatorObserver):
         }
 
 
-def optimize(length: float, depth: float, variables: int, material: pd.DataFrame, population_size: int,
-             max_evaluations: int) -> Tuple[OptimizationResult, HomogenizationProblem]:
+def optimize(length: float, depth: float, variables: int, material: pd.DataFrame, parameter_columns: List[str],
+             population_size: int, max_evaluations: int) -> Tuple[OptimizationResult, HomogenizationProblem]:
     problem = HomogenizationProblem(
         length=length,
         depth=depth,
         number_of_variables=variables,
-        material=material
+        material=material,
+        parameter_columns=parameter_columns
     )
 
     evaluator_observer = MyEvaluatorObserver()

@@ -15,8 +15,9 @@ def evaluate_solution(
         length: float,
         depth: float,
         material: pd.DataFrame,
+        parameter_columns: List[str],
         deposition: pd.DataFrame,
-        material_quality_stdev: float,
+        material_parameter_standard_deviations: List[float],
         total_material_volume: float
 ) -> [float, float]:
     sim = BslBlendingSimulator(bed_size_x=length, bed_size_z=depth, ppm3=0.125)
@@ -26,8 +27,8 @@ def evaluate_solution(
     ), x_per_s=0.5)
     reclaimed_data = reclaimed_material.data
 
-    # TODO make work with more parameters
-    quality_average, quality_stdev = weighted_avg_and_std(reclaimed_data['p_1'], reclaimed_data['volume'])
+    standard_deviations = [weighted_avg_and_std(reclaimed_data[parameter_column], reclaimed_data['volume'])[1] for
+                           parameter_column in parameter_columns]
 
     # TODO make work with xz_scaling != 1
     offset = 0.1 * depth
@@ -37,22 +38,27 @@ def evaluate_solution(
     volume_stdev = stdev(central_reclaim_volumes)
     worst_case_volume_stdev = stdev(np.array([total_material_volume / len(central_reclaim_volumes), 0]))
 
-    return [quality_stdev / material_quality_stdev, volume_stdev / worst_case_volume_stdev]
+    return [s / d for s, d in zip(standard_deviations, material_parameter_standard_deviations)] + [
+        volume_stdev / worst_case_volume_stdev]
 
 
 class HomogenizationProblem(FloatProblem):
-    def __init__(self, length: float, depth: float, material: pd.DataFrame, number_of_variables: int = 2):
+    def __init__(self, length: float, depth: float, material: pd.DataFrame, parameter_columns: List[str],
+                 number_of_variables: int = 2):
         super().__init__()
 
         self.length = length
         self.depth = depth
         self.material = material
+        self.parameter_columns = parameter_columns
 
-        # TODO make work with more parameters
-        _, self.material_quality_stdev = weighted_avg_and_std(self.material['p_1'], self.material['volume'])
+        self.material_parameter_standard_deviations = [
+            weighted_avg_and_std(self.material[parameter_column], self.material['volume'])[1] for parameter_column in
+            parameter_columns
+        ]
         self.total_material_volume = material['volume'].sum()
 
-        self.number_of_objectives = 2
+        self.number_of_objectives = len(parameter_columns)
         self.number_of_variables = number_of_variables
         self.number_of_constraints = 0
 
@@ -75,14 +81,14 @@ class HomogenizationProblem(FloatProblem):
             length=self.length,
             depth=self.depth,
             material=self.material,
+            parameter_columns=self.parameter_columns,
             deposition=deposition,
-            material_quality_stdev=self.material_quality_stdev,
+            material_parameter_standard_deviations=self.material_parameter_standard_deviations,
             total_material_volume=self.total_material_volume
         )
 
-    @staticmethod
-    def get_objective_labels() -> List[str]:
-        return ['Quality Stdev', 'Volume Stdev']
+    def get_objective_labels(self) -> List[str]:
+        return [col + ' Stdev' for col in self.parameter_columns] + ['Volume Stdev']
 
     def get_variable_labels(self) -> List[str]:
         return [f'v{(i + 1)}' for i in range(self.number_of_variables)]
