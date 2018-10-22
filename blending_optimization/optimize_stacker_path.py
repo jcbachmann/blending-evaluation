@@ -37,8 +37,8 @@ class MyObserver(Observer):
         population = kwargs['population']
         computing_time = kwargs['computing time']
         cps = evaluations / computing_time if computing_time > 0 else '-'
-        logging.info(
-            f'{evaluations} evaluations after {computing_time:.1f}s @{cps:.2f}cps, best fitness: {str(population[0].objectives)}')
+        logger.info(
+            f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, first: {str(population[0].objectives)}')
 
 
 def optimize(length: float, depth: float, variables: int, material: Union[str, pd.DataFrame], population_size: int,
