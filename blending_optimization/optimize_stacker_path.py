@@ -18,6 +18,7 @@ from jmetal.operator.selection import BinaryTournamentSelection
 
 from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
+from blending_optimization.multiprocess_evaluator import MultiprocessEvaluator
 from blending_optimization.plot_server import PlotServer
 
 logging.basicConfig(level=logging.INFO)
@@ -57,8 +58,8 @@ def optimize(length: float, depth: float, variables: int, material: Union[str, p
         mutation=Polynomial(1.0 / problem.number_of_variables, distribution_index=20),
         crossover=SBX(1.0, distribution_index=20),
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-        evaluator=MapEvaluator(processes=8),
         offspring_size=20
+        evaluator=MultiprocessEvaluator(),
     )
 
     algorithm.observable.register(MyAlgorithmObserver())
