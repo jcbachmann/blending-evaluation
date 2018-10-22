@@ -31,7 +31,7 @@ class OptimizationResult:
         self.all_objectives = all_objectives
 
 
-class MyObserver(Observer):
+class MyAlgorithmObserver(Observer):
     def update(self, *args, **kwargs):
         evaluations = kwargs['evaluations']
         population = kwargs['population']
@@ -61,7 +61,7 @@ def optimize(length: float, depth: float, variables: int, material: Union[str, p
         offspring_size=20
     )
 
-    algorithm.observable.register(MyObserver())
+    algorithm.observable.register(MyAlgorithmObserver())
 
     plot_server = PlotServer(problem.get_new_solutions)
     plot_server.serve_background()
