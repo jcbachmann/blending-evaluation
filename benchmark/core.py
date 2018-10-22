@@ -24,8 +24,8 @@ def prepare_simulator(simulator_meta: SimulatorMeta):
     sim_params = simulator_meta.get_params()
 
     sim_params_copy = sim_params.copy()
-    sim_params_copy['bed_size_x'] = 10
-    sim_params_copy['bed_size_z'] = 10
+    sim_params_copy['bed_size_x'] = 10.0
+    sim_params_copy['bed_size_z'] = 10.0
 
     # Create demo simulator to test if params are all accepted
     # If no exception occurs everything seems to be fine
