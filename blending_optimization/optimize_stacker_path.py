@@ -4,7 +4,7 @@ import configparser
 import logging
 import os
 import time
-from typing import List, Union
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -20,6 +20,7 @@ from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
 from blending_optimization.multiprocess_evaluator import MultiprocessEvaluator
 from blending_optimization.plot_server import PlotServer
+from blending_simulator.stacker.stacker import read_material
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,8 +43,8 @@ class MyAlgorithmObserver(Observer):
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, first: {str(population[0].objectives)}')
 
 
-def optimize(length: float, depth: float, variables: int, material: Union[str, pd.DataFrame], population_size: int,
-             max_evaluations: int):
+def optimize(length: float, depth: float, variables: int, material: pd.DataFrame, population_size: int,
+             max_evaluations: int) -> Tuple[OptimizationResult, HomogenizationProblem]:
     problem = HomogenizationProblem(
         length=length,
         depth=depth,
@@ -129,7 +130,7 @@ def main(args) -> None:
         length=args.length,
         depth=args.depth,
         variables=args.variables,
-        material=args.material,
+        material=read_material(args.material),
         population_size=args.population_size,
         max_evaluations=args.max_evaluations
     )

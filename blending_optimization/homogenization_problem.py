@@ -1,6 +1,6 @@
 import random
 from io import StringIO
-from typing import List, Union
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -8,7 +8,7 @@ from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
-from blending_simulator.stacker.stacker import stack_with_printer, read_material
+from blending_simulator.stacker.stacker import stack_with_printer
 from ciglobal.cimath import weighted_avg_and_std, stdev
 
 
@@ -53,16 +53,12 @@ def evaluate_solution(
 
 
 class HomogenizationProblem(FloatProblem):
-    def __init__(self, length: float, depth: float, material: Union[str, pd.DataFrame], number_of_variables: int = 2):
+    def __init__(self, length: float, depth: float, material: pd.DataFrame, number_of_variables: int = 2):
         super().__init__()
 
         self.length = length
         self.depth = depth
-
-        if isinstance(material, pd.DataFrame):
-            self.material = material
-        else:
-            self.material = read_material(material)
+        self.material = material
 
         _, self.material_quality_stdev = weighted_avg_and_std(self.material['p_1'], self.material['volume'])
 
