@@ -200,7 +200,7 @@ class MaterialDeposition:
         self.data = MaterialDeposition.prepare(material.data, deposition.data)
 
     @staticmethod
-    def prepare(material_df: pd.DataFrame, deposition_df: pd.DataFrame, t_diff_max: float = 15):
+    def prepare(material_df: pd.DataFrame, deposition_df: pd.DataFrame, t_diff_max: float = 15) -> pd.DataFrame:
         # Copy material data
         data = pd.DataFrame()
 
