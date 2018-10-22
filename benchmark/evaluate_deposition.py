@@ -56,6 +56,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         'p_1': material.data[material.get_parameter_columns()[0]]
     })
 
+    # TODO respect starting side
     # TODO use same simulator?
     optimization_result, problem = optimize(
         length=deposition.bed_size_x,
