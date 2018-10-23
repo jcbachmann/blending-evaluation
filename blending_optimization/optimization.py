@@ -4,7 +4,7 @@ from typing import List, Tuple
 import pandas as pd
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
-from jmetal.component.observer import Observer, VisualizerObserver
+from jmetal.component.observer import Observer
 from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
@@ -27,13 +27,24 @@ class OptimizationResult:
 
 
 class MyAlgorithmObserver(Observer):
+    def __init__(self):
+        self.population = []
+
     def update(self, *args, **kwargs):
         evaluations = kwargs['evaluations']
-        population = kwargs['population']
+        self.population = kwargs['population']
         computing_time = kwargs['computing time']
         cps = evaluations / computing_time if computing_time > 0 else '-'
         logger.info(
-            f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, first: {str(population[0].objectives)}')
+            f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
+            f'first: {str(self.population[0].objectives)}'
+        )
+
+    def get_population(self):
+        return {
+            'f1': [o.objectives[0] for o in self.population],
+            'f2': [o.objectives[1] for o in self.population]
+        }
 
 
 class MyEvaluatorObserver(EvaluatorObserver):
@@ -78,10 +89,14 @@ def optimize(length: float, depth: float, variables: int, material: pd.DataFrame
         offspring_size=20
     )
 
-    algorithm.observable.register(MyAlgorithmObserver())
-    algorithm.observable.register(VisualizerObserver())
+    algorithm_observer = MyAlgorithmObserver()
+    algorithm.observable.register(algorithm_observer)
 
-    plot_server = PlotServer(evaluator_observer.get_new_solutions)
+    plot_server = PlotServer(
+        all_callback=evaluator_observer.get_new_solutions,
+        pop_callback=algorithm_observer.get_population,
+        pop_size=population_size
+    )
     plot_server.serve_background()
 
     algorithm.run()

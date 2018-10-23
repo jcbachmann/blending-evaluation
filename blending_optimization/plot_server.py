@@ -15,13 +15,16 @@ from tornado.ioloop import IOLoop
 class PlotServer:
     PORT = 5001
 
-    def __init__(self, data_callback):
-        self.data_callback = data_callback
+    def __init__(self, all_callback, pop_callback, pop_size):
+        self.all_callback = all_callback
+        self.pop_callback = pop_callback
+        self.pop_size = pop_size
 
     def make_document(self, doc: Document):
         doc.title = 'Optimization'
 
-        source = ColumnDataSource({'f1': [], 'f2': []})
+        all_source = ColumnDataSource({'f1': [], 'f2': []})
+        pop_source = ColumnDataSource({'f1': [], 'f2': []})
         palette = Category10[10]
 
         p = figure(
@@ -32,7 +35,14 @@ class PlotServer:
             y_axis_label='f2 Volume StDev'
         )
 
-        p.scatter(x='f1', y='f2', source=source, color=palette[0], legend='Solutions', marker='x')
+        p.scatter(
+            x='f1', y='f2', source=all_source, legend='All Evaluations',
+            marker='x', size=5, line_color=palette[0], alpha=0.7
+        )
+        p.scatter(
+            x='f1', y='f2', source=pop_source, legend='Population',
+            marker='o', size=8, line_color=palette[1], fill_alpha=0
+        )
         p.legend.location = 'top_right'
         p.x_range = Range1d(0, 0.3)
         p.y_range = Range1d(0, 2)
@@ -40,9 +50,12 @@ class PlotServer:
         doc.add_root(gridplot([[p]], toolbar_location='left'))
 
         def update():
-            start = len(source.data['f1'])
-            new_data = self.data_callback(start)
-            source.stream(new_data, 50000)
+            start = len(all_source.data['f1'])
+            all_data = self.all_callback(start)
+            all_source.stream(all_data)
+
+            pop_data = self.pop_callback()
+            pop_source.stream(pop_data, self.pop_size)
 
         doc.add_periodic_callback(update, 500)
 
