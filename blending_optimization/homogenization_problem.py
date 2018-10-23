@@ -103,12 +103,50 @@ class HomogenizationProblem(FloatProblem):
         def solution_full_speed(v):
             return [i % 2 for i in range(v)]
 
+        def solution_fixed_random_speed(v):
+            speed = random.randint(1, 10)
+
+            def pos(i):
+                nonlocal speed
+
+                p = (i % speed) / speed
+                return p if int(i / speed) % 2 == 0 else 1 - p
+
+            return [pos(i) for i in range(v)]
+
+        def solution_random_speed(v):
+            offset = 0
+            speed = random.randint(1, 10)
+            start_dir = True
+
+            def pos(i):
+                nonlocal offset
+                nonlocal speed
+                nonlocal start_dir
+
+                i_rel = i - offset
+
+                if i_rel > 0 and i_rel % speed == 0:
+                    offset = i
+                    speed = random.randint(1, 10)
+                    start_dir = not start_dir
+                    i_rel = 0
+
+                p = (i_rel % speed) / speed
+                return p if start_dir else 1 - p
+
+            return [pos(i) for i in range(v)]
+
         new_solution.variables = random.choices([
             solution_random,
-            solution_full_speed
+            solution_full_speed,
+            solution_fixed_random_speed,
+            solution_random_speed
         ], weights=[
             8,
-            2
+            2,
+            5,
+            5
         ])[0](self.number_of_variables)
 
         return new_solution
