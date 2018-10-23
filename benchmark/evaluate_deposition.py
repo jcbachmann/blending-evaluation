@@ -58,8 +58,8 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         variables=chevron_layers + 1,
         material=material.data,
         parameter_columns=material.get_parameter_columns(),
-        population_size=100,
-        max_evaluations=5000
+        population_size=250,
+        max_evaluations=25000
     )
 
     result_population = optimization_result.result_population
