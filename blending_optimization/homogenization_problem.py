@@ -97,8 +97,18 @@ class HomogenizationProblem(FloatProblem):
             self.upper_bound
         )
 
-        new_solution.variables = [random.uniform(self.lower_bound[i] * 1.0, self.upper_bound[i] * 1.0) for i in
-                                  range(self.number_of_variables)] if random.random() < 0.8 else [i % 2 for i in range(
-            self.number_of_variables)]
+        def solution_random(v):
+            return [random.uniform(self.lower_bound[i] * 1.0, self.upper_bound[i] * 1.0) for i in range(v)]
+
+        def solution_full_speed(v):
+            return [i % 2 for i in range(v)]
+
+        new_solution.variables = random.choices([
+            solution_random,
+            solution_full_speed
+        ], weights=[
+            8,
+            2
+        ])[0](self.number_of_variables)
 
         return new_solution
