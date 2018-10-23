@@ -30,13 +30,8 @@ def evaluate_solution(
     standard_deviations = [weighted_avg_and_std(reclaimed_data[parameter_column], reclaimed_data['volume'])[1] for
                            parameter_column in parameter_columns]
 
-    # TODO make work with xz_scaling != 1
-    offset = 0.1 * depth
-    central_reclaim_volumes = reclaimed_data['volume'].values[int(offset):int(length - depth - offset)]
-    central_reclaim_volumes[0] += reclaimed_data['volume'].values[:int(offset)].sum()
-    central_reclaim_volumes[-1] += reclaimed_data['volume'].values[int(length - depth - offset):].sum()
-    volume_stdev = stdev(central_reclaim_volumes)
-    worst_case_volume_stdev = stdev(np.array([total_material_volume / len(central_reclaim_volumes), 0]))
+    volume_stdev = stdev(reclaimed_data['volume'].values.copy())
+    worst_case_volume_stdev = stdev(np.array([total_material_volume / reclaimed_data['volume'].shape[0], 0]))
 
     return [s / d for s, d in zip(standard_deviations, material_parameter_standard_deviations)] + [
         volume_stdev / worst_case_volume_stdev]
