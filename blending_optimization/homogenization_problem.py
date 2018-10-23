@@ -137,16 +137,15 @@ class HomogenizationProblem(FloatProblem):
 
             return [pos(i) for i in range(v)]
 
-        new_solution.variables = random.choices([
-            solution_random,
-            solution_full_speed,
-            solution_fixed_random_speed,
-            solution_random_speed
-        ], weights=[
-            8,
-            2,
-            5,
-            5
-        ])[0](self.number_of_variables)
+        weighted_choices = [
+            (solution_random, 8),
+            (solution_full_speed, 2),
+            (solution_fixed_random_speed, 5),
+            (solution_random_speed, 5)
+        ]
+
+        new_solution.variables = random.choices(
+            [c[0] for c in weighted_choices], weights=[c[1] for c in weighted_choices]
+        )[0](self.number_of_variables)
 
         return new_solution
