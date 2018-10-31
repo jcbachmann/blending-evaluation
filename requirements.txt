@@ -1,5 +1,8 @@
 tornado
 bokeh
+dash
+dash-html-components
+dash-core-components
 dask
 distributed
 graphviz
