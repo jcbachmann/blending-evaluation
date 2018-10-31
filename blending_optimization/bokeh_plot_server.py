@@ -15,10 +15,9 @@ from tornado.ioloop import IOLoop
 class PlotServer:
     PORT = 5001
 
-    def __init__(self, all_callback, pop_callback, pop_size):
+    def __init__(self, all_callback, pop_callback):
         self.all_callback = all_callback
         self.pop_callback = pop_callback
-        self.pop_size = pop_size
 
     def make_document(self, doc: Document):
         doc.title = 'Optimization'
@@ -55,7 +54,7 @@ class PlotServer:
             all_source.stream(all_data)
 
             pop_data = self.pop_callback()
-            pop_source.stream(pop_data, self.pop_size)
+            pop_source.stream(pop_data, len(pop_data['f1']))
 
         doc.add_periodic_callback(update, 500)
 

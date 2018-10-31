@@ -11,7 +11,6 @@ app = dash.Dash('dash-plot-server')
 server = app.server
 global_all_callback = None
 global_pop_callback = None
-global_pop_size = 0
 
 app.layout = html.Div([
     html.Div([
@@ -86,13 +85,11 @@ def update_scatter(_interval):
 class PlotServer:
     PORT = 5001
 
-    def __init__(self, all_callback, pop_callback, pop_size):
+    def __init__(self, all_callback, pop_callback):
         global global_all_callback
         global global_pop_callback
-        global global_pop_size
         global_all_callback = all_callback
         global_pop_callback = pop_callback
-        global_pop_size = pop_size
 
     def serve(self):
         app.run_server(port=PlotServer.PORT)

@@ -104,8 +104,7 @@ def optimize(length: float, depth: float, variables: int, material: pd.DataFrame
 
     plot_server = PlotServer(
         all_callback=evaluator_observer.get_new_solutions,
-        pop_callback=algorithm_observer.get_population,
-        pop_size=population_size
+        pop_callback=algorithm_observer.get_population
     )
     plot_server.serve_background()
 
