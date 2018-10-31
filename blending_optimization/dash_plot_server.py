@@ -11,13 +11,17 @@ app = dash.Dash('dash-plot-server')
 server = app.server
 global_all_callback = None
 global_pop_callback = None
+global_path_callback = None
 
 app.layout = html.Div([
     html.Div([
         dcc.Graph(
             id='scatter',
-            hoverData={'points': [{'customdata': 'path1'}]}
+            hoverData={'points': [{'customdata': 0}]}
         )
+    ]),
+    html.Div([
+        dcc.Graph(id='path'),
     ]),
     dcc.Interval(id='scatter-update', interval=500)
 ])
@@ -43,6 +47,7 @@ def update_scatter(_interval):
         name='All Evaluations',
         x=all_data['f1'],
         y=all_data['f2'],
+        customdata=list(range(len(all_data['f1']))),
         marker=go.scattergl.Marker(
             symbol='x',
             color='#0000FF',
@@ -65,8 +70,7 @@ def update_scatter(_interval):
     )
 
     layout = go.Layout(
-        height=800,
-        width=800,
+        height=600,
         xaxis=dict(
             range=get_margin_range(pop_data['f1']),
             title='f1 Homogenization Effect'
@@ -82,14 +86,38 @@ def update_scatter(_interval):
     return go.Figure(data=[all_data_scatter, pop_data_scatter], layout=layout)
 
 
+@app.callback(Output('path', 'figure'), [Input('scatter', 'hoverData')])
+def update_path(hover_data):
+    path_id = hover_data['points'][0]['customdata']
+    path = global_path_callback(path_id)
+
+    layout = go.Layout(
+        height=700,
+    )
+
+    path = go.Scattergl(
+        name='Population',
+        x=path,
+        y=list(range(len(path))),
+        line=go.scattergl.Line(
+            color='#FF0000',
+        ),
+        mode='lines'
+    )
+
+    return go.Figure(data=[path], layout=layout)
+
+
 class PlotServer:
     PORT = 5001
 
-    def __init__(self, all_callback, pop_callback):
+    def __init__(self, all_callback, pop_callback, path_callback):
         global global_all_callback
         global global_pop_callback
+        global global_path_callback
         global_all_callback = all_callback
         global_pop_callback = pop_callback
+        global_path_callback = path_callback
 
     def serve(self):
         app.run_server(port=PlotServer.PORT)

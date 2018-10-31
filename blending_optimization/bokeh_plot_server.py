@@ -15,9 +15,10 @@ from tornado.ioloop import IOLoop
 class PlotServer:
     PORT = 5001
 
-    def __init__(self, all_callback, pop_callback):
+    def __init__(self, all_callback, pop_callback, path_callback):
         self.all_callback = all_callback
         self.pop_callback = pop_callback
+        self.path_callback = path_callback
 
     def make_document(self, doc: Document):
         doc.title = 'Optimization'

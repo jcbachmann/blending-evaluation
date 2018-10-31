@@ -72,6 +72,12 @@ class MyEvaluatorObserver(EvaluatorObserver):
             'f2': [o[1] for o in new_solutions]
         }
 
+    def get_path(self, path_id: int):
+        if 0 <= path_id < len(self.evaluated_variables):
+            return self.evaluated_variables[path_id]
+
+        return None
+
 
 def optimize(length: float, depth: float, variables: int, material: pd.DataFrame, parameter_columns: List[str],
              population_size: int, max_evaluations: int) -> Tuple[OptimizationResult, HomogenizationProblem]:
@@ -104,7 +110,8 @@ def optimize(length: float, depth: float, variables: int, material: pd.DataFrame
 
     plot_server = PlotServer(
         all_callback=evaluator_observer.get_new_solutions,
-        pop_callback=algorithm_observer.get_population
+        pop_callback=algorithm_observer.get_population,
+        path_callback=evaluator_observer.get_path
     )
     plot_server.serve_background()
 
