@@ -10,11 +10,11 @@ from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
 
+from blending_optimization.bokeh_plot_server import PlotServer
 from blending_optimization.dask_evaluator import DaskEvaluator
 from blending_optimization.evaluator_observer import EvaluatorObserver
 from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
-from blending_optimization.plot_server import PlotServer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
