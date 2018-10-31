@@ -5,15 +5,12 @@ from typing import List
 from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
 
+from blending_optimization.evaluator_observer import EvaluatorObserver
+
 
 def evaluate_solution(solution, problem):
     Evaluator[S].evaluate_solution(solution, problem)
     return solution
-
-
-class EvaluatorObserver:
-    def notify(self, solution_list: List[S]):
-        pass
 
 
 class MultiprocessEvaluator(Evaluator[S]):
