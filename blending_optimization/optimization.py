@@ -30,16 +30,22 @@ class OptimizationResult:
 class MyAlgorithmObserver(Observer):
     def __init__(self):
         self.population = []
+        self.last_evaluations = None
+        self.last_computing_time = None
 
     def update(self, *args, **kwargs):
         evaluations = kwargs['evaluations']
         self.population = kwargs['population']
         computing_time = kwargs['computing time']
-        cps = evaluations / computing_time if computing_time > 0 else '-'
+        e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
+        t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
+        cps = e_diff / t_diff if t_diff > 0 else '-'
         logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
             f'first: {str(self.population[0].objectives)}'
         )
+        self.last_evaluations = evaluations
+        self.last_computing_time = computing_time
 
     def get_population(self):
         return {
