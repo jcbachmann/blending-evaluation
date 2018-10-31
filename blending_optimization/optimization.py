@@ -10,11 +10,11 @@ from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
 
+from blending_optimization.dask_evaluator import DaskEvaluator
 from blending_optimization.evaluator_observer import EvaluatorObserver
 from blending_optimization.homogenization_problem import HomogenizationProblem
 from blending_optimization.hpsea import HPSEA
 from blending_optimization.plot_server import PlotServer
-from blending_optimization.multiprocess_evaluator import MultiprocessEvaluator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -86,7 +86,10 @@ def optimize(length: float, depth: float, variables: int, material: pd.DataFrame
         mutation=Polynomial(1.0 / problem.number_of_variables, distribution_index=20),
         crossover=SBX(1.0, distribution_index=20),
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-        evaluator=MultiprocessEvaluator(observer=evaluator_observer),
+        evaluator=DaskEvaluator(
+            observer=evaluator_observer,
+            # scheduler_address='127.0.0.1:8786'
+        ),
         offspring_size=20
     )
 
