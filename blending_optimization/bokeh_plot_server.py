@@ -6,7 +6,7 @@ from bokeh.document import Document
 from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource, Range1d
 # noinspection PyUnresolvedReferences
-from bokeh.palettes import Category10
+from bokeh.palettes import Category10, Viridis256
 from bokeh.plotting import figure
 from bokeh.server.server import Server
 from tornado.ioloop import IOLoop
@@ -23,22 +23,22 @@ class PlotServer:
     def make_document(self, doc: Document):
         doc.title = 'Optimization'
 
-        all_source = ColumnDataSource({'f1': [], 'f2': []})
+        all_source = ColumnDataSource({'f1': [], 'f2': [], 'color': []})
         pop_source = ColumnDataSource({'f1': [], 'f2': []})
         path_source = ColumnDataSource({'x': [], 'i': []})
         palette = Category10[10]
 
         scatter_fig = figure(
-            plot_height=600,
-            plot_width=600,
-            tools='pan,wheel_zoom,reset,hover,tap',
+            plot_width=900,
+            plot_height=700,
+            tools='pan,wheel_zoom,reset,hover,tap,crosshair,zoom_in,zoom_out,box_zoom,undo,redo,save,box_select',
             x_axis_label='f1 Homogenization Effect',
             y_axis_label='f2 Volume StDev'
         )
 
         scatter_fig.scatter(
             x='f1', y='f2', source=all_source, legend='All Evaluations',
-            marker='x', size=5, line_color=palette[0], alpha=0.7
+            marker='x', size=5, line_color='color', alpha=0.7
         )
         scatter_fig.scatter(
             x='f1', y='f2', source=pop_source, legend='Population',
@@ -56,8 +56,8 @@ class PlotServer:
         all_source.selected.on_change('indices', path_callback)
 
         path_fig = figure(
-            plot_height=400,
             plot_width=900,
+            plot_height=400,
             tools='pan,wheel_zoom,reset,hover',
             x_axis_label='Position',
             y_axis_label='Layer'
@@ -69,6 +69,7 @@ class PlotServer:
         def update():
             start = len(all_source.data['f1'])
             all_data = self.all_callback(start)
+            all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
             all_source.stream(all_data)
 
             pop_data = self.pop_callback()
