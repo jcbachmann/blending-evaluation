@@ -1,4 +1,3 @@
-import threading
 from typing import List
 
 import dash
@@ -6,6 +5,8 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output
+
+from .plot_server import PlotServer
 
 app = dash.Dash('dash-plot-server')
 server = app.server
@@ -108,10 +109,10 @@ def update_path(hover_data):
     return go.Figure(data=[path], layout=layout)
 
 
-class PlotServer:
-    PORT = 5001
-
+class DashPlotServer(PlotServer):
     def __init__(self, all_callback, pop_callback, path_callback):
+        super().__init__(all_callback, pop_callback, path_callback)
+
         global global_all_callback
         global global_pop_callback
         global global_path_callback
@@ -120,8 +121,4 @@ class PlotServer:
         global_path_callback = path_callback
 
     def serve(self):
-        app.run_server(port=PlotServer.PORT)
-
-    def serve_background(self):
-        t = threading.Thread(target=self.serve)
-        t.start()
+        app.run_server(port=self.port)

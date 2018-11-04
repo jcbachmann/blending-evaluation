@@ -1,6 +1,5 @@
 import io
 import json
-import threading
 
 import tornado
 import tornado.httpserver
@@ -11,6 +10,8 @@ from matplotlib.backends.backend_webagg_core import (FigureManagerWebAgg, new_fi
 from matplotlib.figure import Figure
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop, PeriodicCallback
+
+from .plot_server import PlotServer
 
 html_content = '''
 <html>
@@ -134,15 +135,11 @@ class MyApplication(tornado.web.Application):
         ])
 
 
-class PlotServer:
-    PORT = 5001
-
+class MplPlotServer(PlotServer):
     def __init__(self, all_callback, pop_callback, path_callback):
-        self.all_callback = all_callback
-        self.pop_callback = pop_callback
-        self.path_callback = path_callback
+        super().__init__(all_callback, pop_callback, path_callback)
 
-        self.figure, self.all_plot, self.pop_plot = PlotServer.create_figure()
+        self.figure, self.all_plot, self.pop_plot = MplPlotServer.create_figure()
         self.application = MyApplication(self.figure)
 
     @staticmethod
@@ -181,13 +178,9 @@ class PlotServer:
 
     def serve(self):
         http_server = HTTPServer(self.application)
-        http_server.listen(PlotServer.PORT)
-        print(f'http://127.0.0.1:{PlotServer.PORT}/')
+        http_server.listen(self.port)
+        print(f'http://127.0.0.1:{self.port}/')
 
         io_loop = IOLoop.instance()
         PeriodicCallback(self.update_figure, 100).start()
         io_loop.start()
-
-    def serve_background(self):
-        t = threading.Thread(target=self.serve)
-        t.start()

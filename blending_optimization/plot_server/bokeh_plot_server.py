@@ -1,5 +1,3 @@
-import threading
-
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.document import Document
@@ -11,15 +9,10 @@ from bokeh.plotting import figure
 from bokeh.server.server import Server
 from tornado.ioloop import IOLoop
 
+from .plot_server import PlotServer
 
-class PlotServer:
-    PORT = 5001
 
-    def __init__(self, all_callback, pop_callback, path_callback):
-        self.all_callback = all_callback
-        self.pop_callback = pop_callback
-        self.path_callback = path_callback
-
+class BokehPlotServer(PlotServer):
     def make_document(self, doc: Document):
         doc.title = 'Optimization'
 
@@ -78,15 +71,11 @@ class PlotServer:
         doc.add_periodic_callback(update, 500)
 
     def serve(self):
-        print(f'Opening Bokeh application on http://localhost:{PlotServer.PORT}/')
+        print(f'Opening Bokeh application on http://localhost:{self.port}/')
         apps = {'/': Application(FunctionHandler(self.make_document))}
 
-        server = Server(apps, port=PlotServer.PORT, io_loop=IOLoop())
+        server = Server(apps, port=self.port, io_loop=IOLoop())
         server.start()
 
         server.io_loop.add_callback(server.show, '/')
         server.io_loop.start()
-
-    def serve_background(self):
-        t = threading.Thread(target=self.serve)
-        t.start()
