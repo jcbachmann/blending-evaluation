@@ -8,9 +8,9 @@ import time
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from blending_optimization.homogenization_problem import HomogenizationProblem
-from blending_optimization.optimization import OptimizationResult, optimize
 from blending_simulator.stacker.stacker import read_material
+from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
+from .optimization import OptimizationResult, optimize
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

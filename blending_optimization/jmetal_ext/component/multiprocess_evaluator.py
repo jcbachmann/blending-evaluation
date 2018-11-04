@@ -5,7 +5,7 @@ from typing import List
 from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
 
-from blending_optimization.evaluator_observer import EvaluatorObserver
+from .evaluator_observer import EvaluatorObserver
 
 
 def evaluate_solution(solution, problem):
