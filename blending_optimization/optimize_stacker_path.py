@@ -70,7 +70,8 @@ def main(args) -> None:
         variables=args.variables,
         material=read_material(args.material),
         population_size=args.population_size,
-        max_evaluations=args.max_evaluations
+        max_evaluations=args.max_evaluations,
+        # TODO: parameter_columns=
     )
 
     write_optimization_result_to_file(optimization_result, problem, directory)
