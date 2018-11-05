@@ -168,7 +168,6 @@ class MplPlotServer(PlotServer):
 
     def update_figure(self) -> None:
         all_data = self.all_callback(0)
-        n = len(all_data['f1'])
         self.all_plot.set_data(all_data['f1'], all_data['f2'])
 
         pop_data = self.pop_callback()
