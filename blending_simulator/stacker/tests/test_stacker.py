@@ -3,7 +3,7 @@ import unittest
 
 import pandas as pd
 
-from blending_simulator.stacker import Stacker
+from blending_simulator.stacker.stacker import Stacker
 
 
 class TestScaling(unittest.TestCase):

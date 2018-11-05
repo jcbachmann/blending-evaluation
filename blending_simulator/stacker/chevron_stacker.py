@@ -3,7 +3,7 @@ import argparse
 
 import pandas as pd
 
-from blending_simulator.stacker import stack_with_printer
+from blending_simulator.stacker.stacker import stack_with_printer
 
 
 def chevron_path(layers: float) -> pd.DataFrame:

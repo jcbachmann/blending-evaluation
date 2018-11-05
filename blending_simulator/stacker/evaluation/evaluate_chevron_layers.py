@@ -12,8 +12,8 @@ from matplotlib import gridspec
 from seaborn.palettes import color_palette
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
-from blending_simulator.stacker import stack_with_printer
 from blending_simulator.stacker.chevron_stacker import chevron_path
+from blending_simulator.stacker.stacker import stack_with_printer
 from ciglobal.cimath import weighted_avg_and_std
 
 
