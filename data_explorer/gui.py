@@ -3,7 +3,6 @@ import sys
 from multiprocessing.pool import ThreadPool
 from typing import List, Optional
 
-import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import (
@@ -18,6 +17,7 @@ from PyQt5.QtWidgets import (
 )
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from pandas import DataFrame
 
 from data_explorer.testlet import TestletResult
 
@@ -135,7 +135,7 @@ class MainWindow(QMainWindow):
 
         if isinstance(testlet_result.view, str):
             s = testlet_result.view
-        elif isinstance(testlet_result.view, pd.DataFrame):
+        elif isinstance(testlet_result.view, DataFrame):
             s = testlet_result.view.to_string()
 
         if s is not None:

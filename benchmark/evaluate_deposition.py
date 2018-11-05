@@ -7,7 +7,7 @@ import math
 import os
 from datetime import datetime
 
-import pandas as pd
+from pandas import DataFrame
 
 from benchmark import core, helpers
 from benchmark.data import BenchmarkData
@@ -28,7 +28,7 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
     """
     core_length = deposition.bed_size_x - deposition.bed_size_z
 
-    deposition_data = pd.DataFrame({
+    deposition_data = DataFrame({
         'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
         'x': [0.5 * deposition.bed_size_z + core_length * float((l + starting_side) % 2) for l in
               range(0, chevron_layers + 1)],
@@ -68,7 +68,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
     core_length = deposition.bed_size_x - deposition.bed_size_z
 
-    deposition_data = pd.DataFrame({
+    deposition_data = DataFrame({
         'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
         'x': [0.5 * deposition.bed_size_z + core_length * p for p in chosen_solution.variables],
         'z': [0.5 * deposition.bed_size_z] * (chevron_layers + 1),

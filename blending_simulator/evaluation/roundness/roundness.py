@@ -6,6 +6,7 @@ import math
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import pandas as pd
+from pandas import DataFrame
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
 
@@ -62,7 +63,7 @@ class RoundnessEvaluator:
         df = pd.read_csv(input_file, header=None, delimiter='\t', index_col=None)
 
         # Calculate weighted center
-        df_cols = pd.DataFrame()
+        df_cols = DataFrame()
         cols = len(df.columns)
         for c in range(cols):
             df_cols[c] = df[c] * c

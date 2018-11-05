@@ -2,7 +2,7 @@
 from blending_simulator_lib import BlendingSimulatorLib
 from typing import Optional
 
-import pandas as pd
+from pandas import DataFrame
 
 from blending_simulator.blending_simulator import BlendingSimulator
 from blending_simulator.material_deposition import MaterialDeposition, Material
@@ -63,6 +63,6 @@ class BslBlendingSimulator(BlendingSimulator):
         del data_dict['x']
 
         # reorganize reclaimed material into pandas DataFrame
-        data = pd.DataFrame(data_dict)
+        data = DataFrame(data_dict)
 
         return Material(data=data)

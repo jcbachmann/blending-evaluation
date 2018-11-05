@@ -3,7 +3,7 @@ import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+from pandas import DataFrame
 from scipy.optimize import fminbound
 
 from blending_simulator.evaluation.roundness.roundness import execute_for_roundness
@@ -11,7 +11,7 @@ from ciglobal.ciplot import ciplot
 
 
 class OptEvaluator:
-    df = pd.DataFrame()
+    df = DataFrame()
     evaluations = 0
 
     def evaluate(self, likelihood, dist_seg_size, angle_seg_count, pos, volume, runs):
@@ -21,7 +21,7 @@ class OptEvaluator:
             result = execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volume, run)
             results.append([likelihood, volume, OptEvaluator.evaluations, run, result])
 
-        df_i = pd.DataFrame(
+        df_i = DataFrame(
             results,
             columns=['likelihood', 'volume', 'run_group', 'run', 'results']
         )
@@ -105,7 +105,7 @@ def optimize_single(volume, args):
 
 
 def calculate_optimized(args):
-    all_df = pd.DataFrame()
+    all_df = DataFrame()
 
     for volume in args.volumes:
         x_opt, df = optimize_single(volume, args)

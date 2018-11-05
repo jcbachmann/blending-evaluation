@@ -1,6 +1,5 @@
 import threading
 
-import pandas as pd
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.document import Document
@@ -10,6 +9,7 @@ from bokeh.models import ColumnDataSource, FuncTickFormatter, Range1d
 from bokeh.palettes import Category10
 from bokeh.plotting import figure
 from bokeh.server.server import Server
+from pandas import DataFrame
 from tornado.ioloop import IOLoop
 
 
@@ -138,8 +138,8 @@ class PlotServer:
         doc.title = 'Plant Simulation'
 
         # Create data sources
-        live_source = ColumnDataSource(pd.DataFrame(columns=self.columns).to_dict(orient='list'))
-        stats_source = ColumnDataSource(pd.DataFrame(columns=get_stats_columns(self.columns)).to_dict(orient='list'))
+        live_source = ColumnDataSource(DataFrame(columns=self.columns).to_dict(orient='list'))
+        stats_source = ColumnDataSource(DataFrame(columns=get_stats_columns(self.columns)).to_dict(orient='list'))
 
         # Add and arrange graphs
         palette = Category10[10]

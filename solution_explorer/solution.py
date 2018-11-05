@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas import DataFrame
 
 
 class Solution:
@@ -12,10 +13,10 @@ class Meta:
             self,
             objective_maximums: [float],
             variables_count: int,
-            variables: pd.DataFrame,
-            objectives: pd.DataFrame,
-            all_variables: pd.DataFrame,
-            all_objectives: pd.DataFrame
+            variables: DataFrame,
+            objectives: DataFrame,
+            all_variables: DataFrame,
+            all_objectives: DataFrame
     ):
         self.objective_maximums = objective_maximums
         self.variables_count = variables_count

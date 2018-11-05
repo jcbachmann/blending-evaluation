@@ -2,9 +2,9 @@ import random
 from typing import List
 
 import numpy as np
-import pandas as pd
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
+from pandas import DataFrame
 
 from blending_simulator.bsl_blending_simulator import BslBlendingSimulator
 from blending_simulator.material_deposition import MaterialDeposition, Material, Deposition
@@ -14,9 +14,9 @@ from ciglobal.cimath import weighted_avg_and_std, stdev
 def evaluate_solution(
         length: float,
         depth: float,
-        material: pd.DataFrame,
+        material: DataFrame,
         parameter_columns: List[str],
-        deposition: pd.DataFrame,
+        deposition: DataFrame,
         material_parameter_standard_deviations: List[float],
         total_material_volume: float
 ) -> [float, float]:
@@ -38,7 +38,7 @@ def evaluate_solution(
 
 
 class HomogenizationProblem(FloatProblem):
-    def __init__(self, length: float, depth: float, material: pd.DataFrame, parameter_columns: List[str],
+    def __init__(self, length: float, depth: float, material: DataFrame, parameter_columns: List[str],
                  number_of_variables: int = 2):
         super().__init__()
 
@@ -66,7 +66,7 @@ class HomogenizationProblem(FloatProblem):
     def evaluate(self, solution: FloatSolution) -> None:
         min_pos = self.depth / 2
         max_pos = self.length - self.depth / 2
-        deposition = pd.DataFrame(data={
+        deposition = DataFrame(data={
             'x': [elem * (max_pos - min_pos) + min_pos for elem in solution.variables],
             'z': [self.depth / 2] * self.number_of_variables,
             'timestamp': np.linspace(0, self.material['timestamp'].values[-1], self.number_of_variables)

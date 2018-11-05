@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from dask import delayed
 from dask.distributed import Client
+from pandas import DataFrame
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
 from ciglobal.ciplot import ciplot_scatter
@@ -148,7 +149,7 @@ def acquire_results(args):
 
 def to_df(results):
     results = list(filter(lambda entry: entry[2] is not None, results))
-    return pd.DataFrame(results, columns=['in_volume', 'ppm3', 'run', 'out_volume'])
+    return DataFrame(results, columns=['in_volume', 'ppm3', 'run', 'out_volume'])
 
 
 def main(args):

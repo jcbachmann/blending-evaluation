@@ -1,6 +1,6 @@
 from typing import List, Union
 
-import pandas as pd
+from pandas import DataFrame
 
 from blending_simulator.material_deposition import MaterialDeposition, Material
 
@@ -40,12 +40,12 @@ class BlendingSimulator:
         data_list = self.reclaim()
 
         # reorganize reclaimed material into pandas DataFrame
-        data_dict = pd.DataFrame(
+        data_dict = DataFrame(
             [row[2] for row in data_list], columns=material_deposition.material.get_parameter_columns()
         ).fillna(0).to_dict(orient='list')
         data_dict['x'] = [row[0] for row in data_list]
         data_dict['volume'] = [row[1] for row in data_list]
-        data = pd.DataFrame(data_dict)
+        data = DataFrame(data_dict)
 
         # calculate timestamp column from x positions
         data['timestamp'] = data['x'] / x_per_s

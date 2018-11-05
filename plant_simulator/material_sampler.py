@@ -2,7 +2,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+from pandas import DataFrame
 
 from ciglobal.cimath import weighted_avg_and_std
 from .material_handler import MaterialHandler
@@ -120,7 +120,7 @@ class MaterialSampler:
             self.last_stats = time
 
     def evaluate(self):
-        df = pd.DataFrame(data=self.samples, columns=self.get_columns())
+        df = DataFrame(data=self.samples, columns=self.get_columns())
         df = df.set_index('time')
 
         axs = df.filter(regex='.* quality').replace([0], value=[None]).plot.hist(
@@ -165,11 +165,11 @@ class MaterialSampler:
         plt.show()
 
     def get_diff_live(self, start):
-        df = pd.DataFrame(data=self.samples[start:], columns=self.get_columns())
+        df = DataFrame(data=self.samples[start:], columns=self.get_columns())
         return df.to_dict(orient='list')
 
     def get_diff_stats(self, start):
-        df = pd.DataFrame(data=self.stats[start:])
+        df = DataFrame(data=self.stats[start:])
         return df.to_dict(orient='list')
 
     def get_columns(self):

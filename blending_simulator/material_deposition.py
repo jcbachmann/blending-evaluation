@@ -4,9 +4,10 @@ from typing import List, Optional
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 
-def read_data_file(data_file: str) -> pd.DataFrame:
+def read_data_file(data_file: str) -> DataFrame:
     """
     Read data file provided in the arguments from tab separated file
     :param data_file: file which is read into pandas DataFrame
@@ -22,7 +23,7 @@ def read_data_file(data_file: str) -> pd.DataFrame:
     return data
 
 
-def check_required_columns(data: pd.DataFrame, required_columns: List[str]) -> None:
+def check_required_columns(data: DataFrame, required_columns: List[str]) -> None:
     """
     Data is check whether all required columns are provided. A ValueError is raised if the data does not contain all
     required columns.
@@ -42,7 +43,7 @@ class Material:
 
     REQUIRED_COLUMNS = ['timestamp', 'volume']
 
-    def __init__(self, *, data: pd.DataFrame = None, data_file: Optional[str] = None, meta=None):
+    def __init__(self, *, data: DataFrame = None, data_file: Optional[str] = None, meta=None):
         if data is not None:
             self.data = data
         elif data_file is not None:
@@ -200,10 +201,10 @@ class MaterialDeposition:
         self.data = MaterialDeposition.prepare(material.data, deposition.data)
 
     @staticmethod
-    def prepare(material_df: pd.DataFrame, deposition_df: pd.DataFrame, t_diff_max: float = 15) -> pd.DataFrame:
+    def prepare(material_df: DataFrame, deposition_df: DataFrame, t_diff_max: float = 15) -> DataFrame:
         # Copy material data
         data = material_df.copy()
-        # data = pd.DataFrame()
+        # data = DataFrame()
 
         # TODO make fast!
         # for index, row in material_df.iterrows():
@@ -226,7 +227,7 @@ class MaterialDeposition:
         #         sub_rows['volume'].append(volume_per_step)
         #         sub_rows['parameter'].append(parameter)
         #
-        #     data = data.append(pd.DataFrame(sub_rows))
+        #     data = data.append(DataFrame(sub_rows))
 
         data['x'] = np.interp(data['timestamp'], deposition_df['timestamp'], deposition_df['x'])
         data['z'] = np.interp(data['timestamp'], deposition_df['timestamp'], deposition_df['z'])

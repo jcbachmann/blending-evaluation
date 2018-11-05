@@ -5,10 +5,11 @@ from typing import Union, Optional
 
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 
 def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: str = 'volume',
-                  cols_p: [str] = None) -> pd.DataFrame:
+                  cols_p: [str] = None) -> DataFrame:
     df = pd.read_csv(filepath, delimiter='\t', index_col=None)
     if cols_p is None:
         # Use all columns except for timestamp and volume
@@ -16,7 +17,7 @@ def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: s
     required_cols = [col_timestamp, col_volume] + cols_p
     if not set(required_cols).issubset(df.columns):
         raise Exception(f'required columns ({required_cols}) not found in material file')
-    material = pd.DataFrame()
+    material = DataFrame()
     material['timestamp'] = df[col_timestamp]
     material['volume'] = df[col_volume]
     for i, col_p in enumerate(cols_p):
@@ -25,7 +26,7 @@ def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: s
 
 
 def read_path(filepath: str, col_path: str = 'path', col_part: Optional[str] = None,
-              col_timestamp: Optional[str] = None) -> pd.DataFrame:
+              col_timestamp: Optional[str] = None) -> DataFrame:
     required_cols = [col_path]
     if col_part is not None:
         required_cols += [col_part]
@@ -51,7 +52,7 @@ class Stacker:
         # Status message callback
         self.status = lambda msg: None if status is None else status
 
-    def run(self, material: pd.DataFrame, path: pd.DataFrame, callback) -> None:
+    def run(self, material: DataFrame, path: DataFrame, callback) -> None:
         self.status('Starting stacker')
 
         # Stacker path parameters
@@ -102,7 +103,7 @@ class StackerPrinter:
     def status(msg):
         print(f'[stacker] {msg}', file=sys.stderr)
 
-    def out(self, material: pd.DataFrame):
+    def out(self, material: DataFrame):
         first_cols = ['timestamp', 'x', 'z', 'volume']
         col_order = first_cols.copy()
         col_order.extend(list(set(material.columns) - set(first_cols)))
@@ -115,8 +116,8 @@ class StackerPrinter:
 def stack_with_printer(
         length: float,
         depth: float,
-        material: Union[str, pd.DataFrame],
-        stacker_path: Union[str, pd.DataFrame],
+        material: Union[str, DataFrame],
+        stacker_path: Union[str, DataFrame],
         header: bool = True,
         out_buffer=sys.stdout.buffer
 ):

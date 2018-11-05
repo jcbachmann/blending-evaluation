@@ -3,9 +3,9 @@ import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 from dask import delayed
 from dask.distributed import Client
+from pandas import DataFrame
 
 from blending_simulator.evaluation.roundness.roundness import execute_for_roundness
 from ciglobal.ciplot import ciplot
@@ -37,7 +37,7 @@ def evaluate_volumes(dist_seg_size, angle_seg_count, pos, start, stop, steps, ru
 
 
 def to_df(results):
-    return pd.DataFrame(
+    return DataFrame(
         results,
         columns=['likelihood', 'volume', 'run', 'results']
     )

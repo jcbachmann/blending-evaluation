@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-import pandas as pd
+from pandas import DataFrame
 
 from blending_simulator.stacker.stacker import Stacker
 
@@ -14,8 +14,8 @@ class TestScaling(unittest.TestCase):
             res.append([t, x, z, v] + list(ps.values))
 
         stacker = Stacker(depth=0, length=2)
-        material = pd.DataFrame(data=[[0, 1, 0.25]], columns=['timestamp', 'volume', 'p_1'])
-        path = pd.DataFrame(data=[0, 1], columns=['path'])
+        material = DataFrame(data=[[0, 1, 0.25]], columns=['timestamp', 'volume', 'p_1'])
+        path = DataFrame(data=[0, 1], columns=['path'])
         stacker.run(material=material, path=path, callback=aggregate)
 
         self.assertEqual(len(res), 1)
@@ -28,8 +28,8 @@ class TestScaling(unittest.TestCase):
             res.append([t, x, z, v] + list(ps.values))
 
         stacker = Stacker(depth=0, length=2)
-        material = pd.DataFrame(data=[[0, 1, 0.25], [1, 1, 0.75]], columns=['timestamp', 'volume', 'p_1'])
-        path = pd.DataFrame(data=[0, 1], columns=['path'])
+        material = DataFrame(data=[[0, 1, 0.25], [1, 1, 0.75]], columns=['timestamp', 'volume', 'p_1'])
+        path = DataFrame(data=[0, 1], columns=['path'])
         stacker.run(material=material, path=path, callback=aggregate)
 
         self.assertEqual(len(res), 2)
@@ -42,8 +42,8 @@ class TestScaling(unittest.TestCase):
             res.append([t, x, z, v] + list(ps.values))
 
         stacker = Stacker(depth=0, length=2)
-        material = pd.DataFrame(data=[[0, 1, 0.25], [1, 1, 0.1], [2, 1, 0.75]], columns=['timestamp', 'volume', 'p_1'])
-        path = pd.DataFrame(data=[0, 1], columns=['path'])
+        material = DataFrame(data=[[0, 1, 0.25], [1, 1, 0.1], [2, 1, 0.75]], columns=['timestamp', 'volume', 'p_1'])
+        path = DataFrame(data=[0, 1], columns=['path'])
         stacker.run(material=material, path=path, callback=aggregate)
 
         self.assertEqual(len(res), 3)

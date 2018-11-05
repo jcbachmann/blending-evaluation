@@ -3,13 +3,14 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from pandas import DataFrame
 
 from ciglobal.mpl_interaction import PanAndZoom
 from data_explorer.gui import ExpandingFigureCanvas
 
 
 class ObjectivesScatterCanvas(ExpandingFigureCanvas):
-    def __init__(self, objectives: pd.DataFrame, all_variables: pd.DataFrame, all_objectives: pd.DataFrame,
+    def __init__(self, objectives: DataFrame, all_variables: DataFrame, all_objectives: DataFrame,
                  selection_callback):
         self.all_variables = all_variables
         self.all_objectives = all_objectives

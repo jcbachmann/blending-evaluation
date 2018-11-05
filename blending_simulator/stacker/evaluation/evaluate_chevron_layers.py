@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib import gridspec
+from pandas import DataFrame
 from seaborn.palettes import color_palette
 
 from blending_simulator.external_blending_simulator import ExternalBlendingSimulatorInterface
@@ -34,7 +35,7 @@ def simulate(args, reclaim, layers):
     ))
 
 
-def get_results(meta, data: pd.DataFrame, c_meta='layers', c_weights: str = 'volume', c_values: str = 'p_1'):
+def get_results(meta, data: DataFrame, c_meta='layers', c_weights: str = 'volume', c_values: str = 'p_1'):
     minvol = 0.75 * data[c_weights].sum() / len(data.index)
     larger = data.query(f'{c_weights}>={minvol}')
     lbound = larger[c_values].min()
@@ -48,7 +49,7 @@ def get_results(meta, data: pd.DataFrame, c_meta='layers', c_weights: str = 'vol
         lbound = min(lbound, np.average(smaller[c_values], weights=smaller[c_weights]))
         ubound = max(ubound, np.average(smaller[c_values], weights=smaller[c_weights]))
 
-    return pd.DataFrame(
+    return DataFrame(
         data=[(meta, lbound, lstd, mean, ustd, ubound)],
         columns=[c_meta, 'lbound', 'lstd', 'mean', 'ustd', 'ubound']
     )
@@ -65,7 +66,7 @@ def get_reference(file):
 
 
 def load_results_from_path(path):
-    results = pd.DataFrame()
+    results = DataFrame()
 
     r1 = re.compile('reclaim-layers-([\d.]+)\.csv')
     for file in os.listdir(path):
