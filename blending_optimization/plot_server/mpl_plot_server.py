@@ -166,7 +166,7 @@ class MplPlotServer(PlotServer):
 
         return fig, all_plot, pop_plot
 
-    def update_figure(self):
+    def update_figure(self) -> None:
         all_data = self.all_callback(0)
         n = len(all_data['f1'])
         self.all_plot.set_data(all_data['f1'], all_data['f2'])
@@ -176,7 +176,7 @@ class MplPlotServer(PlotServer):
 
         self.figure.canvas.draw_idle()
 
-    def serve(self):
+    def serve(self) -> None:
         http_server = HTTPServer(self.application)
         http_server.listen(self.port)
         print(f'http://127.0.0.1:{self.port}/')

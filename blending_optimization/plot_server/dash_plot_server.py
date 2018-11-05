@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable
 
 import dash
 import dash_core_components as dcc
@@ -10,9 +10,9 @@ from .plot_server import PlotServer
 
 app = dash.Dash('dash-plot-server')
 server = app.server
-global_all_callback = None
-global_pop_callback = None
-global_path_callback = None
+global_all_callback: Callable = None
+global_pop_callback: Callable = None
+global_path_callback: Callable = None
 
 app.layout = html.Div([
     html.Div([
@@ -120,5 +120,5 @@ class DashPlotServer(PlotServer):
         global_pop_callback = pop_callback
         global_path_callback = path_callback
 
-    def serve(self):
+    def serve(self) -> None:
         app.run_server(port=self.port)

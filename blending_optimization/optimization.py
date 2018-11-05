@@ -1,7 +1,6 @@
 import logging
 from typing import List, Tuple
 
-import pandas as pd
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
 from jmetal.component.observer import Observer
@@ -9,6 +8,7 @@ from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
+from pandas import DataFrame
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.component.dask_evaluator import DaskEvaluator
@@ -79,7 +79,7 @@ class MyEvaluatorObserver(EvaluatorObserver):
         return None
 
 
-def optimize(length: float, depth: float, variables: int, material: pd.DataFrame, parameter_columns: List[str],
+def optimize(length: float, depth: float, variables: int, material: DataFrame, parameter_columns: List[str],
              population_size: int, max_evaluations: int) -> Tuple[OptimizationResult, HomogenizationProblem]:
     problem = HomogenizationProblem(
         length=length,

@@ -13,7 +13,7 @@ from .plot_server import PlotServer
 
 
 class BokehPlotServer(PlotServer):
-    def make_document(self, doc: Document):
+    def make_document(self, doc: Document) -> None:
         doc.title = 'Optimization'
 
         all_source = ColumnDataSource({'f1': [], 'f2': [], 'color': []})
@@ -59,7 +59,7 @@ class BokehPlotServer(PlotServer):
 
         doc.add_root(gridplot([[scatter_fig], [path_fig]], toolbar_location='left'))
 
-        def update():
+        def update() -> None:
             start = len(all_source.data['f1'])
             all_data = self.all_callback(start)
             all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
@@ -70,7 +70,7 @@ class BokehPlotServer(PlotServer):
 
         doc.add_periodic_callback(update, 500)
 
-    def serve(self):
+    def serve(self) -> None:
         print(f'Opening Bokeh application on http://localhost:{self.port}/')
         apps = {'/': Application(FunctionHandler(self.make_document))}
 
