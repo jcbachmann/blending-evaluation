@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from blending_simulator_lib import BlendingSimulatorLib
+from typing import Optional
 
 import pandas as pd
 
@@ -8,9 +9,10 @@ from blending_simulator.material_deposition import MaterialDeposition, Material
 
 
 class BslBlendingSimulator(BlendingSimulator):
-    def __init__(self, bed_size_x: float, bed_size_z: float, reclaimangle: float = None, ppm3: float = None,
-                 circular: bool = None, eight: float = None, bulkdensity: float = None, dropheight: float = None,
-                 detailed: bool = None, reclaimincrement: float = None):
+    def __init__(self, bed_size_x: float, bed_size_z: float, reclaimangle: Optional[float] = None,
+                 ppm3: Optional[float] = None, circular: Optional[bool] = None, eight: Optional[float] = None,
+                 bulkdensity: Optional[float] = None, dropheight: Optional[float] = None,
+                 detailed: Optional[bool] = None, reclaimincrement: Optional[float] = None):
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None: reclaimangle = 45.0
         if ppm3 is None: ppm3 = 1.0

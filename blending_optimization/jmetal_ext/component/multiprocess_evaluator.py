@@ -1,6 +1,6 @@
 import functools
 from multiprocessing.pool import Pool
-from typing import List
+from typing import List, Optional
 
 from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
@@ -14,7 +14,7 @@ def evaluate_solution(solution, problem):
 
 
 class MultiprocessEvaluator(Evaluator[S]):
-    def __init__(self, processes=None, observer: EvaluatorObserver = None):
+    def __init__(self, processes=None, observer: Optional[EvaluatorObserver] = None):
         self.pool = Pool(processes)
         self.observer = observer
 

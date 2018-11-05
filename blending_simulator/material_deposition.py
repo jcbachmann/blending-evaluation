@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class Material:
 
     REQUIRED_COLUMNS = ['timestamp', 'volume']
 
-    def __init__(self, *, data: pd.DataFrame = None, data_file: str = None, meta=None):
+    def __init__(self, *, data: pd.DataFrame = None, data_file: Optional[str] = None, meta=None):
         if data is not None:
             self.data = data
         elif data_file is not None:
@@ -116,7 +116,7 @@ class Deposition:
 
     REQUIRED_COLUMNS = ['timestamp', 'x', 'z']
 
-    def __init__(self, meta, data_file: str = None, data=None):
+    def __init__(self, meta, data_file: Optional[str] = None, data=None):
         if data_file is not None:
             self.data = read_data_file(data_file)
         elif data is not None:

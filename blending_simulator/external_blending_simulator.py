@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import logging
 import subprocess
-from typing import List, Union
+from typing import List, Union, Optional
 
 from blending_simulator.blending_simulator import BlendingSimulator
 
@@ -10,22 +10,22 @@ class ExternalBlendingSimulatorInterface:
     def __init__(
             self,
             executable='./BlendingSimulator',
-            config: str = None,
+            config: Optional[str] = None,
             verbose: bool = False,
             detailed: bool = False,
             circular: bool = False,
-            length: float = None,
-            depth: float = None,
-            reclaimangle: float = None,
-            eight: float = None,
-            bulkdensity: float = None,
-            ppm3: float = None,
-            dropheight: float = None,
-            reclaimincrement: float = None,
+            length: Optional[float] = None,
+            depth: Optional[float] = None,
+            reclaimangle: Optional[float] = None,
+            eight: Optional[float] = None,
+            bulkdensity: Optional[float] = None,
+            ppm3: Optional[float] = None,
+            dropheight: Optional[float] = None,
+            reclaimincrement: Optional[float] = None,
             visualize: bool = False,
             pretty: bool = False,
-            heights: str = None,
-            reclaim: str = None
+            heights: Optional[str] = None,
+            reclaim: Optional[str] = None
     ):
         self.executable = executable
         self.config = config

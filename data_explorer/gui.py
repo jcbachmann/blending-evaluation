@@ -1,7 +1,7 @@
 import logging
 import sys
 from multiprocessing.pool import ThreadPool
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -34,7 +34,7 @@ class ExpandingFigureCanvas(FigureCanvas):
 
 class MainWindow(QMainWindow):
     testlet_evaluated = pyqtSignal(int, list, name='testlet evaluated')
-    table_widget: QTableWidget = None
+    table_widget: Optional[QTableWidget] = None
 
     def __init__(self, path, entry_list, testlet_list, label, main_figures=None, icon=None):
         # noinspection PyArgumentList

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -12,7 +14,7 @@ def white_to_red(p):
 
 
 class ObjectiveTestlet(Testlet):
-    def __init__(self, index: float, maximum: float, label: str = None):
+    def __init__(self, index: float, maximum: float, label: Optional[str] = None):
         self.index = index
         self.maximum = maximum
         self.label = label

@@ -1,5 +1,5 @@
 import functools
-from typing import List
+from typing import List, Optional
 
 from dask.distributed import Client, LocalCluster
 from jmetal.component.evaluator import Evaluator, S
@@ -14,7 +14,7 @@ def evaluate_solution(solution, problem):
 
 
 class DaskEvaluator(Evaluator[S]):
-    def __init__(self, observer: EvaluatorObserver = None, scheduler_address: str = None):
+    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler_address: Optional[str] = None):
         self.observer = observer
         if scheduler_address is None:
             self.client = Client(LocalCluster())

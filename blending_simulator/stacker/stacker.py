@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import sys
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,8 @@ def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: s
     return material
 
 
-def read_path(filepath: str, col_path: str = 'path', col_part: str = None, col_timestamp: str = None) -> pd.DataFrame:
+def read_path(filepath: str, col_path: str = 'path', col_part: Optional[str] = None,
+              col_timestamp: Optional[str] = None) -> pd.DataFrame:
     required_cols = [col_path]
     if col_part is not None:
         required_cols += [col_part]
