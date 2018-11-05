@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import pandas as pd
 from blending_simulator_lib import BlendingSimulatorLib
+
+import pandas as pd
 
 from blending_simulator.blending_simulator import BlendingSimulator
 from blending_simulator.material_deposition import MaterialDeposition, Material
