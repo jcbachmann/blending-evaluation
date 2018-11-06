@@ -62,14 +62,15 @@ def write_arguments_to_file(args, directory: str):
 
 
 def main(args) -> None:
+    # Prepare directory
     datetime = time.strftime('%Y-%m-%d %H-%M-%S')
     directory = f'{datetime} {args.length}x{args.depth} v{args.variables} {args.population_size}of{args.max_evaluations} {args.material}'
     if os.path.exists(directory):
         raise Exception(f'directory "{directory}" already exists')
-
     os.makedirs(directory)
     write_arguments_to_file(args, directory)
 
+    # Execute optimization
     material = read_material(args.material)
     optimization_result = optimize(
         length=args.length,
@@ -81,6 +82,7 @@ def main(args) -> None:
         parameter_columns=get_parameter_colums(material)
     )
 
+    # Write results
     write_optimization_result_to_file(optimization_result, directory)
     plot_optimization_result(optimization_result, directory)
 
