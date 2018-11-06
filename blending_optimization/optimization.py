@@ -1,5 +1,5 @@
 import logging
-from typing import List, Tuple
+from typing import List
 
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
@@ -21,10 +21,13 @@ logger = logging.getLogger(__name__)
 
 
 class OptimizationResult:
-    def __init__(self, result_population, all_variables, all_objectives):
+    def __init__(self, result_population, all_variables, all_objectives, variable_labels: List[str],
+                 objective_labels: List[str]):
         self.result_population = result_population
         self.all_variables = all_variables
         self.all_objectives = all_objectives
+        self.variable_labels = variable_labels
+        self.objective_labels = objective_labels
 
 
 class MyAlgorithmObserver(Observer):
@@ -80,7 +83,7 @@ class MyEvaluatorObserver(EvaluatorObserver):
 
 
 def optimize(length: float, depth: float, variables: int, material: DataFrame, parameter_columns: List[str],
-             population_size: int, max_evaluations: int) -> Tuple[OptimizationResult, HomogenizationProblem]:
+             population_size: int, max_evaluations: int) -> OptimizationResult:
     problem = HomogenizationProblem(
         length=length,
         depth=depth,
@@ -120,5 +123,7 @@ def optimize(length: float, depth: float, variables: int, material: DataFrame, p
     return OptimizationResult(
         result_population=algorithm.get_result(),
         all_variables=evaluator_observer.evaluated_variables,
-        all_objectives=evaluator_observer.evaluated_objectives
-    ), problem
+        all_objectives=evaluator_observer.evaluated_objectives,
+        variable_labels=problem.get_variable_labels(),
+        objective_labels=problem.get_objective_labels()
+    )

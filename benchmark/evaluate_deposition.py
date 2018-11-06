@@ -52,7 +52,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
     # TODO respect starting side
     # TODO use same simulator?
-    optimization_result, problem = optimize(
+    optimization_result = optimize(
         length=deposition.bed_size_x,
         depth=deposition.bed_size_z,
         variables=chevron_layers + 1,

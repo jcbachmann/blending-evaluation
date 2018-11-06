@@ -8,37 +8,35 @@ import time
 import matplotlib.pyplot as plt
 from pandas import DataFrame
 
+from blending_optimization.optimization import OptimizationResult, optimize
 from blending_simulator.stacker.stacker import read_material
-from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
-from .optimization import OptimizationResult, optimize
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def write_optimization_result_to_file(optimization_result: OptimizationResult, problem: HomogenizationProblem,
-                                      directory: str):
+def write_optimization_result_to_file(optimization_result: OptimizationResult, directory: str):
     variables = DataFrame(data=[solution.variables for solution in optimization_result.result_population])
-    variables.columns = problem.get_variable_labels()
+    variables.columns = optimization_result.variable_labels
     variables.to_csv(f'{directory}/variables.csv', sep='\t', index=False)
 
     objectives = DataFrame(
         data=[solution.objectives for solution in optimization_result.result_population],
-        columns=problem.get_objective_labels()
+        columns=optimization_result.objective_labels
     )
     objectives.to_csv(f'{directory}/objectives.csv', sep='\t', index=False)
 
-    all_variables_df = DataFrame(data=optimization_result.all_variables, columns=problem.get_variable_labels())
+    all_variables_df = DataFrame(data=optimization_result.all_variables, columns=optimization_result.variable_labels)
     all_variables_df.to_csv(f'{directory}/all_variables.csv', sep='\t', index=False)
 
-    all_objectives_df = DataFrame(data=optimization_result.all_objectives, columns=problem.get_objective_labels())
+    all_objectives_df = DataFrame(data=optimization_result.all_objectives, columns=optimization_result.objective_labels)
     all_objectives_df.to_csv(f'{directory}/all_objectives.csv', sep='\t', index=False)
 
 
-def plot_optimization_result(optimization_result: OptimizationResult, problem, directory: str):
+def plot_optimization_result(optimization_result: OptimizationResult, directory: str):
     df = DataFrame(
         data=[solution.objectives for solution in optimization_result.result_population],
-        columns=problem.get_objective_labels()
+        columns=optimization_result.objective_labels
     )
     for c0 in range(len(df.columns) - 1):
         for c1 in range(c0 + 1, len(df.columns)):
@@ -64,7 +62,7 @@ def main(args) -> None:
     os.makedirs(directory)
     write_arguments_to_file(args, directory)
 
-    optimization_result, problem = optimize(
+    optimization_result = optimize(
         length=args.length,
         depth=args.depth,
         variables=args.variables,
@@ -74,8 +72,8 @@ def main(args) -> None:
         # TODO: parameter_columns=
     )
 
-    write_optimization_result_to_file(optimization_result, problem, directory)
-    plot_optimization_result(optimization_result, problem, directory)
+    write_optimization_result_to_file(optimization_result, directory)
+    plot_optimization_result(optimization_result, directory)
 
 
 if __name__ == '__main__':
