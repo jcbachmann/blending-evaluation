@@ -48,7 +48,7 @@ class HomogenizationProblem(FloatProblem):
         self.parameter_columns = parameter_columns
 
         self.material_parameter_standard_deviations = [
-            weighted_avg_and_std(self.material[parameter_column], self.material['volume'])[1] for parameter_column in
+            weighted_avg_and_std(material[parameter_column], material['volume'])[1] for parameter_column in
             parameter_columns
         ]
         self.total_material_volume = material['volume'].sum()

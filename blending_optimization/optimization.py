@@ -95,7 +95,7 @@ def optimize(length: float, depth: float, variables: int, material: DataFrame, p
         problem=problem,
         population_size=population_size,
         max_evaluations=max_evaluations,
-        mutation=Polynomial(3.3 / problem.number_of_variables, distribution_index=20),
+        mutation=Polynomial(3.3 / variables, distribution_index=20),
         crossover=SBX(0.9, distribution_index=15),
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
         evaluator=DaskEvaluator(
