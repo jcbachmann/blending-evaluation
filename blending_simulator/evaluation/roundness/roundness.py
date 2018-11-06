@@ -15,7 +15,7 @@ def execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volum
     print(f'processing volume {volume} with likelihood {likelihood} (run {run})')
     path = f'/tmp/heights-{volume}-{likelihood:.4f}-{run}.txt'
 
-    ExternalBlendingSimulatorInterface(config='pile.conf', heights=path, eight=likelihood).run(
+    ExternalBlendingSimulatorInterface(config='pile.conf', heights=path, eight=likelihood).run(  # TODO
         lambda sim: sim.communicate((f'0 {pos} {volume}').encode())
     )
 

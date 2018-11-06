@@ -1,4 +1,4 @@
-from blending_simulator.external_blending_simulator import ExternalBlendingSimulator
+from blending_simulator.bsl_blending_simulator import BslBlendingSimulator
 from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
 from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
 from plant_simulator.plant import Plant
@@ -17,7 +17,7 @@ class Stockpile:
         self.reclaimer_position = 0
 
         self.simulator = {
-            'fast': lambda: ExternalBlendingSimulator(
+            'fast': lambda: BslBlendingSimulator(
                 bed_size_x=length,
                 bed_size_z=depth,
                 ppm3=1

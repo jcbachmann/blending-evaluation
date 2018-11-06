@@ -88,7 +88,7 @@ def execute_for_bulk_density(
     print(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
     path += f'/heights-vol{volume}-res{ppm3:.1f}-run{run}.txt'
 
-    ExternalBlendingSimulatorInterface(
+    ExternalBlendingSimulatorInterface(  # TODO
         executable=executable,
         length=size,
         depth=size,

@@ -19,7 +19,7 @@ from ciglobal.cimath import weighted_avg_and_std
 
 
 def simulate(args, reclaim, layers):
-    ExternalBlendingSimulatorInterface(
+    ExternalBlendingSimulatorInterface(  # TODO
         length=args.length,
         depth=args.depth,
         dropheight=(args.depth / 2),

@@ -3,7 +3,6 @@ import os
 from typing import Dict
 
 from blending_simulator.bsl_blending_simulator import BslBlendingSimulator
-from blending_simulator.external_blending_simulator import ExternalBlendingSimulator
 from blending_simulator.mathematical_blending_simulator import MathematicalBlendingSimulator
 from blending_simulator.smooth_blending_simulator import SmoothBlendingSimulator
 
@@ -12,8 +11,6 @@ SIMULATOR_TYPE = {
     'MathematicalBlendingSimulator': MathematicalBlendingSimulator,
     'smooth': SmoothBlendingSimulator,
     'SmoothBlendingSimulator': SmoothBlendingSimulator,
-    'external': ExternalBlendingSimulator,
-    'ExternalBlendingSimulator': ExternalBlendingSimulator,
     'bsl': BslBlendingSimulator,
     'BslBlendingSimulator': BslBlendingSimulator,
 }
