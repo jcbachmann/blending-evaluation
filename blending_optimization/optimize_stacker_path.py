@@ -4,6 +4,7 @@ import configparser
 import logging
 import os
 import time
+from typing import List
 
 import matplotlib.pyplot as plt
 from pandas import DataFrame
@@ -46,6 +47,13 @@ def plot_optimization_result(optimization_result: OptimizationResult, directory:
     plt.show()
 
 
+def get_parameter_colums(material: DataFrame) -> List[str]:
+    non_parameter_columns = ['timestamp', 'volume']
+    parameter_columns = list(set(material.columns) - set(non_parameter_columns))
+    logging.info(f'Found the following parameter columns: {", ".join(parameter_columns)}')
+    return parameter_columns
+
+
 def write_arguments_to_file(args, directory: str):
     with open(f'{directory}/args.ini', 'w') as args_file:
         c = configparser.ConfigParser()
@@ -62,14 +70,15 @@ def main(args) -> None:
     os.makedirs(directory)
     write_arguments_to_file(args, directory)
 
+    material = read_material(args.material)
     optimization_result = optimize(
         length=args.length,
         depth=args.depth,
         variables=args.variables,
-        material=read_material(args.material),
+        material=material,
         population_size=args.population_size,
         max_evaluations=args.max_evaluations,
-        # TODO: parameter_columns=
+        parameter_columns=get_parameter_colums(material)
     )
 
     write_optimization_result_to_file(optimization_result, directory)
