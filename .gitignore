@@ -1,10 +1,10 @@
-__pycache__
+__pycache__/
+*.egg-info/
 
 /.idea/
 /.venv/
-/Blending.egg-info/
 
 /workdir/
 /dask-worker-space/
 
-/jmetalpy/
+/libraries_external/
