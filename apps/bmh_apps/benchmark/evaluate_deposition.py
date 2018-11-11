@@ -203,7 +203,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', default='.', help='Simulator benchmark path')
     parser.add_argument('--dst', default='.', help='Path where results will be stored')
     parser.add_argument('--dry_run', action='store_true', help='Do not write files')
-    parser.add_argument('--sim', type=str, required=True, help='Simulator identifier')
-    parser.add_argument('--material', type=str, required=True, help='Material curve identifier')
+    parser.add_argument('--sim', type=str, default='bsl_low', help='Simulator identifier')
+    parser.add_argument('--material', type=str, default='generated_2Y45', help='Material curve identifier')
 
     main(parser.parse_args())

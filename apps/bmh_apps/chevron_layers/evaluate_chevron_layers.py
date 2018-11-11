@@ -159,9 +159,9 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='height map evaluator')
-    parser.add_argument('--length', type=float, required=True, help='Blending bed length')
-    parser.add_argument('--depth', type=float, required=True, help='Blending bed depth')
-    parser.add_argument('--material', type=str, required=True, help='Material input file')
+    parser.add_argument('--length', type=float, default=300, help='Blending bed length')
+    parser.add_argument('--depth', type=float, default=50, help='Blending bed depth')
+    parser.add_argument('--material', type=str, default='quality_input_curve.txt', help='Material input file')
     parser.add_argument('--path', type=str, default='/tmp', help='Output path')
     parser.add_argument('--reuse', action='store_true', help='Use material available in path')
 
