@@ -6,7 +6,7 @@ import numpy as np
 from pandas import DataFrame
 from scipy.optimize import fminbound
 
-from .roundness import execute_for_roundness
+from .roundness_evaluator import RoundnessEvaluator
 from ..helpers.ciplot import ciplot
 
 
@@ -18,7 +18,9 @@ class OptEvaluator:
         results = []
 
         for run in range(runs):
-            result = execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volume, run)
+            evaluator = RoundnessEvaluator(dist_seg_size, angle_seg_count)
+            evaluator.simulate(likelihood, pos, volume, run)
+            result = evaluator.evaluate()
             results.append([likelihood, volume, OptEvaluator.evaluations, run, result])
 
         df_i = DataFrame(
@@ -129,8 +131,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop', type=float, default=1.0, help='Likelihood range stop')
     parser.add_argument('--steps', type=int, default=5, help='Likelihood range step count')
     parser.add_argument('--runs', type=int, default=5, help='Amount of runs to evaluate statistical variation')
-    parser.add_argument('volumes', type=int, nargs='+', help='Volumes to be evaluated')
-
-    parser.add_argument('--client', action='store_true', help='Use external dask workers')
+    parser.add_argument('--volumes', type=int, nargs='+', default=range(1000, 10000, 1000),
+                        help='Volumes to be evaluated')
 
     main(parser.parse_args())

@@ -3,11 +3,9 @@ import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
-from dask import delayed
-from dask.distributed import Client
 from pandas import DataFrame
 
-from .roundness import execute_for_roundness
+from .roundness_evaluator import RoundnessEvaluator
 from ..helpers.ciplot import ciplot
 
 
@@ -18,25 +16,21 @@ def evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps
 
     for run in range(runs):
         for likelihood in likelihoods:
-            result = delayed(execute_for_roundness)(
-                likelihood, dist_seg_size, angle_seg_count, pos, volume, run
-            )
+            evaluator = RoundnessEvaluator(dist_seg_size, angle_seg_count)
+            evaluator.simulate(likelihood, pos, volume, run)
+            result = evaluator.evaluate()
             results.append([likelihood, volume, run, result])
 
     return results
 
 
-def evaluate_volumes(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volumes):
+def evaluate_volumes(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volumes) -> DataFrame:
     results = []
 
     for volume in volumes:
         v_results = evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volume)
         results.extend(v_results)
 
-    return results
-
-
-def to_df(results):
     return DataFrame(
         results,
         columns=['likelihood', 'volume', 'run', 'results']
@@ -56,14 +50,8 @@ def visualize(df):
 
 
 def calculate_linear(args):
-    # Setup Dask
-    if args.client:
-        client = Client('127.0.0.1:8786')
-        client.upload_file('roundness.py')
-        client.upload_file('pile.py')
-
     # Compute graph
-    results = evaluate_volumes(
+    df = evaluate_volumes(
         dist_seg_size=args.dist_seg_size,
         angle_seg_count=args.angle_seg_count,
         pos=args.pos,
@@ -73,11 +61,6 @@ def calculate_linear(args):
         runs=args.runs,
         volumes=args.volumes
     )
-    rdf = delayed(to_df)(results)
-    # rdf.visualize(filename='dask-graph')
-
-    # Compute results
-    df = rdf.compute()
 
     # Visualize results
     visualize(df)
@@ -97,8 +80,7 @@ if __name__ == '__main__':
     parser.add_argument('--stop', type=float, default=1.0, help='Likelihood range stop')
     parser.add_argument('--steps', type=int, default=5, help='Likelihood range step count')
     parser.add_argument('--runs', type=int, default=5, help='Amount of runs to evaluate statistical variation')
-    parser.add_argument('volumes', type=int, nargs='+', help='Volumes to be evaluated')
-
-    parser.add_argument('--client', action='store_true', help='Use external dask workers')
+    parser.add_argument('--volumes', type=float, nargs='+', default=range(1000, 10000, 1000),
+                        help='Volumes to be evaluated')
 
     main(parser.parse_args())

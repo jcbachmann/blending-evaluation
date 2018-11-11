@@ -1,25 +1,14 @@
 #!/usr/bin/env python
-import argparse
 import csv
 import math
+from typing import List
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from pandas import DataFrame
-
-
-def execute_for_roundness(likelihood, dist_seg_size, angle_seg_count, pos, volume, run):
-    print(f'processing volume {volume} with likelihood {likelihood} (run {run})')
-    path = f'/tmp/heights-{volume}-{likelihood:.4f}-{run}.txt'
-
-    ExternalBlendingSimulatorInterface(config='pile.conf', heights=path, eight=likelihood).run(  # TODO
-        lambda sim: sim.communicate((f'0 {pos} {volume}').encode())
-    )
-
-    e = RoundnessEvaluator(dist_seg_size, angle_seg_count)
-    e.add_from_file(path)
-    return e.evaluate()
 
 
 class RoundnessEvaluator:
@@ -31,6 +20,18 @@ class RoundnessEvaluator:
         self.dist_seg_count = None
         self.shapes_main = None
         self.shapes_range = None
+
+    def simulate(self, likelihood, pos, volume, run):
+        print(f'processing volume {volume} with likelihood {likelihood} (run {run})')
+        simulator = BslBlendingSimulator(
+            bed_size_x=pos * 2.0,
+            bed_size_z=pos * 2.0,
+            eight=likelihood,
+        )
+        simulator.stack(0, pos, pos, volume, [])
+        heights = simulator.get_heights()
+
+        self.add_from_heights(heights)
 
     def add(self, x_abs, z_abs, height):
         x = x_abs - self.cx
@@ -90,6 +91,25 @@ class RoundnessEvaluator:
                             self.add(x_abs, z_abs, v)
                     x_abs += 1
                 z_abs += 1
+
+    def add_from_heights(self, heights: List[List[float]]):
+        # Calculate weighted center
+        self.cx = np.average(range(len(heights)), weights=[sum(col) for col in heights])
+        self.cz = np.average(range(len(heights[0])), weights=[sum(row) for row in list(map(list, zip(*heights)))])
+
+        self.dist_seg_count = int(math.hypot(self.cx, self.cz) / self.dist_seg_size + 0.5)
+
+        self.shapes_main = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(3)]
+        self.shapes_range = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(self.angle_seg_count)]
+
+        z_abs = 0
+        for row in heights:
+            x_abs = 0
+            for v in row:
+                if v > 0:
+                    self.add(x_abs, z_abs, v)
+                x_abs += 1
+            z_abs += 1
 
     def evaluate(self):
         min_shape = None
@@ -158,24 +178,3 @@ class RoundnessEvaluator:
         )
         plt.xlabel('distance from center')
         plt.ylabel('height')
-
-
-def main(args):
-    i = 0
-    for input_file in args.input_files:
-        e = RoundnessEvaluator(args.dist_seg_size, args.angle_seg_count)
-        e.add_from_file(input_file)
-        e.plot(input_file[:-4], i / (len(args.input_files) - 1) if i > 0 else 0)
-        i += 1
-
-    plt.legend()
-    plt.show()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='evaluate height map roundness')
-    parser.add_argument('input_files', type=str, help='Height map file', nargs='+')
-    parser.add_argument('--dist_seg_size', type=float, default=5.0, help='Size of a single distance segment')
-    parser.add_argument('--angle_seg_count', type=int, default=9, help='Amount of angle segments in range 0-45°')
-
-    main(parser.parse_args())

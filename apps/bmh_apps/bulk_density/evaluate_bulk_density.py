@@ -6,8 +6,6 @@ import re
 import matplotlib.pyplot as plt
 import pandas as pd
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
-from dask import delayed
-from dask.distributed import Client
 from pandas import DataFrame
 
 from ..helpers.ciplot import ciplot_scatter
@@ -66,8 +64,8 @@ def load_results_from_path(path, size):
                 ppm3 = float(g.group(2))
                 run = int(g.group(3))
         if g:
-            df = delayed(load_for_bulk_density)(file=file, path=path)
-            out_volume = delayed(get_height_map_volume_df)(df, size)
+            df = load_for_bulk_density(file=file, path=path)
+            out_volume = get_height_map_volume_df(df, size)
             results.append([in_volume, ppm3, run, out_volume])
     return results
 
@@ -82,10 +80,8 @@ def execute_for_bulk_density(
         detailed: bool,
         visualize: bool,
         bulkdensity: float,
-        path: str,
 ):
     print(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
-    path += f'/heights-vol{volume}-res{ppm3:.1f}-run{run}.txt'
 
     sim = BslBlendingSimulator(
         bed_size_x=size,
@@ -115,7 +111,7 @@ def calculate_results(args):
     for in_volume in args.volumes:
         for ppm3 in args.ppm3s:
             for run in range(args.runs):
-                heights = delayed(execute_for_bulk_density)(
+                heights = execute_for_bulk_density(
                     pos=args.size / 2,
                     size=args.size,
                     volume=in_volume,
@@ -125,9 +121,8 @@ def calculate_results(args):
                     detailed=args.detailed,
                     visualize=args.visualize,
                     bulkdensity=args.bulkdensity,
-                    path=args.path
                 )
-                out_volume = delayed(get_height_map_volume)(heights, args.size)
+                out_volume = get_height_map_volume(heights, args.size)
                 results.append([in_volume, ppm3, run, out_volume])
     return results
 
@@ -142,21 +137,11 @@ def acquire_results(args):
         return calculate_results(args)
 
 
-def to_df(results):
-    results = list(filter(lambda entry: entry[2] is not None, results))
-    return DataFrame(results, columns=['in_volume', 'ppm3', 'run', 'out_volume'])
-
-
 def main(args):
-    if args.client:
-        client = Client('127.0.0.1:8786')
-        client.upload_file('../pile.py')
-        client.upload_file('../roundness.py')
-        client.upload_file('../execute.py')
-
-    results = acquire_results(args)
-    results_df_delayed = delayed(to_df)(results)
-    results_df = results_df_delayed.compute()
+    results_df = DataFrame(
+        list(filter(lambda entry: entry[2] is not None, acquire_results(args))),
+        columns=['in_volume', 'ppm3', 'run', 'out_volume']
+    )
 
     if len(args.ppm3s) == 1:
         ciplot_scatter(
@@ -188,7 +173,6 @@ if __name__ == '__main__':
     parser.add_argument('--detailed', action='store_true', help='Use detailed simulation')
     parser.add_argument('--visualize', action='store_true', help='Visualize simulation')
     parser.add_argument('--reuse', action='store_true', help='Reuse old calculation data')
-    parser.add_argument('--client', action='store_true', help='Use external dask workers')
     parser.add_argument('--path', type=str, default='/tmp', help='Output path for intermediate files')
     parser.add_argument('--bulkdensity', type=float, default=1.0, help='Bulk density')
 
