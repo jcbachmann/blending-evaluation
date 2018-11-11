@@ -5,6 +5,7 @@ import re
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from dask import delayed
 from dask.distributed import Client
 from pandas import DataFrame
@@ -82,26 +83,21 @@ def execute_for_bulk_density(
         visualize: bool,
         bulkdensity: float,
         path: str,
-        executable: str = './BlendingSimulator'
 ):
     print(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
     path += f'/heights-vol{volume}-res{ppm3:.1f}-run{run}.txt'
 
-    ExternalBlendingSimulatorInterface(  # TODO
-        executable=executable,
-        length=size,
-        depth=size,
-        heights=path,
+    sim = BslBlendingSimulator(
+        bed_size_x=size,
+        bed_size_z=size,
         ppm3=ppm3,
         dropheight=dropheight,
         detailed=detailed,
         visualize=visualize,
         bulkdensity=bulkdensity
-    ).run(
-        lambda sim: sim.communicate(f'0 {pos} {pos} {volume}'.encode())
     )
-
-    return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
+    sim.stack(0, pos, pos, volume, [])
+    return sim.get_heights()
 
 
 def load_for_bulk_density(file: str, path: str = '/tmp'):
@@ -119,7 +115,7 @@ def calculate_results(args):
     for in_volume in args.volumes:
         for ppm3 in args.ppm3s:
             for run in range(args.runs):
-                df = delayed(execute_for_bulk_density)(
+                heights = delayed(execute_for_bulk_density)(
                     pos=args.size / 2,
                     size=args.size,
                     volume=in_volume,
@@ -131,7 +127,7 @@ def calculate_results(args):
                     bulkdensity=args.bulkdensity,
                     path=args.path
                 )
-                out_volume = delayed(get_height_map_volume_df)(df, args.size)
+                out_volume = delayed(get_height_map_volume)(heights, args.size)
                 results.append([in_volume, ppm3, run, out_volume])
     return results
 
