@@ -11,7 +11,8 @@ class BslBlendingSimulator(BlendingSimulator):
     def __init__(self, bed_size_x: float, bed_size_z: float, reclaimangle: Optional[float] = None,
                  ppm3: Optional[float] = None, circular: Optional[bool] = None, eight: Optional[float] = None,
                  bulkdensity: Optional[float] = None, dropheight: Optional[float] = None,
-                 detailed: Optional[bool] = None, reclaimincrement: Optional[float] = None):
+                 detailed: Optional[bool] = None, reclaimincrement: Optional[float] = None,
+                 visualize: Optional[bool] = False):
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None: reclaimangle = 45.0
         if ppm3 is None: ppm3 = 1.0
@@ -21,6 +22,7 @@ class BslBlendingSimulator(BlendingSimulator):
         if dropheight is None: dropheight = 0.5 * bed_size_z
         if detailed is None: detailed = False
         if reclaimincrement is None: reclaimincrement = 1.0
+        if visualize is None: visualize = False
 
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
@@ -29,10 +31,12 @@ class BslBlendingSimulator(BlendingSimulator):
             ppm3,
             circular,
             eight,
+            visualize,
             bulkdensity,
             dropheight,
             detailed,
-            reclaimincrement
+            reclaimincrement,
+            False  # pretty
         )
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
