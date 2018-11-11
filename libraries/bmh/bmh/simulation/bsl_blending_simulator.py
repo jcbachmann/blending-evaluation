@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from blending_simulator_lib import BlendingSimulatorLib
-from typing import Optional
+from typing import Optional, List
 
 from pandas import DataFrame
 
@@ -35,6 +35,9 @@ class BslBlendingSimulator(BlendingSimulator):
             reclaimincrement
         )
 
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
+        self.bsl.stack(timestamp, x, z, volume, parameter)
+
     def stack_reclaim(self, material_deposition: MaterialDeposition, x_per_s: float) -> Material:
         """
         Stack material according to material deposition and reclaim into new blended material.
@@ -65,3 +68,6 @@ class BslBlendingSimulator(BlendingSimulator):
         data = DataFrame(data_dict)
 
         return Material(data=data)
+
+    def get_heights(self):
+        return self.bsl.get_heights()
