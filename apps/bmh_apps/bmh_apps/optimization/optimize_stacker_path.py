@@ -47,7 +47,7 @@ def plot_optimization_result(optimization_result: OptimizationResult, directory:
     plt.show()
 
 
-def get_parameter_colums(material: DataFrame) -> List[str]:
+def get_parameter_columns(material: DataFrame) -> List[str]:
     non_parameter_columns = ['timestamp', 'volume']
     parameter_columns = list(set(material.columns) - set(non_parameter_columns))
     logging.info(f'Found the following parameter columns: {", ".join(parameter_columns)}')
@@ -79,7 +79,7 @@ def main(args) -> None:
         material=material,
         population_size=args.population_size,
         max_evaluations=args.max_evaluations,
-        parameter_columns=get_parameter_colums(material)
+        parameter_columns=get_parameter_columns(material)
     )
 
     # Write results
