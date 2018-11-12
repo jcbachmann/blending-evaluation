@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
@@ -83,7 +83,7 @@ class MyEvaluatorObserver(EvaluatorObserver):
 
 
 def optimize(length: float, depth: float, variables: int, material: DataFrame, parameter_columns: List[str],
-             population_size: int, max_evaluations: int) -> OptimizationResult:
+             population_size: int, max_evaluations: int, scheduler_address: Optional[str] = None) -> OptimizationResult:
     problem = HomogenizationProblem(
         length=length,
         depth=depth,
@@ -103,7 +103,7 @@ def optimize(length: float, depth: float, variables: int, material: DataFrame, p
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
         evaluator=DaskEvaluator(
             observer=evaluator_observer,
-            # scheduler_address='127.0.0.1:8786'
+            scheduler_address=scheduler_address
         ),
         offspring_size=20
     )
