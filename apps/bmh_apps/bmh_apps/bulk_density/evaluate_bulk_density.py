@@ -143,23 +143,23 @@ def main(args):
         columns=['in_volume', 'ppm3', 'run', 'out_volume']
     )
 
-    if len(args.ppm3s) == 1:
-        pretty_scatter_plot(
-            data=results_df,
-            x_col='in_volume',
-            y_col='out_volume',
-            log_scale=False
-        )
-    else:
-        results_df['out/in volume ratio'] = results_df['out_volume'] / results_df['in_volume']
-        pretty_scatter_plot(
-            data=results_df,
-            x_col='ppm3',
-            y_col='out/in volume ratio',
-            split_col='in_volume',
-            log_scale=False,
-            equal=False
-        )
+    pretty_scatter_plot(
+        data=results_df,
+        x_col='in_volume',
+        y_col='out_volume',
+        split_col='ppm3',
+        log_scale=True
+    )
+
+    results_df['out/in volume ratio'] = results_df['out_volume'] / results_df['in_volume']
+    pretty_scatter_plot(
+        data=results_df,
+        x_col='ppm3',
+        y_col='out/in volume ratio',
+        split_col='in_volume',
+        log_scale=False,
+        equal=False
+    )
     plt.show()
 
 
