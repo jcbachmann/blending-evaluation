@@ -51,7 +51,7 @@ class SSNSGAII(GenerationalGeneticAlgorithm[S, R]):
         return RankingAndCrowdingDistanceSelection(self.population_size).execute(join_population)
 
     def get_name(self) -> str:
-        return "Steady State NSGA-II"
+        return 'Steady State NSGA-II'
 
     def get_result(self) -> R:
         return self.population

@@ -390,7 +390,7 @@ def figure_pz(*args, **kwargs):
     return fig
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     fig = figure_pz()
@@ -460,8 +460,8 @@ if __name__ == "__main__":
     ax6.set_xlim(0, 10.)
     ax6.set_ylim(0, 10.)
 
-    ax6.axis["t"] = ax6.new_floating_axis(0, 3.)
-    ax6.axis["t2"] = ax6.new_floating_axis(1, 7.)
+    ax6.axis['t'] = ax6.new_floating_axis(0, 3.)
+    ax6.axis['t2'] = ax6.new_floating_axis(1, 7.)
     ax6.grid(True)
 
     plt.show()
