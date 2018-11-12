@@ -7,7 +7,7 @@ from seaborn.palettes import color_palette
 from sklearn import linear_model
 
 
-def ciplot(data, x_col=None, unique_col=None, split_col=None, y_col=None, estimator=np.mean):
+def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=None, estimator=np.mean):
     ax = plt.gca()
     if split_col is None:
         split_col = pd.Series(1, index=data.index)
@@ -70,7 +70,7 @@ def ciplot(data, x_col=None, unique_col=None, split_col=None, y_col=None, estima
     return ax
 
 
-def ciplot_scatter(data, x_col=None, split_col=None, y_col=None, log_scale=False, equal=True):
+def pretty_scatter_plot(data, x_col=None, split_col=None, y_col=None, log_scale=False, equal=True):
     ax = plt.gca()
     if split_col is None:
         split_col = pd.Series(1, index=data.index)

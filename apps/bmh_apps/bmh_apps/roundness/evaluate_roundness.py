@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
 
-from bmh_apps.helpers.ciplot import ciplot
+from bmh_apps.helpers.pretty_plot import pretty_line_plot
 from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
 
 
@@ -39,7 +39,7 @@ def evaluate_volumes(dist_seg_size, angle_seg_count, pos, start, stop, steps, ru
 
 def visualize(df):
     plt.cla()
-    ax = ciplot(
+    ax = pretty_line_plot(
         data=df,
         x_col='likelihood',
         split_col='volume',

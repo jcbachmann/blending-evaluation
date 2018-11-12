@@ -6,7 +6,7 @@ import numpy as np
 from pandas import DataFrame
 from scipy.optimize import fminbound
 
-from bmh_apps.helpers.ciplot import ciplot
+from bmh_apps.helpers.pretty_plot import pretty_line_plot
 from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
 
 
@@ -36,7 +36,7 @@ class OptEvaluator:
 
 def visualize(df):
     plt.cla()
-    ax = ciplot(
+    ax = pretty_line_plot(
         data=df,
         x_col='likelihood',
         unique_col='run_group',

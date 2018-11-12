@@ -8,7 +8,7 @@ import pandas as pd
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from pandas import DataFrame
 
-from bmh_apps.helpers.ciplot import ciplot_scatter
+from bmh_apps.helpers.pretty_plot import pretty_scatter_plot
 
 
 def get_volume(a1, a2, c, xz_scaling):
@@ -144,7 +144,7 @@ def main(args):
     )
 
     if len(args.ppm3s) == 1:
-        ciplot_scatter(
+        pretty_scatter_plot(
             data=results_df,
             x_col='in_volume',
             y_col='out_volume',
@@ -152,7 +152,7 @@ def main(args):
         )
     else:
         results_df['out/in volume ratio'] = results_df['out_volume'] / results_df['in_volume']
-        ciplot_scatter(
+        pretty_scatter_plot(
             data=results_df,
             x_col='ppm3',
             y_col='out/in volume ratio',
