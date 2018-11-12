@@ -5,6 +5,7 @@ import scipy.stats as st
 from seaborn import utils
 from seaborn.palettes import color_palette
 from sklearn import linear_model
+from sklearn.metrics import r2_score
 
 
 def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=None, estimator=np.mean):
@@ -102,7 +103,7 @@ def pretty_scatter_plot(data, x_col=None, split_col=None, y_col=None, log_scale=
         y_prediction = regression.predict(x.reshape(-1, 1))
 
         label = str(cond) if legend_name is not None else ''
-        # label += f' (coeff={regression.coef_:.3f}, R²={r2_score(y, y_prediction):.1f})'
+        label += f' (coeff={regression.coef_[0]:.3f}, R²={r2_score(y, y_prediction):.1f})'
 
         ax.plot(x, y_prediction, color=colors[c], marker='', linestyle='-')
         ax.plot(x, y, color=colors[c], label=label, marker='x', linestyle='')
