@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 
-from bmh_apps.helpers.chevron_path import chevron_path
+from bmh_apps.chevron.chevron_path import chevron_path
 from bmh_apps.helpers.material_path_io import print_merged_material_path, read_material, merge_material_path
 
 
