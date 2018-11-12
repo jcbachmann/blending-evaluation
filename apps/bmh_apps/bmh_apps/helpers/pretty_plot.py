@@ -24,7 +24,7 @@ def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=No
 
     current_palette = utils.get_color_cycle()
     if len(current_palette) < n_cond:
-        colors = color_palette("husl", n_cond)
+        colors = color_palette('husl', n_cond)
     else:
         colors = color_palette(n_colors=n_cond)
 
@@ -85,7 +85,7 @@ def pretty_scatter_plot(data, x_col=None, split_col=None, y_col=None, log_scale=
 
     current_palette = utils.get_color_cycle()
     if len(current_palette) < n_cond:
-        colors = color_palette("husl", n_cond)
+        colors = color_palette('husl', n_cond)
     else:
         colors = color_palette(n_colors=n_cond)
 

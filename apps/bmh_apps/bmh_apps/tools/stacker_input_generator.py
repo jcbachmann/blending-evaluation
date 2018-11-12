@@ -141,7 +141,7 @@ class Generator:
 
     @staticmethod
     def status(msg):
-        print("[generator] " + msg, file=sys.stderr)
+        print('[generator] ' + msg, file=sys.stderr)
 
     def signal_handler(self, _signum, _frame):
         self.status('Stopping generator')
