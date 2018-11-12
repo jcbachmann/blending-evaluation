@@ -9,7 +9,8 @@ from sklearn.metrics import r2_score
 
 
 def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=None, estimator=np.mean):
-    ax = plt.gca()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     if split_col is None:
         split_col = pd.Series(1, index=data.index)
         n_cond = 1
@@ -72,7 +73,8 @@ def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=No
 
 
 def pretty_scatter_plot(data, x_col=None, split_col=None, y_col=None, log_scale=False, equal=True):
-    ax = plt.gca()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     if split_col is None:
         split_col = pd.Series(1, index=data.index)
         n_cond = 1

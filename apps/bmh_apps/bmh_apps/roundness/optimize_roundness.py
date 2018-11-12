@@ -35,7 +35,6 @@ class OptEvaluator:
 
 
 def visualize(df):
-    plt.cla()
     ax = pretty_line_plot(
         data=df,
         x_col='likelihood',
@@ -44,7 +43,6 @@ def visualize(df):
         y_col='results'
     )
     ax.set_ylim(0, )
-    plt.gcf().canvas.draw()
 
 
 def calculate_optimized_scipy(args):

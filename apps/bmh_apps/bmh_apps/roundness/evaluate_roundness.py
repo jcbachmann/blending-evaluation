@@ -37,18 +37,6 @@ def evaluate_volumes(dist_seg_size, angle_seg_count, pos, start, stop, steps, ru
     )
 
 
-def visualize(df):
-    plt.cla()
-    ax = pretty_line_plot(
-        data=df,
-        x_col='likelihood',
-        split_col='volume',
-        y_col='results'
-    )
-    ax.set_ylim(0, )
-    plt.gcf().canvas.draw()
-
-
 def calculate_linear(args):
     # Compute graph
     df = evaluate_volumes(
@@ -63,7 +51,13 @@ def calculate_linear(args):
     )
 
     # Visualize results
-    visualize(df)
+    ax = pretty_line_plot(
+        data=df,
+        x_col='likelihood',
+        split_col='volume',
+        y_col='results'
+    )
+    ax.set_ylim(0, )
     plt.show()
 
 
