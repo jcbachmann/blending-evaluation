@@ -1,40 +1,51 @@
 #!/usr/bin/env python
 import argparse
-import os
-import re
-from multiprocessing import Pool
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from bmh.benchmark.material_deposition import MaterialDeposition, Deposition, Material
 from bmh.helpers.math import weighted_avg_and_std
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from matplotlib import gridspec
 from pandas import DataFrame
 from seaborn.palettes import color_palette
 
-from ..helpers import chevron_path
-from ..helpers.stack_with_printer import stack_with_printer
+from ..helpers.chevron_path import chevron_path
+from ..helpers.stack_with_printer import read_material
 
 
-def simulate(args, reclaim, layers):
-    ExternalBlendingSimulatorInterface(  # TODO
-        length=args.length,
-        depth=args.depth,
-        dropheight=(args.depth / 2),
-        reclaim=reclaim,
-        ppm3=10
-    ).run(lambda sim: stack_with_printer(
-        length=args.length,
-        depth=args.depth,
-        material=args.material,
-        stacker_path=chevron_path(layers),
-        header=False,
-        out_buffer=sim.stdin
-    ))
+def simulate(args, layers) -> DataFrame:
+    material = read_material(args.material)
+    max_timestamp = material['timestamp'].values[-1]
+    min_pos = args.depth / 2
+    max_pos = args.length - args.depth / 2
+    path = chevron_path(layers)
+    max_part = path['part'].values[-1]
+
+    deposition = DataFrame()
+    deposition['x'] = path['path'] * (max_pos - min_pos) + min_pos
+    deposition['z'] = args.depth / 2
+    deposition['timestamp'] = max_timestamp * path['part'] / max_part
+
+    simulator = BslBlendingSimulator(
+        bed_size_x=args.length,
+        bed_size_z=args.depth,
+        ppm3=10,
+    )
+    reclaim = simulator.stack_reclaim(
+        material_deposition=MaterialDeposition(
+            material=Material(data=material),
+            deposition=Deposition(None, data=deposition)
+        ),
+        x_per_s=1
+    )
+
+    return reclaim.data
 
 
-def get_results(meta, data: DataFrame, c_meta='layers', c_weights: str = 'volume', c_values: str = 'p_1'):
+def get_results(meta, data: DataFrame, c_meta='layers', c_weights: str = 'volume', c_values: str = 'p_1') -> DataFrame:
     minvol = 0.75 * data[c_weights].sum() / len(data.index)
     larger = data.query(f'{c_weights}>={minvol}')
     lbound = larger[c_values].min()
@@ -54,27 +65,9 @@ def get_results(meta, data: DataFrame, c_meta='layers', c_weights: str = 'volume
     )
 
 
-def get_results_for_file(layers, file, path):
-    df = pd.read_csv(path + '/' + file, delimiter='\t', index_col=None)
-    return get_results(meta=layers, data=df, c_values='p_1')
-
-
 def get_reference(file):
     df = pd.read_csv(file, delimiter='\t', index_col=None)
-    return get_results(meta=0, data=df, c_values='p_1')
-
-
-def load_results_from_path(path):
-    results = DataFrame()
-
-    r1 = re.compile('reclaim-layers-([\d.]+)\.csv')
-    for file in os.listdir(path):
-        g = r1.match(file)
-        if g:
-            layers = float(g.group(1))
-            results = results.append(get_results_for_file(layers, file, path))
-
-    return results.sort_values('layers')
+    return get_results(meta=0, data=df)
 
 
 def plot_results(df_reference, df_layers):
@@ -142,17 +135,12 @@ def plot_results(df_reference, df_layers):
 
 
 def main(args):
-    if not os.path.exists(args.path):
-        os.makedirs(args.path)
-
-    if not args.reuse:
-        p = Pool(8)
-        p.starmap(simulate, [
-            (args, f'{args.path}/reclaim-layers-{layers:.4f}.csv', layers) for layers in np.linspace(1, 100, 10)
-        ])
+    results = DataFrame()
+    for layers in np.linspace(1, 100, 10):
+        df = simulate(args, layers)
+        results = results.append(get_results(meta=layers, data=df))
 
     reference = get_reference(args.material)
-    results = load_results_from_path(args.path)
     plot_results(reference, results)
     plt.show()
 
@@ -162,7 +150,5 @@ if __name__ == '__main__':
     parser.add_argument('--length', type=float, default=300, help='Blending bed length')
     parser.add_argument('--depth', type=float, default=50, help='Blending bed depth')
     parser.add_argument('--material', type=str, default='quality_input_curve.txt', help='Material input file')
-    parser.add_argument('--path', type=str, default='/tmp', help='Output path')
-    parser.add_argument('--reuse', action='store_true', help='Use material available in path')
 
     main(parser.parse_args())
