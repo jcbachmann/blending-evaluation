@@ -5,7 +5,7 @@ import numpy as np
 from data_explorer.rating import RaterColorScale, Rater
 from data_explorer.testlet import Testlet
 
-from .solution import Solution
+from solution_explorer.solution import Solution
 
 
 def white_to_red(p):

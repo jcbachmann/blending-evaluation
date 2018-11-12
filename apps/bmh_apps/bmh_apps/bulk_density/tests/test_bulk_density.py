@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-from ..evaluate_bulk_density import get_height_map_volume
+from bmh_apps.bulk_density.evaluate_bulk_density import get_height_map_volume
 
 
 class TestScaling(unittest.TestCase):

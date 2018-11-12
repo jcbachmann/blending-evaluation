@@ -4,8 +4,8 @@ from typing import Union, Optional
 import pandas as pd
 from pandas import DataFrame
 
-from .stacker import Stacker
-from .stacker_printer import StackerPrinter
+from bmh_apps.helpers.stacker import Stacker
+from bmh_apps.helpers.stacker_printer import StackerPrinter
 
 
 def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: str = 'volume',

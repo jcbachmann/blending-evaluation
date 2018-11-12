@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from bmh.optimization.optimization import OptimizationResult, optimize
 from pandas import DataFrame
 
-from ..helpers.stack_with_printer import read_material
+from bmh_apps.helpers.stack_with_printer import read_material
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

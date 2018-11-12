@@ -3,7 +3,7 @@ import unittest
 
 from pandas import DataFrame
 
-from ..stacker import Stacker
+from bmh_apps.helpers.stacker import Stacker
 
 
 class TestStacker(unittest.TestCase):

@@ -1,0 +1,4 @@
+data_explorer
+matplotlib
+numpy
+pandas

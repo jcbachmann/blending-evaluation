@@ -12,8 +12,8 @@ from matplotlib import gridspec
 from pandas import DataFrame
 from seaborn.palettes import color_palette
 
-from ..helpers.chevron_path import chevron_path
-from ..helpers.stack_with_printer import read_material
+from bmh_apps.helpers.chevron_path import chevron_path
+from bmh_apps.helpers.stack_with_printer import read_material
 
 
 def simulate(args, layers) -> DataFrame:

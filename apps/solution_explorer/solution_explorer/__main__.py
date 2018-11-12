@@ -3,8 +3,7 @@ import argparse
 import os
 
 from data_explorer import app
-
-from . import graphs, solution, testlets
+from solution_explorer.solution_explorer import solution, testlets, graphs
 
 
 def main(args):

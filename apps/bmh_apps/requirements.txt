@@ -1,8 +1,7 @@
-dask
-distributed
-graphviz
+bmh
 matplotlib
 numpy
 pandas
 scipy
 seaborn
+scikit-learn

@@ -6,8 +6,8 @@ import numpy as np
 from pandas import DataFrame
 from scipy.optimize import fminbound
 
-from .roundness_evaluator import RoundnessEvaluator
-from ..helpers.ciplot import ciplot
+from bmh_apps.helpers.ciplot import ciplot
+from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
 
 
 class OptEvaluator:
