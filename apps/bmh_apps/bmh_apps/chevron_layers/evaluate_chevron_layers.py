@@ -13,7 +13,7 @@ from pandas import DataFrame
 from seaborn.palettes import color_palette
 
 from bmh_apps.helpers.chevron_path import chevron_path
-from bmh_apps.helpers.stack_with_printer import read_material
+from bmh_apps.helpers.material_path_io import read_material
 
 
 def simulate(args, layers) -> DataFrame:

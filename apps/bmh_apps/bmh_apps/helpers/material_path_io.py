@@ -1,11 +1,9 @@
 import sys
-from typing import Union, Optional
+from typing import Optional
 
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
-
-from bmh_apps.helpers.stacker import Stacker
-from bmh_apps.helpers.stacker_printer import StackerPrinter
 
 
 def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: str = 'volume',
@@ -43,29 +41,43 @@ def read_path(filepath: str, col_path: str = 'path', col_part: Optional[str] = N
     return path
 
 
-def stack_with_printer(
-        length: float,
-        depth: float,
-        material: Union[str, DataFrame],
-        stacker_path: Union[str, DataFrame],
-        header: bool = True,
-        out_buffer=sys.stdout.buffer
-):
-    printer = StackerPrinter(header=header, out_buffer=out_buffer)
+def merge_material_path(length: float, depth: float, material: DataFrame, path: DataFrame) -> DataFrame:
+    # Stacker path parameters
+    min_pos = depth / 2
+    max_pos = length - depth / 2
 
-    if isinstance(material, str):
-        material = read_material(material)
+    # Total volume in cubic meters
+    t_total = material['timestamp'].max()
+    if 'timestamp' not in path.columns:
+        # No timestamps provided - generate time stamps
+        if 'part' in path.columns:
+            # Position relative to time is known
+            path['timestamp'] = path['part'] / path['part'].max() * t_total
+        else:
+            n = len(path.index)
+            if n > 1:
+                path['timestamp'] = [t_total * i / (n - 1) for i in range(n)]
+            else:
+                path['timestamp'] = [0]
 
-    if isinstance(stacker_path, str):
-        stacker_path = read_path(stacker_path)
+    material_with_path = material.copy()
+    material_with_path['z'] = depth / 2
+    material_with_path['x'] = np.interp(material_with_path['timestamp'], path['timestamp'], path['path']) * (
+            max_pos - min_pos) + min_pos
 
-    Stacker(
-        length,
-        depth,
-        status=printer.status
-    ).run(
-        material,
-        stacker_path,
-        callback=printer.out
-    )
-    printer.flush()
+    return material_with_path
+
+
+class StrToBytesWrapper:
+    def __init__(self, bytes_buffer):
+        self.bytes_buffer = bytes_buffer
+
+    def write(self, s):
+        self.bytes_buffer.write(s.encode('utf-8'))
+
+
+def print_merged_material_path(material_path: DataFrame):
+    first_cols = ['timestamp', 'x', 'z', 'volume']
+    col_order = first_cols + list(set(material_path.columns) - set(first_cols))
+    material_path.to_csv(StrToBytesWrapper(sys.stdout.buffer), index=False, columns=col_order, sep=' ')
+    sys.stdout.buffer.flush()
