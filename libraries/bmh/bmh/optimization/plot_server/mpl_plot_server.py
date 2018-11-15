@@ -178,7 +178,7 @@ class MplPlotServer(PlotServer):
     def serve(self) -> None:
         http_server = HTTPServer(self.application)
         http_server.listen(self.port)
-        print(f'http://127.0.0.1:{self.port}/')
+        self.logger.info(f'http://127.0.0.1:{self.port}/')
 
         io_loop = IOLoop.instance()
         PeriodicCallback(self.update_figure, 100).start()

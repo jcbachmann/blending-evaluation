@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -58,7 +59,9 @@ def calculate_optimized_scipy(args):
         full_output=True,
         disp=3
     )
-    print(x_opt)
+
+    logger = logging.getLogger(__name__)
+    logger.info(f'Optimum found: {x_opt}')
 
     # Visualize results
     visualize(e.df)
@@ -86,7 +89,8 @@ def minimize_brute_force(func, x_start, x_stop, args, x_tol, f_tol):
         x_start = x_opt - 0.5 * x_range
         x_stop = x_start + x_range
 
-    print(f'Optimum found: f({x_opt}) = {f_opt}')
+    logger = logging.getLogger(__name__)
+    logger.info(f'Optimum found: f({x_opt}) = {f_opt}')
 
     return x_opt
 

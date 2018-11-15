@@ -7,12 +7,15 @@ import os
 
 from bmh.helpers.identifiers import get_identifier
 
+from bmh_apps.helpers.configure_logging import configure_logging
+
 META_JSON = 'meta.json'
 
 
 def add_combination(material: str, deposition: str, dst: str):
+    logger = logging.getLogger(__name__)
     dst_dir = os.path.join(dst, f'{material} x {deposition}')
-    logging.info(f'Destination: {dst_dir}')
+    logger.info(f'Destination: {dst_dir}')
     os.makedirs(dst_dir)
     json.dump(
         {
@@ -25,10 +28,7 @@ def add_combination(material: str, deposition: str, dst: str):
 
 
 def main(args):
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
-    )
+    configure_logging(args.verbose)
 
     for material in args.material:
         for deposition in args.deposition:

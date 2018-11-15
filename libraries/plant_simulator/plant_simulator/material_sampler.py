@@ -20,7 +20,8 @@ def average_sample_group(sample_group):
 
 
 def calculate_stats(start, samples, columns):
-    logging.debug('Calculating stats')
+    logger = logging.getLogger(__name__)
+    logger.debug('Calculating stats')
     regroup = list(map(list, zip(*samples)))
 
     data = [

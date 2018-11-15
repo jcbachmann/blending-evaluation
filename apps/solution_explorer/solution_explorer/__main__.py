@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 import argparse
+import logging
 import os
 
 from data_explorer import app
-from solution_explorer.solution_explorer import solution, testlets, graphs
+
+from solution_explorer import solution, graphs, testlets
 
 
 def main(args):
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
+    )
+
     solutions, meta = solution.read_solutions(args.directory)
 
     path_detail_canvas = graphs.PathDetailCanvas()
@@ -25,8 +32,7 @@ def main(args):
                                            path_detail_canvas.plot_selection),
             path_detail_canvas
         ],
-        label=args.directory,
-        verbose=args.verbose
+        label=args.directory
     )
 
 

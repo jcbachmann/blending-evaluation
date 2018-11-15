@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import logging
 import os
 import re
 
@@ -81,7 +82,8 @@ def execute_for_bulk_density(
         visualize: bool,
         bulkdensity: float,
 ):
-    print(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
+    logger = logging.getLogger(__name__)
+    logger.info(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
 
     sim = BslBlendingSimulator(
         bed_size_x=size,

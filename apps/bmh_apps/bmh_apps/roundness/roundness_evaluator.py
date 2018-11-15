@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import csv
+import logging
 import math
 from typing import List
 
@@ -20,9 +21,10 @@ class RoundnessEvaluator:
         self.dist_seg_count = None
         self.shapes_main = None
         self.shapes_range = None
+        self.logger = logging.getLogger(__name__)
 
     def simulate(self, likelihood, pos, volume, run):
-        print(f'processing volume {volume} with likelihood {likelihood} (run {run})')
+        self.logger.info(f'processing volume {volume} with likelihood {likelihood} (run {run})')
         simulator = BslBlendingSimulator(
             bed_size_x=pos * 2.0,
             bed_size_z=pos * 2.0,

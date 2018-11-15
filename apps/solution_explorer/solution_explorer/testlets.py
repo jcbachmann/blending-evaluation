@@ -15,6 +15,7 @@ def white_to_red(p):
 
 class ObjectiveTestlet(Testlet):
     def __init__(self, index: float, maximum: float, label: Optional[str] = None):
+        super().__init__()
         self.index = index
         self.maximum = maximum
         self.label = label
@@ -35,6 +36,7 @@ class ObjectiveTestlet(Testlet):
 
 class PathDistanceTestlet(Testlet):
     def __init__(self, variables_count: int):
+        super().__init__()
         self.variables_count = variables_count
 
     def __str__(self):

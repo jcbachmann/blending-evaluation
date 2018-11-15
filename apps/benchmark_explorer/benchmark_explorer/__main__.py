@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import logging
 import os
 from typing import List
 
@@ -15,11 +16,16 @@ from benchmark_explorer.evaluation import Evaluation
 
 def read_evaluation(evaluation_path: str) -> Evaluation:
     evaluation = Evaluation(get_identifier(evaluation_path), evaluation_path)
-    evaluation.references = BenchmarkData.read_references(evaluation_path)
+    evaluation.references = BenchmarkData().read_references(evaluation_path)
     return evaluation
 
 
 def main(args):
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
+    )
+
     standard = read_evaluation(args.standard)
     evaluations = [read_evaluation(s) for s in args.evaluations]
 
@@ -36,8 +42,7 @@ def main(args):
         path=os.path.abspath(args.path),
         entry_list=[s for _, s in standard.references.items()],
         testlet_list=static_testlets + dynamic_testlets,
-        label='Benchmark Explorer',
-        verbose=args.verbose
+        label='Benchmark Explorer'
     )
 
 

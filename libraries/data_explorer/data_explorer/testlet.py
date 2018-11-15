@@ -18,14 +18,17 @@ class TestletResult:
 
 
 class Testlet:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
     def wrapped_evaluate(self, entry):
         try:
-            logging.debug(f'evaluating {self} on {entry}')
+            self.logger.debug(f'evaluating {self} on {entry}')
             result_model, result_view = self.evaluate(entry)
             rating, color = self.get_rating(result_model)
             return TestletResult(result_model, result_view, rating, color)
         except Exception as e:
-            logging.error(f'Exception in wrapped_evaluate: {self} {entry} {e} {traceback.format_exc()}')
+            self.logger.error(f'Exception in wrapped_evaluate: {self} {entry} {e} {traceback.format_exc()}')
             return TestletResult(e, str(e), Rating.ERROR)
 
     def evaluate(self, entry):

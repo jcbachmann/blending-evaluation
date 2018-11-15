@@ -71,7 +71,7 @@ class BokehPlotServer(PlotServer):
         doc.add_periodic_callback(update, 500)
 
     def serve(self) -> None:
-        print(f'Opening Bokeh application on http://localhost:{self.port}/')
+        self.logger.info(f'Opening Bokeh application on http://localhost:{self.port}/')
         apps = {'/': Application(FunctionHandler(self.make_document))}
 
         server = Server(apps, port=self.port, io_loop=IOLoop())

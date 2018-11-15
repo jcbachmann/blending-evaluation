@@ -12,14 +12,16 @@ class Plant:
         self.sampler = MaterialSampler(sampler_buffer_size, sample_group_size, stats_size,
                                        stats_period) if evaluate else None
 
+        self.logger = logging.getLogger(__name__)
+
     def simulate_step(self):
         self.time += Plant.TIME_INCREMENT
-        logging.debug(f'--- Simulating step at t = {self.time}')
+        self.logger.debug(f'--- Simulating step at t = {self.time}')
         for material_out in self.material_outs:
             material_out.step()
         if self.sampler:
             self.sampler.sample(self.time)
-        logging.debug('-----------------------------------------------------')
+        self.logger.debug('-----------------------------------------------------')
 
     def evaluate(self):
         self.sampler.evaluate()

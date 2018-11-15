@@ -12,13 +12,16 @@ from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.reference_meta import ReferenceMeta
 from bmh.helpers.identifiers import get_identifiers
 
+from bmh_apps.helpers.configure_logging import configure_logging
+
 
 def process_data(benchmark_data: BenchmarkData, references: Dict[str, ReferenceMeta], dst: str, sim_identifier: str,
                  dry_run: bool):
+    logger = logging.getLogger(__name__)
     simulator_meta = benchmark_data.simulators[sim_identifier]
-    logging.info(f'Processing data with simulator "{simulator_meta.type}"')
+    logger.info(f'Processing data with simulator "{simulator_meta.type}"')
 
-    logging.debug('Writing simulator type and parameters to destination directory')
+    logger.debug('Writing simulator type and parameters to destination directory')
     if not dry_run:
         json.dump({'simulator': str(simulator_meta)}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
 
@@ -33,22 +36,20 @@ def process_data(benchmark_data: BenchmarkData, references: Dict[str, ReferenceM
             computed_deposition=False
         )
 
-    logging.info('Processing finished')
+    logger.info('Processing finished')
 
 
 def main(args: argparse.Namespace):
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
-    )
+    configure_logging(args.verbose)
+    logger = logging.getLogger(__name__)
 
     timestamp_str = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-    logging.info(f'Starting evaluation with timestamp {timestamp_str}')
+    logger.info(f'Starting evaluation with timestamp {timestamp_str}')
 
     # Initialization
     benchmark_data = BenchmarkData()
     benchmark_data.read_base(args.path)
-    references = BenchmarkData.read_references(args.src)
+    references = benchmark_data.read_references(args.src)
 
     # Make sure everything will work out
     benchmark_data.validate_references(references)
@@ -61,7 +62,7 @@ def main(args: argparse.Namespace):
     for sim_identifier in sim_identifiers:
         core.test_simulator(benchmark_data.simulators[sim_identifier])
 
-    logging.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
+    logger.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
     for sim_identifier in sim_identifiers:
         # Prepare output directory
         dst = os.path.join(args.dst, timestamp_str + ' ' + sim_identifier)

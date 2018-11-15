@@ -16,9 +16,6 @@ from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
 from .plot_server.bokeh_plot_server import BokehPlotServer
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 class OptimizationResult:
     def __init__(self, result_population, all_variables, all_objectives, variable_labels: List[str],
@@ -35,6 +32,7 @@ class MyAlgorithmObserver(Observer):
         self.population = []
         self.last_evaluations = None
         self.last_computing_time = None
+        self.logger = logging.getLogger(__name__)
 
     def update(self, *args, **kwargs):
         evaluations = kwargs['evaluations']
@@ -43,7 +41,7 @@ class MyAlgorithmObserver(Observer):
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
         cps = e_diff / t_diff if t_diff > 0 else '-'
-        logger.info(
+        self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
             f'first: {str(self.population[0].objectives)}'
         )

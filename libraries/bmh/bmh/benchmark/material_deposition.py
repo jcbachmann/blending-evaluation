@@ -13,12 +13,13 @@ def read_data_file(data_file: str) -> DataFrame:
     :param data_file: file which is read into pandas DataFrame
     :return: pandas DataFrame containing data contained in data_file
     """
-    logging.debug(f'Reading data file "{data_file}"')
+    logger = logging.getLogger(__name__)
+    logger.debug(f'Reading data file "{data_file}"')
     if not os.path.isfile(data_file):
         raise IOError(f'Data file "{data_file}" does not exist')
 
     data = pd.read_csv(data_file, sep='\t')
-    logging.debug(f'"{data_file}" data:\n{data.describe()}')
+    logger.debug(f'"{data_file}" data:\n{data.describe()}')
 
     return data
 
@@ -30,7 +31,8 @@ def check_required_columns(data: DataFrame, required_columns: List[str]) -> None
     :param data: data for which the check is performed
     :param required_columns: list of required columns
     """
-    logging.debug(f'Checking required columns')
+    logger = logging.getLogger(__name__)
+    logger.debug(f'Checking required columns')
     required_columns_str = ', '.join(required_columns)
     if not set(required_columns).issubset(data.columns):
         raise ValueError(f'Data does not contain all required columns: {required_columns_str}')

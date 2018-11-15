@@ -40,6 +40,8 @@ class MainWindow(QMainWindow):
         # noinspection PyArgumentList
         super(MainWindow, self).__init__()
 
+        self.logger = logging.getLogger(__name__)
+
         self.setWindowIcon(QIcon(icon))
 
         self.path = path
@@ -114,18 +116,17 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
-    @staticmethod
-    def close_application():
-        logging.warning('Closing application from UI')
+    def close_application(self):
+        self.logger.warning('Closing application from UI')
         sys.exit()
 
     def save_figures_png(self):
-        logging.info('Saving figures')
+        self.logger.info('Saving figures')
         for fig in self.main_figures:
             fig.savefig(f'{self.path}/{fig}.png')
 
     def save_figures_svg(self):
-        logging.info('Saving figures')
+        self.logger.info('Saving figures')
         for fig in self.main_figures:
             fig.savefig(f'{self.path}/{fig}.svg')
 

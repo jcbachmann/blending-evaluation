@@ -1,4 +1,3 @@
-import logging
 import os
 import sys
 
@@ -13,14 +12,8 @@ def execute(
         testlet_list: list,
         main_figures=None,
         label: str = 'Unknown',
-        icon: str = os.path.join(os.path.dirname(__file__), 'icon.svg'),
-        verbose: bool = False
+        icon: str = os.path.join(os.path.dirname(__file__), 'icon.svg')
 ):
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
     app = QApplication([])
     win = MainWindow(path, entry_list, testlet_list, label, main_figures=main_figures, icon=icon)
     win.show()

@@ -1,5 +1,3 @@
-import logging
-
 from .reclaimer import Reclaimer
 from .stacker import Stacker
 from .stockpile import Stockpile
@@ -28,8 +26,8 @@ class BlendingSystem(MaterialHandler):
                 self.reclaimer.stockpile = self.stacker.stockpile
                 self.stacker.stockpile = None
             else:
-                logging.warning('Illegal situation occurred: stacker is full while reclaimer is not yet finished')
-                logging.warning(f'Material illegally dropped: {tph} tph, quality: {q}')
+                self.logger.warning('Illegal situation occurred: stacker is full while reclaimer is not yet finished')
+                self.logger.warning(f'Material illegally dropped: {tph} tph, quality: {q}')
                 tph, q = 0, 0
 
         if self.stacker.stockpile is None:

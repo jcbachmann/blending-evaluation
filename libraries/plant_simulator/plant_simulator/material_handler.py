@@ -12,6 +12,7 @@ class MaterialHandler:
     def __init__(self, label: str, plant, shape=None):
         self.label = label
         self.plant = plant
+        self.logger = logging.getLogger(__name__)
         if MaterialHandler.dot is not None:
             MaterialHandler.dot.attr('node', shape=shape if shape else 'ellipse')
             MaterialHandler.dot.node(label, label)
@@ -66,9 +67,9 @@ class MaterialBuffer(MaterialHandler):
         while True:
             self.buffer.put(next(self.src_gen))
             tph, q = self.buffer.get()
-            logging.debug(
+            self.logger.debug(
                 f'Buffer {self.label}: {", ".join([f"({tph:.1f}, {q:.1f})" for tph, q in self.buffer.queue])}')
-            logging.debug(f'Buffer {self.label} out: ({tph:.1f}, {q:.1f})')
+            self.logger.debug(f'Buffer {self.label} out: ({tph:.1f}, {q:.1f})')
             self._sample = (tph, q)
             yield tph, q
 
@@ -87,7 +88,7 @@ class MaterialJoiner(MaterialHandler):
             m = [next(src_gen) for src_gen in self.src_gens]
             tph = sum(tph for tph, _ in m)
             q = np.average([q for _, q in m], weights=[tph for tph, _ in m]) if tph > 0 else 0
-            logging.debug(f'Joiner {self.label}: ({tph:.1f}, {q:.1f})')
+            self.logger.debug(f'Joiner {self.label}: ({tph:.1f}, {q:.1f})')
             self._sample = (tph, q)
             yield tph, q
 
@@ -108,7 +109,7 @@ class MaterialSplitter(MaterialHandler):
             if self.buffer[i].empty():
                 self.acquire_buffer()
             tph, q = self.buffer[i].get()
-            logging.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
+            self.logger.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
             yield tph, q
 
     def acquire_buffer(self):
@@ -139,7 +140,7 @@ class MaterialMux(MaterialHandler):
             if self.buffer[i].empty():
                 self.acquire_buffer()
             tph, q = self.buffer[i].get()
-            logging.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
+            self.logger.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
             yield tph, q
 
     def acquire_buffer(self):
@@ -172,7 +173,7 @@ class MaterialDuplicator(MaterialHandler):
             if self.buffer[i].empty():
                 self.acquire_buffer()
             tph, q = self.buffer[i].get()
-            logging.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
+            self.logger.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
             yield tph, q
 
     def acquire_buffer(self):
@@ -193,7 +194,7 @@ class MaterialOut(MaterialHandler):
 
     def step(self):
         tph, q = next(self.src_gen)
-        logging.debug(f'Destination {self.label}: ({tph:.1f}, {q:.1f})')
+        self.logger.debug(f'Destination {self.label}: ({tph:.1f}, {q:.1f})')
         # Inconsistently sample input instead of output as there is no output but sampling might be interesting
         self._sample = (tph, q)
 

@@ -163,7 +163,8 @@ class ZoomOnWheel(MplInteraction):
                 center if center > 0. else numpy.nextafter(0, 1))
             old_max = numpy.log10(max_) if max_ > 0. else 0.
         else:
-            logging.warning(f'Zoom on wheel not implemented for scale "{scale}"')
+            logger = logging.getLogger(__name__)
+            logger.warning(f'Zoom on wheel not implemented for scale "{scale}"')
             return begin, end
 
         offset = (center - old_min) / (old_max - old_min)
@@ -265,7 +266,8 @@ class PanAndZoom(ZoomOnWheel):
             except (ValueError, OverflowError):
                 new_lim = lim  # Keep previous limits
         else:
-            logging.warning(f'Pan not implemented for scale "{scale}"')
+            logger = logging.getLogger(__name__)
+            logger.warning(f'Pan not implemented for scale "{scale}"')
             new_lim = lim
         return new_lim
 

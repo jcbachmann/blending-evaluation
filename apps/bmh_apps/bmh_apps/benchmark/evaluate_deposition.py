@@ -15,6 +15,8 @@ from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import optimize
 from pandas import DataFrame
 
+from bmh_apps.helpers.configure_logging import configure_logging
+
 
 def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition: DepositionMeta,
                            chevron_layers: int, starting_side: int = 0) -> None:
@@ -115,9 +117,10 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
 
 
 def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: SimulatorMeta, dst: str, dry_run: bool):
-    logging.info(f'Processing data with simulator "{simulator_meta.type}"')
+    logger = logging.getLogger(__name__)
+    logger.info(f'Processing data with simulator "{simulator_meta.type}"')
 
-    logging.debug('Writing simulator type and parameters to destination directory')
+    logger.debug('Writing simulator type and parameters to destination directory')
     if not dry_run:
         json.dump({'simulator': str(simulator_meta)}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
 
@@ -134,12 +137,12 @@ def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: S
     # Write material deposition
     deposition_directory = os.path.join(dst, identifier, core.COMPUTED_DEPOSITION_DIR)
 
-    logging.debug(f'Creating directory "{deposition_directory}"')
+    logger.debug(f'Creating directory "{deposition_directory}"')
     if not dry_run:
         os.mkdir(deposition_directory)
 
     deposition_meta_file = os.path.join(deposition_directory, BenchmarkData.META_JSON)
-    logging.debug(f'Writing reclaimed material meta to "{deposition_meta_file}"')
+    logger.debug(f'Writing reclaimed material meta to "{deposition_meta_file}"')
     if not dry_run:
         json.dump(
             deposition_meta.to_dict(),
@@ -149,20 +152,19 @@ def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: S
 
     deposition = deposition_meta.get_deposition()
     data_file = os.path.join(deposition_directory, core.DATA_CSV)
-    logging.debug(f'Writing material data to "{data_file}"')
+    logger.debug(f'Writing material data to "{data_file}"')
     if not dry_run:
         deposition.data.to_csv(data_file, sep='\t', index=False)
 
 
 def main(args: argparse.Namespace):
-    logging.basicConfig(
-        level=logging.DEBUG if args.verbose else logging.INFO,
-        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
-    )
+    # Setup logging
+    configure_logging(args.verbose)
+    logger = logging.getLogger(__name__)
 
     # Setup timestamp identifier
     timestamp_str = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-    logging.info(f'Starting evaluation with timestamp {timestamp_str}')
+    logger.info(f'Starting evaluation with timestamp {timestamp_str}')
 
     # Load benchmark base data
     benchmark = BenchmarkData()
@@ -191,7 +193,7 @@ def main(args: argparse.Namespace):
         dry_run=args.dry_run
     )
 
-    logging.info('Processing finished')
+    logger.info('Processing finished')
 
 
 if __name__ == '__main__':

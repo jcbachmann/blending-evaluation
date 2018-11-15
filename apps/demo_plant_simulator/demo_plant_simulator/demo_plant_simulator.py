@@ -71,10 +71,11 @@ def main(args):
         level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
     )
-    logging.info('Initializing')
+    logger = logging.getLogger(__name__)
+    logger.info('Initializing')
 
     if args.seed is not None:
-        logging.info(f'Setting random seed to {args.seed}')
+        logger.info(f'Setting random seed to {args.seed}')
         random.seed(args.seed)
 
     if args.graph:
@@ -87,26 +88,26 @@ def main(args):
         MaterialHandler.dot.render()
 
     if args.evaluate:
-        logging.info('Starting background plot server')
+        logger.info('Starting background plot server')
         plot_server = PlotServer(plant.get_columns())
         plot_server.set_data_callback(plant.get_diff_live, plant.get_diff_stats)
         plot_server.serve_background()
 
     time = datetime.timedelta(0, args.max_steps * Plant.TIME_INCREMENT, 0)
-    logging.info(f'Starting simulation of {args.max_steps} steps = {time}')
+    logger.info(f'Starting simulation of {args.max_steps} steps = {time}')
     start = datetime.datetime.now()
     step = 0
     while step < args.max_steps:
         plant.simulate_step()
         step += 1
     end = datetime.datetime.now()
-    logging.info(f'Simulation finished in {end - start}')
+    logger.info(f'Simulation finished in {end - start}')
 
     if args.evaluate:
-        logging.info('Evaluating')
+        logger.info('Evaluating')
         plant.evaluate()
 
-    logging.info('Done')
+    logger.info('Done')
 
 
 if __name__ == '__main__':

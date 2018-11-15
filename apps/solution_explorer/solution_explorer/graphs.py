@@ -15,6 +15,8 @@ class ObjectivesScatterCanvas(ExpandingFigureCanvas):
         self.all_objectives = all_objectives
         self.selection_callback = selection_callback
 
+        self.logger = logging.getLogger(__name__)
+
         # Setup interactive figure
         fig, self.ax = plt.subplots()
         super().__init__(fig)
@@ -102,7 +104,7 @@ class ObjectivesScatterCanvas(ExpandingFigureCanvas):
     def pick_from_all_objectives(self, event):
         if event.mouseevent.dblclick:
             index = event.ind[0]
-            logging.info(f'Picked item with index {index}')
+            self.logger.info(f'Picked item with index {index}')
             self.permanent_annotation.xy = self.sc.get_offsets()[index]
             self.permanent_annotation.set_text(str(index))
             self.permanent_annotation.get_bbox_patch().set_edgecolor(self.colormap(self.norm(index)))

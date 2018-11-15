@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+import logging
 import math
 import signal
 import sys
@@ -11,6 +12,8 @@ class Generator:
     def __init__(self, args):
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
+
+        self.logger = logging.getLogger(__name__)
 
         # Blending bed parameters
         self.length = args.length
@@ -128,23 +131,19 @@ class Generator:
         sys.stdout.close()
 
     def run(self):
-        self.status('Starting generator')
+        self.logger.info('Starting generator')
         try:
             if self.circular:
                 self.run_circular()
             else:
                 self.run_linear()
         except IOError:
-            self.status('Stopping generator due to IOError')
+            self.logger.error('Stopping generator due to IOError')
             self.finish = True
-        self.status('Generator stopped')
-
-    @staticmethod
-    def status(msg):
-        print('[generator] ' + msg, file=sys.stderr)
+        self.logger.info('Generator stopped')
 
     def signal_handler(self, _signum, _frame):
-        self.status('Stopping generator')
+        self.logger.info('Stopping generator')
         self.finish = True
 
 

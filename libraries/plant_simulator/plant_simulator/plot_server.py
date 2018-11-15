@@ -1,3 +1,4 @@
+import logging
 import threading
 
 from bokeh.application import Application
@@ -129,6 +130,7 @@ class PlotServer:
         self.live_data_callback = None
         self.stats_data_callback = None
         self.columns = columns
+        self.logger = logging.getLogger(__name__)
 
     def set_data_callback(self, live_data_callback, stats_data_callback):
         self.live_data_callback = live_data_callback
@@ -169,7 +171,7 @@ class PlotServer:
         doc.add_periodic_callback(update, 500)
 
     def serve(self):
-        print(f'Opening Bokeh application on http://localhost:{PlotServer.PORT}/')
+        self.logger.info(f'Opening Bokeh application on http://localhost:{PlotServer.PORT}/')
         apps = {'/': Application(FunctionHandler(self.make_document))}
 
         server = Server(apps, port=PlotServer.PORT, io_loop=IOLoop())

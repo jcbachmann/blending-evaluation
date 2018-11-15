@@ -10,10 +10,8 @@ import matplotlib.pyplot as plt
 from bmh.optimization.optimization import OptimizationResult, optimize
 from pandas import DataFrame
 
+from bmh_apps.helpers.configure_logging import configure_logging
 from bmh_apps.helpers.material_path_io import read_material
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 def write_optimization_result_to_file(optimization_result: OptimizationResult, directory: str):
@@ -48,9 +46,10 @@ def plot_optimization_result(optimization_result: OptimizationResult, directory:
 
 
 def get_parameter_columns(material: DataFrame) -> List[str]:
+    logger = logging.getLogger(__name__)
     non_parameter_columns = ['timestamp', 'volume']
     parameter_columns = list(set(material.columns) - set(non_parameter_columns))
-    logging.info(f'Found the following parameter columns: {", ".join(parameter_columns)}')
+    logger.info(f'Found the following parameter columns: {", ".join(parameter_columns)}')
     return parameter_columns
 
 
@@ -62,6 +61,8 @@ def write_arguments_to_file(args, directory: str):
 
 
 def main(args) -> None:
+    configure_logging(args.verbose)
+
     # Prepare directory
     datetime = time.strftime('%Y-%m-%d %H-%M-%S')
     directory = f'{datetime} {args.length}x{args.depth} v{args.variables} {args.population_size}of{args.max_evaluations} {args.material}'
@@ -107,4 +108,5 @@ if __name__ == '__main__':
     parser.add_argument('--variables', type=int, default=20, help='Amount of variables')
     parser.add_argument('--population_size', type=int, default=100, help='Amount of individuals in population')
     parser.add_argument('--max_evaluations', type=int, default=5000, help='Maximum amount of function evaluations')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     main(parser.parse_args(extended_argv))

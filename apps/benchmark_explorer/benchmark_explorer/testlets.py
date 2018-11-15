@@ -26,6 +26,7 @@ def get_correlation(standard_reference: ReferenceMeta, evaluation_reference: Ref
 
 class CorrelationTestlet(Testlet):
     def __init__(self, evaluation: Evaluation):
+        super().__init__()
         self.evaluation = evaluation
 
     def __str__(self):
@@ -43,6 +44,7 @@ class CorrelationTestlet(Testlet):
 
 class SimulatorIdentifier(Testlet):
     def __init__(self, evaluation: Evaluation):
+        super().__init__()
         self.evaluation = evaluation
 
     def __str__(self):

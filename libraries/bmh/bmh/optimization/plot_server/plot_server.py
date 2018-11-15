@@ -3,8 +3,6 @@ import threading
 
 from typing import Callable
 
-logger = logging.getLogger(__name__)
-
 
 class PlotServer:
     def __init__(self, all_callback: Callable, pop_callback: Callable, path_callback: Callable,
@@ -13,9 +11,10 @@ class PlotServer:
         self.pop_callback = pop_callback
         self.path_callback = path_callback
         self.port = port
+        self.logger = logging.getLogger(__name__)
 
     def serve(self) -> None:
-        logger.error('PlotServer.serve method not implemented')
+        self.logger.error('PlotServer.serve method not implemented')
 
     def serve_background(self) -> None:
         t = threading.Thread(target=self.serve)
