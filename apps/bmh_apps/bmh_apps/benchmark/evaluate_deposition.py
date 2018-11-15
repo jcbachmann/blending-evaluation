@@ -18,35 +18,35 @@ from pandas import DataFrame
 from bmh_apps.helpers.configure_logging import configure_logging
 
 
-def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition: DepositionMeta,
+def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
                            chevron_layers: int, starting_side: int = 0) -> None:
     """
     Set the deposition to traditional Chevron stacking in layers
     :param identifier: identifier of this deposition computation
     :param material_meta: material description to current knowledge which will be stacked
-    :param deposition: deposition meta to which the deposition data will be added
+    :param deposition_meta: deposition meta to which the deposition data will be added
     :param chevron_layers: amount of layers for Chevron stacking
     :param starting_side: set 0 for same side as reclaimer or 1 for opposite side
     """
-    core_length = deposition.bed_size_x - deposition.bed_size_z
+    core_length = deposition_meta.bed_size_x - deposition_meta.bed_size_z
 
     deposition_data = DataFrame({
         'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
-        'x': [0.5 * deposition.bed_size_z + core_length * float((l + starting_side) % 2) for l in
+        'x': [0.5 * deposition_meta.bed_size_z + core_length * float((l + starting_side) % 2) for l in
               range(0, chevron_layers + 1)],
-        'z': [0.5 * deposition.bed_size_z] * (chevron_layers + 1),
+        'z': [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
     })
-    deposition.data = Deposition(data=deposition_data, meta=deposition)
-    deposition.label = f'{identifier} - Chevron {chevron_layers} layers'
+    deposition_meta.data = Deposition(data=deposition_data, meta=deposition_meta)
+    deposition_meta.label = f'{identifier} - Chevron {chevron_layers} layers'
 
 
-def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition: DepositionMeta,
+def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
                              chevron_layers: int, starting_side: int = 0) -> None:
     """
     Optimize the deposition regarding the material information provided
     :param identifier: identifier of this deposition computation
     :param material_meta: material description to current knowledge which will be stacked
-    :param deposition: deposition meta to which the deposition data will be added
+    :param deposition_meta: deposition meta to which the deposition data will be added
     :param chevron_layers: amount of layers for Chevron stacking for speed determination
     :param starting_side: set 0 for same side as reclaimer or 1 for opposite side
     """
@@ -55,8 +55,8 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     # TODO respect starting side
     # TODO use same simulator?
     optimization_result = optimize(
-        length=deposition.bed_size_x,
-        depth=deposition.bed_size_z,
+        length=deposition_meta.bed_size_x,
+        depth=deposition_meta.bed_size_z,
         variables=chevron_layers + 1,
         material=material.data,
         parameter_columns=material.get_parameter_columns(),
@@ -68,15 +68,15 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     result_population.sort(key=lambda s: s.objectives[0])
     chosen_solution = result_population[0]
 
-    core_length = deposition.bed_size_x - deposition.bed_size_z
+    core_length = deposition_meta.bed_size_x - deposition_meta.bed_size_z
 
     deposition_data = DataFrame({
         'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
-        'x': [0.5 * deposition.bed_size_z + core_length * p for p in chosen_solution.variables],
-        'z': [0.5 * deposition.bed_size_z] * (chevron_layers + 1),
+        'x': [0.5 * deposition_meta.bed_size_z + core_length * p for p in chosen_solution.variables],
+        'z': [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
     })
-    deposition.data = Deposition(data=deposition_data, meta=deposition)
-    deposition.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
+    deposition_meta.data = Deposition(data=deposition_data, meta=deposition_meta)
+    deposition_meta.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
 
 
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
@@ -116,7 +116,8 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     return deposition
 
 
-def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: SimulatorMeta, dst: str, dry_run: bool):
+def evaluate_deposition(identifier: str, material_meta: MaterialMeta, simulator_meta: SimulatorMeta,
+                        deposition_meta: DepositionMeta, dst: str, dry_run: bool):
     logger = logging.getLogger(__name__)
     logger.info(f'Processing data with simulator "{simulator_meta.type}"')
 
@@ -128,11 +129,16 @@ def process_data(identifier: str, material_meta: MaterialMeta, simulator_meta: S
     # TODO v3 Determine prediction from material curve
     # TODO v3 Store prediction
 
-    # Compute deposition
-    deposition_meta = compute_deposition(identifier, material_meta)
-
     # Process material with computed deposition and selected simulator
-    core.process(identifier, material_meta, deposition_meta, simulator_meta, dst, dry_run, computed_deposition=True)
+    core.process(
+        identifier=identifier,
+        material_meta=material_meta,
+        deposition_meta=deposition_meta,
+        simulator_meta=simulator_meta,
+        dst=dst,
+        dry_run=dry_run,
+        computed_deposition=True
+    )
 
     # Write material deposition
     deposition_directory = os.path.join(dst, identifier, core.COMPUTED_DEPOSITION_DIR)
@@ -184,11 +190,13 @@ def main(args: argparse.Namespace):
     dst = os.path.join(args.dst, identifier)
     core.prepare_dst(dst, args.dry_run)
 
-    # Processing
-    process_data(
+    # Compute and evaluate deposition
+    deposition_meta = compute_deposition(identifier, material_meta)
+    evaluate_deposition(
         identifier=identifier,
         material_meta=material_meta,
         simulator_meta=simulator_meta,
+        deposition_meta=deposition_meta,
         dst=dst,
         dry_run=args.dry_run
     )

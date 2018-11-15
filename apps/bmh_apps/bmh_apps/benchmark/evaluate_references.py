@@ -27,12 +27,12 @@ def process_data(benchmark_data: BenchmarkData, references: Dict[str, ReferenceM
 
     for _, reference in references.items():
         core.process(
-            str(reference),
-            benchmark_data.materials[reference.material],
-            benchmark_data.depositions[reference.deposition],
-            simulator_meta,
-            dst,
-            dry_run,
+            identifier=str(reference),
+            material_meta=benchmark_data.materials[reference.material],
+            deposition_meta=benchmark_data.depositions[reference.deposition],
+            simulator_meta=simulator_meta,
+            dst=dst,
+            dry_run=dry_run,
             computed_deposition=False
         )
 

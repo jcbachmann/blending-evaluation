@@ -86,23 +86,23 @@ def compute_sigma_reduction(material_before: MaterialMeta, material_after: Mater
         logger.info(f'{parameter}\t1:{reduction:.2f}')
 
 
-def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta, simulator_meta: SimulatorMeta,
-            dst: str, dry_run: bool, computed_deposition: bool):
+def process(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
+            simulator_meta: SimulatorMeta, dst: str, dry_run: bool, computed_deposition: bool):
     logger = logging.getLogger(__name__)
-    logger.info(f'Processing "{identifier}" with material "{material}" and deposition "{deposition}"')
+    logger.info(f'Processing "{identifier}" with material "{material_meta}" and deposition "{deposition_meta}"')
 
     logger.debug('Creating simulator')
     sim_params = simulator_meta.get_params().copy()
-    sim_params['bed_size_x'] = deposition.bed_size_x
-    sim_params['bed_size_z'] = deposition.bed_size_z
+    sim_params['bed_size_x'] = deposition_meta.bed_size_x
+    sim_params['bed_size_z'] = deposition_meta.bed_size_z
     sim = simulator_meta.get_type()(**sim_params)
 
     logger.debug('Combining material and deposition')
-    material_deposition = MaterialDeposition(material.get_material(), deposition.get_deposition())
+    material_deposition = MaterialDeposition(material_meta.get_material(), deposition_meta.get_deposition())
     logger.debug(f'Material and deposition combined:\n{material_deposition.data.describe()}')
 
     logger.debug('Stacking and reclaiming material')
-    reclaimed_material = sim.stack_reclaim(material_deposition, x_per_s=deposition.reclaim_x_per_s)
+    reclaimed_material = sim.stack_reclaim(material_deposition, x_per_s=deposition_meta.reclaim_x_per_s)
     logger.debug(f'Reclaimed material:\n{reclaimed_material.data.describe()}')
 
     directory = os.path.join(dst, identifier)
@@ -111,8 +111,8 @@ def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta,
         os.mkdir(directory)
 
     reclaimed_reference = ReferenceMeta(identifier, directory, {
-        'material': str(material),
-        'deposition': str(deposition),
+        'material': str(material_meta),
+        'deposition': str(deposition_meta),
         'deposition_path': COMPUTED_DEPOSITION_DIR if computed_deposition else None,
         'reclaimed_path': RECLAIMED_MATERIAL_DIR
     })
@@ -155,4 +155,4 @@ def process(identifier: str, material: MaterialMeta, deposition: DepositionMeta,
     if not dry_run:
         reclaimed_material.data.to_csv(data_file, sep='\t', index=False)
 
-    compute_sigma_reduction(material, reclaimed_material_meta)
+    compute_sigma_reduction(material_meta, reclaimed_material_meta)
