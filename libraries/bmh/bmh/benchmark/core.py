@@ -15,8 +15,8 @@ COMPUTED_DEPOSITION_DIR = 'deposition'
 SIMULATOR_JSON = 'simulator.json'
 
 
-def prepare_simulator(simulator_meta: SimulatorMeta):
     logging.debug(f'Acquiring simulator type for "{simulator_meta.type}"')
+def test_simulator(simulator_meta: SimulatorMeta):
 
     # Acquire simulator type
     sim_type = simulator_meta.get_type()

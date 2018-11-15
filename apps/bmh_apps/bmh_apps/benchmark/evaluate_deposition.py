@@ -160,23 +160,22 @@ def main(args: argparse.Namespace):
         format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
     )
 
+    # Setup timestamp identifier
     timestamp_str = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
     logging.info(f'Starting evaluation with timestamp {timestamp_str}')
 
-    # Initialization
+    # Load benchmark base data
     benchmark = BenchmarkData()
     benchmark.read_base(args.path)
 
-    # Parse and validate material
+    # Acquire material
     material_identifier = get_identifier(args.material)
-    benchmark.validate_material(material_identifier)
-    material_meta = benchmark.materials[material_identifier]
+    material_meta = benchmark.get_material_meta(material_identifier)
 
-    # Parse and validate simulator
+    # Acquire and test simulator
     sim_identifier = get_identifier(args.sim)
-    benchmark.validate_simulator(sim_identifier)
-    simulator_meta = benchmark.simulators[sim_identifier]
-    core.prepare_simulator(simulator_meta)
+    simulator_meta = benchmark.get_simulator_meta(sim_identifier)
+    core.test_simulator(simulator_meta)
 
     # Prepare output directory
     identifier = f'{timestamp_str} {material_identifier} {sim_identifier}'

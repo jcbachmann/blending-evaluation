@@ -79,11 +79,19 @@ class BenchmarkData:
                 f'Simulator type "{self.simulators[sim_identifier]}" not found for identifier "{sim_identifier}"')
         logging.info(f'Simulator identifier "{sim_identifier}" validated')
 
+    def get_simulator_meta(self, sim_identifier: str):
+        self.validate_simulator(sim_identifier)
+        return self.simulators[sim_identifier]
+
     def validate_material(self, material_identifier: str):
         logging.debug(f'Validating material identifier "{material_identifier}"')
         if material_identifier not in self.materials:
             raise ValueError(f'Material "{material_identifier}" not found in materials')
         logging.info(f'Material identifier "{material_identifier}" validated')
+
+    def get_material_meta(self, material_identifier: str):
+        self.validate_material(material_identifier)
+        return self.materials[material_identifier]
 
     @staticmethod
     def list_managed_dirs(path: str) -> List[str]:

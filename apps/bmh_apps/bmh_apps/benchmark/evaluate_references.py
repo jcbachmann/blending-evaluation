@@ -59,7 +59,7 @@ def main(args: argparse.Namespace):
     # Make sure simulation will work properly
     benchmark_data.validate_simulators(sim_identifiers)
     for sim_identifier in sim_identifiers:
-        core.prepare_simulator(benchmark_data.simulators[sim_identifier])
+        core.test_simulator(benchmark_data.simulators[sim_identifier])
 
     logging.info(f'Evaluating {len(references)} references with {len(sim_identifiers)} simulator(s)')
     for sim_identifier in sim_identifiers:
