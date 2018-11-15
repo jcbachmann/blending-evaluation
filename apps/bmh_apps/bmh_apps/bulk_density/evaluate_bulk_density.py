@@ -79,7 +79,6 @@ def execute_for_bulk_density(
         run: int,
         dropheight: float,
         detailed: bool,
-        visualize: bool,
         bulkdensity: float,
 ):
     logger = logging.getLogger(__name__)
@@ -91,7 +90,6 @@ def execute_for_bulk_density(
         ppm3=ppm3,
         dropheight=dropheight,
         detailed=detailed,
-        visualize=visualize,
         bulkdensity=bulkdensity
     )
     sim.stack(0, pos, pos, volume, [])
@@ -121,7 +119,6 @@ def calculate_results(args):
                     run=run,
                     dropheight=args.dropheight,
                     detailed=args.detailed,
-                    visualize=args.visualize,
                     bulkdensity=args.bulkdensity,
                 )
                 out_volume = get_height_map_volume(heights, args.size)
@@ -174,7 +171,6 @@ if __name__ == '__main__':
     parser.add_argument('--dropheight', type=float, default=25, help='Stacker drop height')
     parser.add_argument('--runs', type=int, default=3, help='Runs')
     parser.add_argument('--detailed', action='store_true', help='Use detailed simulation')
-    parser.add_argument('--visualize', action='store_true', help='Visualize simulation')
     parser.add_argument('--reuse', action='store_true', help='Reuse old calculation data')
     parser.add_argument('--path', type=str, default='/tmp', help='Output path for intermediate files')
     parser.add_argument('--bulkdensity', type=float, default=1.0, help='Bulk density')
