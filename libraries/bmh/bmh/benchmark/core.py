@@ -89,7 +89,8 @@ def compute_sigma_reduction(material_before: MaterialMeta, material_after: Mater
 def process(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
             simulator_meta: SimulatorMeta, dst: str, dry_run: bool, computed_deposition: bool):
     logger = logging.getLogger(__name__)
-    logger.info(f'Processing "{identifier}" with material "{material_meta}" and deposition "{deposition_meta}"')
+    logger.info(f'Processing "{identifier}" with material "{material_meta}" and deposition "{deposition_meta}" using '
+                f'simulator type {simulator_meta.type}')
 
     logger.debug('Creating simulator')
     sim_params = simulator_meta.get_params().copy()
@@ -109,6 +110,11 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     logger.debug(f'Creating directory "{directory}"')
     if not dry_run:
         os.mkdir(directory)
+
+    simulator_file = os.path.join(directory, SIMULATOR_JSON)
+    logger.debug(f'Writing simulator type and parameters to "{simulator_file}"')
+    if not dry_run:
+        json.dump({'simulator': str(simulator_meta)}, open(simulator_file, 'w'), indent=4)
 
     reclaimed_reference = ReferenceMeta(identifier, directory, {
         'material': str(material_meta),

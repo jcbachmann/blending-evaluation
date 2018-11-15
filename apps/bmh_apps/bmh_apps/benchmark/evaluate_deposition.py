@@ -10,7 +10,6 @@ from datetime import datetime
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, Deposition
-from bmh.benchmark.simulator_meta import SimulatorMeta
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import optimize
 from pandas import DataFrame
@@ -80,6 +79,9 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
 
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
+    # TODO v3 Determine prediction from material curve
+    # TODO v3 Store prediction
+
     # TODO v3 Optimized deposition based on prediction - only one optimization before stacking
     # TODO v4 Optimized deposition based on prediction - optimize every 5 simulation minutes
 
@@ -116,31 +118,9 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     return deposition
 
 
-def evaluate_deposition(identifier: str, material_meta: MaterialMeta, simulator_meta: SimulatorMeta,
-                        deposition_meta: DepositionMeta, dst: str, dry_run: bool):
+def write_deposition(identifier: str, deposition_meta: DepositionMeta, dst: str, dry_run: bool):
     logger = logging.getLogger(__name__)
-    logger.info(f'Processing data with simulator "{simulator_meta.type}"')
 
-    logger.debug('Writing simulator type and parameters to destination directory')
-    if not dry_run:
-        json.dump({'simulator': str(simulator_meta)}, open(os.path.join(dst, core.SIMULATOR_JSON), 'w'), indent=4)
-
-    # Determine prediction from material curve
-    # TODO v3 Determine prediction from material curve
-    # TODO v3 Store prediction
-
-    # Process material with computed deposition and selected simulator
-    core.process(
-        identifier=identifier,
-        material_meta=material_meta,
-        deposition_meta=deposition_meta,
-        simulator_meta=simulator_meta,
-        dst=dst,
-        dry_run=dry_run,
-        computed_deposition=True
-    )
-
-    # Write material deposition
     deposition_directory = os.path.join(dst, identifier, core.COMPUTED_DEPOSITION_DIR)
 
     logger.debug(f'Creating directory "{deposition_directory}"')
@@ -191,11 +171,23 @@ def main(args: argparse.Namespace):
     core.prepare_dst(dst, args.dry_run)
 
     # Compute and evaluate deposition
-    deposition_meta = compute_deposition(identifier, material_meta)
-    evaluate_deposition(
+    deposition_meta = compute_deposition(
+        identifier=identifier,
+        material_meta=material_meta
+    )
+
+    core.process(
         identifier=identifier,
         material_meta=material_meta,
+        deposition_meta=deposition_meta,
         simulator_meta=simulator_meta,
+        dst=dst,
+        dry_run=args.dry_run,
+        computed_deposition=True
+    )
+
+    write_deposition(
+        identifier=identifier,
         deposition_meta=deposition_meta,
         dst=dst,
         dry_run=args.dry_run
