@@ -74,8 +74,8 @@ def main(args) -> None:
     # Execute optimization
     material = read_material(args.material)
     optimization_result = optimize(
-        length=args.length,
-        depth=args.depth,
+        bed_size_x=args.length,
+        bed_size_z=args.depth,
         variables=args.variables,
         material=material,
         population_size=args.population_size,

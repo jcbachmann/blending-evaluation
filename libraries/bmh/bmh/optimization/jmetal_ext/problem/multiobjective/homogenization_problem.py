@@ -11,15 +11,15 @@ from pandas import DataFrame
 
 
 def evaluate_solution(
-        length: float,
-        depth: float,
+        bed_size_x: float,
+        bed_size_z: float,
         material: DataFrame,
         parameter_columns: List[str],
         deposition: DataFrame,
         material_parameter_standard_deviations: List[float],
         total_material_volume: float
 ) -> [float, float]:
-    sim = BslBlendingSimulator(bed_size_x=length, bed_size_z=depth, ppm3=0.125)
+    sim = BslBlendingSimulator(bed_size_x=bed_size_x, bed_size_z=bed_size_z, ppm3=0.125)
     reclaimed_material = sim.stack_reclaim(material_deposition=MaterialDeposition(
         material=Material(data=material),
         deposition=Deposition(None, data=deposition)
@@ -37,12 +37,12 @@ def evaluate_solution(
 
 
 class HomogenizationProblem(FloatProblem):
-    def __init__(self, length: float, depth: float, material: DataFrame, parameter_columns: List[str],
+    def __init__(self, bed_size_x: float, bed_size_z: float, material: DataFrame, parameter_columns: List[str],
                  number_of_variables: int = 2):
         super().__init__()
 
-        self.length = length
-        self.depth = depth
+        self.bed_size_x = bed_size_x
+        self.bed_size_z = bed_size_z
         self.material = material
         self.parameter_columns = parameter_columns
 
@@ -63,17 +63,17 @@ class HomogenizationProblem(FloatProblem):
         FloatSolution.upper_bound = self.upper_bound
 
     def evaluate(self, solution: FloatSolution) -> None:
-        min_pos = self.depth / 2
-        max_pos = self.length - self.depth / 2
+        min_pos = self.bed_size_z / 2
+        max_pos = self.bed_size_x - self.bed_size_z / 2
         deposition = DataFrame(data={
             'x': [elem * (max_pos - min_pos) + min_pos for elem in solution.variables],
-            'z': [self.depth / 2] * self.number_of_variables,
+            'z': [self.bed_size_z / 2] * self.number_of_variables,
             'timestamp': np.linspace(0, self.material['timestamp'].values[-1], self.number_of_variables)
         })
 
         solution.objectives = evaluate_solution(
-            length=self.length,
-            depth=self.depth,
+            bed_size_x=self.bed_size_x,
+            bed_size_z=self.bed_size_z,
             material=self.material,
             parameter_columns=self.parameter_columns,
             deposition=deposition,

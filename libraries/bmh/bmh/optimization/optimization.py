@@ -80,11 +80,11 @@ class MyEvaluatorObserver(EvaluatorObserver):
         return None
 
 
-def optimize(length: float, depth: float, variables: int, material: DataFrame, parameter_columns: List[str],
+def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: DataFrame, parameter_columns: List[str],
              population_size: int, max_evaluations: int, scheduler_address: Optional[str] = None) -> OptimizationResult:
     problem = HomogenizationProblem(
-        length=length,
-        depth=depth,
+        bed_size_x=bed_size_x,
+        bed_size_z=bed_size_z,
         number_of_variables=variables,
         material=material,
         parameter_columns=parameter_columns
