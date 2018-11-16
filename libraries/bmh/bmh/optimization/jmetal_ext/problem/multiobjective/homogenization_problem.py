@@ -29,7 +29,7 @@ def evaluate_solution(
     standard_deviations = [weighted_avg_and_std(reclaimed_data[parameter_column], reclaimed_data['volume'])[1] for
                            parameter_column in parameter_columns]
 
-    volume_stdev = stdev(reclaimed_data['volume'].values.copy())
+    volume_stdev = stdev(reclaimed_data['volume'].values)
     worst_case_volume_stdev = stdev(np.array([total_material_volume / reclaimed_data['volume'].shape[0], 0]))
 
     return [s / d for s, d in zip(standard_deviations, material_parameter_standard_deviations)] + [
