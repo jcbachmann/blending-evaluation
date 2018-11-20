@@ -148,7 +148,7 @@ class MplPlotServer(PlotServer):
         ax = fig.add_subplot(1, 1, 1)
         ax.set_title('Blending Evaluation')
 
-        ax.set_xlim(0, 0.3)
+        ax.set_xlim(0, 2)
         ax.set_ylim(0, 2)
 
         all_plot, = ax.plot(

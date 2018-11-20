@@ -1,4 +1,4 @@
-from typing import List, Callable, Optional
+from typing import Callable, Optional
 
 import dash
 import dash_core_components as dcc
@@ -26,17 +26,6 @@ app.layout = html.Div([
     ]),
     dcc.Interval(id='scatter-update', interval=500)
 ])
-
-
-def get_margin_range(data: List[float], relative_margin: float = 0.1):
-    if len(data) == 0:
-        return None
-
-    min_val = min(data)
-    max_val = max(data)
-    diff = max_val - min_val
-    offset = diff * relative_margin
-    return [min_val - offset, max_val + offset]
 
 
 @app.callback(Output('scatter', 'figure'), [Input('scatter-update', 'n_intervals')])
@@ -73,11 +62,11 @@ def update_scatter(_interval):
     layout = go.Layout(
         height=600,
         xaxis=dict(
-            range=get_margin_range(pop_data['f1']),
+            range=[0, 2],
             title='f1 Homogenization Effect'
         ),
         yaxis=dict(
-            range=get_margin_range(pop_data['f2']),
+            range=[0, 2],
             title='f2 Volume StDev'
         ),
         margin={'l': 40, 'b': 30, 't': 10, 'r': 0},
