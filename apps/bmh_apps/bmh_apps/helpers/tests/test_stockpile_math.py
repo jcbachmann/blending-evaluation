@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import unittest
 
+import numpy as np
+
 from bmh_apps.helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
 
 
@@ -33,3 +35,15 @@ class TestStockpileMath(unittest.TestCase):
                 ),
                 entry['height']
             )
+
+    def test_array_get_stockpile_volume(self):
+        height = np.array([12.3, 111.1])
+        length = np.array([321.0, 3.2])
+        volume = np.array([50512.78536550256, 1475552.3506640848])
+        np.testing.assert_allclose(get_stockpile_volume(height, length), volume)
+
+    def test_array_get_stockpile_height(self):
+        height = np.array([12.3, 111.1])
+        length = np.array([321.0, 3.2])
+        volume = np.array([50512.78536550256, 1475552.3506640848])
+        np.testing.assert_allclose(get_stockpile_height(volume, length), height)

@@ -1,7 +1,9 @@
 from cmath import sqrt, pi
 
+import numpy as np
 
-def get_stockpile_volume(height: float, core_length: float) -> float:
+
+def get_stockpile_volume(height, core_length):
     """
     Compute the volume of a stockpile given the height and core length
     :param height: stockpile height
@@ -11,7 +13,7 @@ def get_stockpile_volume(height: float, core_length: float) -> float:
     return pow(height, 2.0) * core_length + pi / 3.0 * pow(height, 3.0)
 
 
-def get_stockpile_height(volume: float, core_length: float) -> float:
+def get_stockpile_height(volume, core_length):
     """
     Compute the height of a stockpile given the volume and core length
 
@@ -27,7 +29,8 @@ def get_stockpile_height(volume: float, core_length: float) -> float:
     pi_sq_3_vol = 3.0 * pow(pi, 2.0) * volume
     two_3r = pow(2.0, 1.0 / 3.0)
     l_cu = pow(core_length, 3.0)
-    part = pow(sqrt(3.0) * pi * sqrt((pi_sq_3_vol - 4.0 * l_cu) * volume) - 2.0 * l_cu + pi_sq_3_vol, 1.0 / 3.0)
+    inner = (pi_sq_3_vol - 4.0 * l_cu) * volume
+    part = pow(sqrt(3.0) * pi * np.sqrt(np.array(inner, dtype=complex)) - 2.0 * l_cu + pi_sq_3_vol, 1.0 / 3.0)
     height = part / (two_3r * pi) + (two_3r * pow(core_length, 2.0)) / (pi * part) - core_length / pi
 
     return height.real
