@@ -8,7 +8,7 @@ from typing import List
 
 import matplotlib.pyplot as plt
 from bmh.benchmark.material_deposition import Material
-from bmh.optimization.optimization import OptimizationResult, optimize
+from bmh.optimization.optimization import OptimizationResult, optimize_deposition
 from pandas import DataFrame
 
 from bmh_apps.helpers.configure_logging import configure_logging
@@ -75,7 +75,7 @@ def main(args) -> None:
 
     # Execute optimization
     material = read_material(args.material)
-    optimization_result = optimize(
+    optimization_result = optimize_deposition(
         bed_size_x=args.length,
         bed_size_z=args.depth,
         material=Material(data=material),

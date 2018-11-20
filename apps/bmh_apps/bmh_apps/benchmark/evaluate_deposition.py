@@ -11,7 +11,7 @@ from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, Deposition
 from bmh.helpers.identifiers import get_identifier
-from bmh.optimization.optimization import optimize
+from bmh.optimization.optimization import optimize_deposition
 from pandas import DataFrame
 
 from bmh_apps.helpers.configure_logging import configure_logging
@@ -53,7 +53,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
     # TODO respect starting side
     # TODO use same simulator?
-    optimization_result = optimize(
+    optimization_result = optimize_deposition(
         bed_size_x=deposition_meta.bed_size_x,
         bed_size_z=deposition_meta.bed_size_z,
         material=material,

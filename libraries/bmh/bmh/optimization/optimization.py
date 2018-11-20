@@ -80,7 +80,7 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         return None
 
 
-def optimize(
+def optimize_deposition(
         bed_size_x: float,
         bed_size_z: float,
         material: Material,

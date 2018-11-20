@@ -5,7 +5,7 @@ import math
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
-from bmh.optimization.optimization import optimize
+from bmh.optimization.optimization import optimize_deposition
 
 from bmh_apps.helpers.configure_logging import configure_logging
 
@@ -25,7 +25,7 @@ def main(path: str, material_identifier: str):
     material_meta = benchmark.get_material_meta(material_identifier)
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
-    optimize(
+    optimize_deposition(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
         material=material,
