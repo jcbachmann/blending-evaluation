@@ -62,7 +62,6 @@ class BslBlendingSimulator(BlendingSimulator):
 
         # calculate timestamp column from x positions
         data_dict['timestamp'] = [v / x_per_s for v in data_dict['x']]
-        del data_dict['x']
 
         # reorganize reclaimed material into pandas DataFrame
         data = DataFrame(data_dict)
