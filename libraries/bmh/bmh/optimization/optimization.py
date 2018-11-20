@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 
+from bmh.benchmark.material_deposition import Material
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
 from jmetal.component.observer import Observer
@@ -8,7 +9,6 @@ from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
-from pandas import DataFrame
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.component.dask_evaluator import DaskEvaluator
@@ -80,14 +80,13 @@ class MyEvaluatorObserver(EvaluatorObserver):
         return None
 
 
-def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: DataFrame, parameter_columns: List[str],
-             population_size: int, max_evaluations: int, scheduler_address: Optional[str] = None) -> OptimizationResult:
+def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: Material, population_size: int,
+             max_evaluations: int, scheduler_address: Optional[str] = None) -> OptimizationResult:
     problem = HomogenizationProblem(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
-        number_of_variables=variables,
         material=material,
-        parameter_columns=parameter_columns
+        number_of_variables=variables,
     )
 
     evaluator_observer = MyEvaluatorObserver()

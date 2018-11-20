@@ -46,6 +46,7 @@ class Material:
     """
 
     REQUIRED_COLUMNS = ['timestamp', 'volume']
+    OPTIONAL_COLUMNS = ['x']
 
     def __init__(self, *, data: DataFrame = None, data_file: Optional[str] = None, meta=None):
         if data is not None:
@@ -59,7 +60,10 @@ class Material:
         self.meta = meta
 
     def get_parameter_columns(self) -> List[str]:
-        return list(set(self.data.columns).difference(Material.REQUIRED_COLUMNS))
+        return list(set(self.data.columns).difference(Material.REQUIRED_COLUMNS + Material.OPTIONAL_COLUMNS))
+
+    def get_volume(self):
+        return self.data['volume'].sum()
 
 
 class MaterialMeta:

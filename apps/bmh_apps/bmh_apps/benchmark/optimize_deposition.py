@@ -29,8 +29,7 @@ def main(path: str, material_identifier: str):
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
         variables=30 + 1,
-        material=material.data,
-        parameter_columns=material.get_parameter_columns(),
+        material=material,
         population_size=250,
         max_evaluations=25000
     )

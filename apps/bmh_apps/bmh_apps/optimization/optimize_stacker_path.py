@@ -7,6 +7,7 @@ import time
 from typing import List
 
 import matplotlib.pyplot as plt
+from bmh.benchmark.material_deposition import Material
 from bmh.optimization.optimization import OptimizationResult, optimize
 from pandas import DataFrame
 
@@ -78,10 +79,9 @@ def main(args) -> None:
         bed_size_x=args.length,
         bed_size_z=args.depth,
         variables=args.variables,
-        material=material,
+        material=Material(data=material),
         population_size=args.population_size,
         max_evaluations=args.max_evaluations,
-        parameter_columns=get_parameter_columns(material)
     )
 
     # Write results
