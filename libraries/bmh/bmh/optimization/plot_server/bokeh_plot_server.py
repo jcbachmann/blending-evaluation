@@ -22,8 +22,8 @@ class BokehPlotServer(PlotServer):
         palette = Category10[10]
 
         scatter_fig = figure(
-            plot_width=900,
-            plot_height=700,
+            plot_width=750,
+            plot_height=750,
             tools='pan,wheel_zoom,reset,hover,tap,crosshair,zoom_in,zoom_out,box_zoom,undo,redo,save,box_select',
             x_axis_label='f1 Homogenization Effect',
             y_axis_label='f2 Volume StDev'
@@ -39,7 +39,7 @@ class BokehPlotServer(PlotServer):
         )
         scatter_fig.legend.location = 'top_right'
         scatter_fig.x_range = Range1d(0, 0.3)
-        scatter_fig.y_range = Range1d(0, 2)
+        scatter_fig.y_range = Range1d(0, 0.3)
 
         def path_callback(_attr, _old, new):
             path = self.path_callback(new[0])
@@ -49,7 +49,7 @@ class BokehPlotServer(PlotServer):
         all_source.selected.on_change('indices', path_callback)
 
         path_fig = figure(
-            plot_width=900,
+            plot_width=750,
             plot_height=400,
             tools='pan,wheel_zoom,reset,hover',
             x_axis_label='Position',
