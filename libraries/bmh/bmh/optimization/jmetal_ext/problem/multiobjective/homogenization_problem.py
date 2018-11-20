@@ -19,7 +19,7 @@ def evaluate_solution(
         deposition: DataFrame,
         material_parameter_standard_deviations: List[float],
         total_material_volume: float
-) -> [float, float]:
+) -> List[float]:
     sim = BslBlendingSimulator(bed_size_x=bed_size_x, bed_size_z=bed_size_z, ppm3=0.125)
     reclaimed_material = sim.stack_reclaim(material_deposition=MaterialDeposition(
         material=Material(data=material),
