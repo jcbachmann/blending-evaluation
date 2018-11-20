@@ -18,8 +18,8 @@ def get_bed_size(volume: float, max_stockpile_height: float = 20.0):
     return bed_size_x, bed_size_z
 
 
-def main(path: str, material_identifier: str):
-    configure_logging(verbose=False)
+def main(path: str, material_identifier: str, verbose: bool):
+    configure_logging(verbose=verbose)
     benchmark = BenchmarkData()
     benchmark.read_base(path)
     material_meta = benchmark.get_material_meta(material_identifier)
@@ -39,8 +39,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Optimize material deposition for a given material curve'
     )
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     parser.add_argument('--path', default='.', help='Simulator benchmark path')
     parser.add_argument('--material', type=str, default='generated_2Y45', help='Material curve identifier')
     args = parser.parse_args()
 
-    main(path=args.path, material_identifier=get_identifier(args.material))
+    main(path=args.path, material_identifier=get_identifier(args.material), verbose=args.verbose)
