@@ -1,4 +1,4 @@
-from typing import TypeVar, List
+from typing import TypeVar, List, Optional
 
 from jmetal.algorithm.singleobjective.evolutionaryalgorithm import GenerationalGeneticAlgorithm
 from jmetal.component.evaluator import SequentialEvaluator, Evaluator
@@ -19,7 +19,7 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
                  crossover: Crossover[S, S],
                  selection: Selection[List[S], S],
                  evaluator: Evaluator[S] = SequentialEvaluator[S](),
-                 offspring_size: int = 20):
+                 offspring_size: Optional[int] = None):
         super(HPSEA, self).__init__(
             problem,
             population_size,
@@ -28,7 +28,7 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
             crossover,
             selection,
             evaluator)
-        self.offspring_size = offspring_size
+        self.offspring_size = offspring_size if offspring_size is not None else 2 * int(0.5 * 0.2 * population_size)
 
     def replacement(self, population: List[S], offspring_population: List[S]) -> List[List[TypeVar('S')]]:
         join_population = population + offspring_population
