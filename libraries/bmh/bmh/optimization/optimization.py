@@ -103,7 +103,7 @@ def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: Dat
             observer=evaluator_observer,
             scheduler_address=scheduler_address
         ),
-        offspring_size=20
+        offspring_size=2 * int(0.5 * 0.15 * population_size)
     )
 
     algorithm_observer = MyAlgorithmObserver()
