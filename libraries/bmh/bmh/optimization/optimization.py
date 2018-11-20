@@ -27,7 +27,7 @@ class OptimizationResult:
         self.objective_labels = objective_labels
 
 
-class MyAlgorithmObserver(Observer):
+class VerboseHoardingAlgorithmObserver(Observer):
     def __init__(self):
         self.population = []
         self.last_evaluations = None
@@ -55,7 +55,7 @@ class MyAlgorithmObserver(Observer):
         }
 
 
-class MyEvaluatorObserver(EvaluatorObserver):
+class HoardingEvaluatorObserver(EvaluatorObserver):
     def __init__(self):
         self.evaluated_variables = []
         self.evaluated_objectives = []
@@ -89,7 +89,7 @@ def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: Mat
         number_of_variables=variables,
     )
 
-    evaluator_observer = MyEvaluatorObserver()
+    evaluator_observer = HoardingEvaluatorObserver()
 
     algorithm = HPSEA[FloatSolution, List[FloatSolution]](
         problem=problem,
@@ -105,7 +105,7 @@ def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: Mat
         offspring_size=2 * int(0.5 * 0.15 * population_size)
     )
 
-    algorithm_observer = MyAlgorithmObserver()
+    algorithm_observer = VerboseHoardingAlgorithmObserver()
     algorithm.observable.register(algorithm_observer)
 
     plot_server = BokehPlotServer(
