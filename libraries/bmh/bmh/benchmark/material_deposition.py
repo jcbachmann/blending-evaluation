@@ -205,36 +205,12 @@ class MaterialDeposition:
         self.data = MaterialDeposition.prepare(material.data, deposition.data)
 
     @staticmethod
-    def prepare(material_df: DataFrame, deposition_df: DataFrame, t_diff_max: float = 15) -> DataFrame:
+    def prepare(material_df: DataFrame, deposition_df: DataFrame) -> DataFrame:
         # Copy material data
         data = material_df.copy()
-        # data = DataFrame()
 
         # Add cone deposition to the beginning of every layer
         # deposition_df = MaterialDeposition.add_cone_per_layer(deposition_df, material_df)
-
-        # TODO make fast!
-        # for index, row in material_df.iterrows():
-        #     if 'timestamp' in data.columns:
-        #         t_last = data['timestamp'].max()
-        #     else:
-        #         t_last = 0
-        #     t_curr = row['timestamp']
-        #     sub_steps = int((t_curr - t_last) / t_diff_max)
-        #     t_per_step = (t_curr - t_last) / sub_steps
-        #     volume_per_step = row['volume'] / sub_steps
-        #     parameter = row['parameter'] # TODO WTF?
-        #     sub_rows = {
-        #         'timestamp': [],
-        #         'volume': [],
-        #         'parameter': []
-        #     }
-        #     for step in range(sub_steps):
-        #         sub_rows['timestamp'].append(t_last + (step + 1) * t_per_step)
-        #         sub_rows['volume'].append(volume_per_step)
-        #         sub_rows['parameter'].append(parameter)
-        #
-        #     data = data.append(DataFrame(sub_rows))
 
         data['x'] = np.interp(data['timestamp'], deposition_df['timestamp'], deposition_df['x'])
         data['z'] = np.interp(data['timestamp'], deposition_df['timestamp'], deposition_df['z'])
@@ -242,7 +218,34 @@ class MaterialDeposition:
         return data
 
     @staticmethod
-    def add_cone_per_layer(dep_df, mat_df: DataFrame):
+    def upsample_material(mat_df: DataFrame, t_diff_max: float = 15) -> DataFrame:
+        # Very slow...
+        data = DataFrame()
+        for index, row in mat_df.iterrows():
+            if 'timestamp' in data.columns:
+                t_last = data['timestamp'].max()
+            else:
+                t_last = 0
+            t_curr = row['timestamp']
+            sub_steps = int((t_curr - t_last) / t_diff_max)
+            t_per_step = (t_curr - t_last) / sub_steps
+            volume_per_step = row['volume'] / sub_steps
+            parameter = row['parameter']  # TODO WTF?
+            sub_rows = {
+                'timestamp': [],
+                'volume': [],
+                'parameter': []
+            }
+            for step in range(sub_steps):
+                sub_rows['timestamp'].append(t_last + (step + 1) * t_per_step)
+                sub_rows['volume'].append(volume_per_step)
+                sub_rows['parameter'].append(parameter)
+
+            data = data.append(DataFrame(sub_rows))
+        return data
+
+    @staticmethod
+    def add_cone_per_layer(dep_df: DataFrame, mat_df: DataFrame) -> DataFrame:
         dep_df['t_end'] = dep_df['timestamp'].shift(-1)
         dep_df['v_layer'] = dep_df.apply(lambda row: mat_df[
             (mat_df['timestamp'] >= row['timestamp']) & (mat_df['timestamp'] < row['t_end'])]['volume'].sum(),
