@@ -38,8 +38,8 @@ class BokehPlotServer(PlotServer):
             marker='o', size=8, line_color=palette[1], fill_alpha=0
         )
         scatter_fig.legend.location = 'top_right'
-        scatter_fig.x_range = Range1d(0, 0.3)
-        scatter_fig.y_range = Range1d(0, 0.3)
+        scatter_fig.x_range = Range1d(0, 2)
+        scatter_fig.y_range = Range1d(0, 2)
 
         def path_callback(_attr, _old, new):
             path = self.path_callback(new[0])

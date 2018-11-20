@@ -198,19 +198,26 @@ class HomogenizationProblem(FloatProblem):
             raw_material: Material,
             number_of_variables: int
     ):
-        raw_material_evaluator = MaterialEvaluator(raw_material)
-        raw_parameter_stdev = raw_material_evaluator.get_parameter_stdev()
+        # Generate a Chevron deposition with maximum speed
         chevron = [i % 2 for i in range(number_of_variables)]
         chevron_deposition = HomogenizationProblem.variables_to_deposition(
             variables=chevron, x_min=x_min, x_max=x_max, bed_size_z=bed_size_z, material=raw_material
         )
+
+        # Stack and reclaim material to acquire reference reclaimed material
         reclaimed_material = process_material_deposition(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
             material=raw_material,
             deposition=chevron_deposition
         )
+
+        # Set the parameter reference values to full speed Chevron stacked and reclaimed material data
         reclaimed_evaluator = MaterialEvaluator(reclaimed_material)
+        chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
+
+        # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
         volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
-        worst_case_volume_stdev = stdev(np.array([volume_per_slice, 0.0]))
-        return raw_parameter_stdev + [worst_case_volume_stdev]
+        worst_acceptable_volume_stdev = stdev(np.array([4.0 / 3.0 * volume_per_slice, 2.0 / 3.0 * volume_per_slice]))
+
+        return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
