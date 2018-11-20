@@ -1,6 +1,7 @@
 import logging
 from typing import List, Optional
 
+from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
 from jmetal.component.observer import Observer
@@ -10,10 +11,14 @@ from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
+from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.dask_evaluator import DaskEvaluator
 from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
+from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
 from .plot_server.bokeh_plot_server import BokehPlotServer
+from .plot_server.dash_plot_server import DashPlotServer
+from .plot_server.mpl_plot_server import MplPlotServer
 from ..benchmark.material_deposition import Material
 
 
@@ -87,8 +92,14 @@ def optimize_deposition(
         variables: int = 31,
         population_size: int = 250,
         max_evaluations: int = 25000,
-        scheduler_address: Optional[str] = None
+        evaluator_str: Optional[str] = 'dask',
+        algorithm_str: Optional[str] = 'hpsea',
+        plot_server_str: Optional[str] = 'bokeh',
+        **kwargs
 ) -> OptimizationResult:
+    logger = logging.getLogger(__name__)
+    logger.debug('Initializing optimization problem')
+
     problem = HomogenizationProblem(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
@@ -96,33 +107,58 @@ def optimize_deposition(
         number_of_variables=variables,
     )
 
+    algorithm_dict = {
+        'hpsea': (HPSEA, {'offspring_size': kwargs.get('offspring_size', None)}),
+        'nsgaii': (NSGAII, {}),
+        'ssnsgaii': (SSNSGAII, {}),
+    }
+    algorithm_type, algorithm_kwargs = algorithm_dict.get(algorithm_str, (HPSEA, {}))
+
+    logger.debug('Creating evaluator observer')
     evaluator_observer = HoardingEvaluatorObserver()
 
-    algorithm = HPSEA[FloatSolution, List[FloatSolution]](
+    evaluator_dict = {
+        'dask': (DaskEvaluator, {'scheduler_address': kwargs.get('scheduler_address', None)}),
+        'multiprocess': (MultiprocessEvaluator, {}),
+    }
+    evaluator_type, evaluator_kwargs = evaluator_dict.get(evaluator_str, (None, {}))
+    if evaluator_type:
+        logger.debug(f'Creating evaluator {evaluator_type.__name__} with kwargs: {str(evaluator_kwargs)}')
+        algorithm_kwargs['evaluator'] = evaluator_type(observer=evaluator_observer, **evaluator_kwargs)
+
+    logger.debug(f'Creating algorithm {algorithm_type.__name__} with kwargs: {str(algorithm_kwargs)}')
+    algorithm = algorithm_type[FloatSolution, List[FloatSolution]](
         problem=problem,
         population_size=population_size,
         max_evaluations=max_evaluations,
         mutation=Polynomial(3.3 / variables, distribution_index=20),
         crossover=SBX(0.9, distribution_index=15),
         selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-        evaluator=DaskEvaluator(
-            observer=evaluator_observer,
-            scheduler_address=scheduler_address
-        ),
-        offspring_size=2 * int(0.5 * 0.15 * population_size)
+        **algorithm_kwargs
     )
 
+    logger.debug('Creating algorithm observer')
     algorithm_observer = VerboseHoardingAlgorithmObserver()
     algorithm.observable.register(algorithm_observer)
 
-    plot_server = BokehPlotServer(
+    plot_server_dict = {
+        'bokeh': BokehPlotServer,
+        'dash': DashPlotServer,
+        'mpl': MplPlotServer,
+    }
+    plot_server_type = plot_server_dict.get(plot_server_str, None)
+    logger.debug(f'Creating plot_server {plot_server_type.__name__}')
+    plot_server = plot_server_type(
         all_callback=evaluator_observer.get_new_solutions,
         pop_callback=algorithm_observer.get_population,
         path_callback=evaluator_observer.get_path
-    )
-    plot_server.serve_background()
+    ) if plot_server_type else None
+    if plot_server:
+        plot_server.serve_background()
 
+    logger.debug('Running algorithm')
     algorithm.run()
+    logger.debug('Algorithm finished')
 
     return OptimizationResult(
         result_population=algorithm.get_result(),
