@@ -29,9 +29,10 @@ def main(path: str, material_identifier: str, verbose: bool):
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
         material=material,
-        variables=30 + 1,
-        population_size=250,
-        max_evaluations=25000
+        variables=100 + 1,
+        population_size=300,
+        max_evaluations=25000,
+        offspring_size=30
     )
 
 
