@@ -80,8 +80,15 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         return None
 
 
-def optimize(bed_size_x: float, bed_size_z: float, variables: int, material: Material, population_size: int,
-             max_evaluations: int, scheduler_address: Optional[str] = None) -> OptimizationResult:
+def optimize(
+        bed_size_x: float,
+        bed_size_z: float,
+        material: Material,
+        variables: int = 31,
+        population_size: int = 250,
+        max_evaluations: int = 25000,
+        scheduler_address: Optional[str] = None
+) -> OptimizationResult:
     problem = HomogenizationProblem(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,

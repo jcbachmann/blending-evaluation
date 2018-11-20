@@ -28,8 +28,8 @@ def main(path: str, material_identifier: str):
     optimize(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
-        variables=30 + 1,
         material=material,
+        variables=30 + 1,
         population_size=250,
         max_evaluations=25000
     )

@@ -78,8 +78,8 @@ def main(args) -> None:
     optimization_result = optimize(
         bed_size_x=args.length,
         bed_size_z=args.depth,
-        variables=args.variables,
         material=Material(data=material),
+        variables=args.variables,
         population_size=args.population_size,
         max_evaluations=args.max_evaluations,
     )

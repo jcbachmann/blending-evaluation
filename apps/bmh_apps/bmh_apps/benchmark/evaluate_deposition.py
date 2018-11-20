@@ -56,8 +56,8 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     optimization_result = optimize(
         bed_size_x=deposition_meta.bed_size_x,
         bed_size_z=deposition_meta.bed_size_z,
-        variables=chevron_layers + 1,
         material=material,
+        variables=chevron_layers + 1,
         population_size=250,
         max_evaluations=25000
     )
