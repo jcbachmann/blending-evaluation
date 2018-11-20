@@ -2,12 +2,11 @@ import json
 import logging
 import os
 
-from bmh.helpers import math
-
 from .data import BenchmarkData
 from .material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
+from ..helpers import math
 
 DATA_CSV = 'data.csv'
 RECLAIMED_MATERIAL_DIR = 'material'

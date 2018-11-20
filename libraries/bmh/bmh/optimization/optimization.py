@@ -1,7 +1,6 @@
 import logging
 from typing import List, Optional
 
-from bmh.benchmark.material_deposition import Material
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S
 from jmetal.component.observer import Observer
@@ -15,6 +14,7 @@ from .jmetal_ext.component.dask_evaluator import DaskEvaluator
 from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
 from .plot_server.bokeh_plot_server import BokehPlotServer
+from ..benchmark.material_deposition import Material
 
 
 class OptimizationResult:
