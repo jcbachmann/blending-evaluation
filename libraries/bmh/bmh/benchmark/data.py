@@ -79,7 +79,7 @@ class BenchmarkData:
                 f'Simulator type "{self.simulators[sim_identifier]}" not found for identifier "{sim_identifier}"')
         self.logger.info(f'Simulator identifier "{sim_identifier}" validated')
 
-    def get_simulator_meta(self, sim_identifier: str):
+    def get_simulator_meta(self, sim_identifier: str) -> SimulatorMeta:
         self.validate_simulator(sim_identifier)
         return self.simulators[sim_identifier]
 
@@ -89,7 +89,7 @@ class BenchmarkData:
             raise ValueError(f'Material "{material_identifier}" not found in materials')
         self.logger.info(f'Material identifier "{material_identifier}" validated')
 
-    def get_material_meta(self, material_identifier: str):
+    def get_material_meta(self, material_identifier: str) -> MaterialMeta:
         self.validate_material(material_identifier)
         return self.materials[material_identifier]
 
