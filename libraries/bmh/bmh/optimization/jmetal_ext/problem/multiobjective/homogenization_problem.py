@@ -82,6 +82,9 @@ class HomogenizationProblem(FloatProblem):
         self.x_min = 0.5 * self.bed_size_z
         self.x_max = self.bed_size_x - 0.5 * self.bed_size_z
 
+        # Buffer values
+        self.max_timestamp = material.data['timestamp'].values[-1]
+
         # Evaluate reference data
         self.reference = HomogenizationProblem.get_reference(
             bed_size_x=bed_size_x, bed_size_z=bed_size_z,
@@ -101,23 +104,13 @@ class HomogenizationProblem(FloatProblem):
         FloatSolution.upper_bound = self.upper_bound
 
     def evaluate(self, solution: FloatSolution) -> None:
-        deposition = HomogenizationProblem.variables_to_deposition(
-            variables=solution.variables,
-            x_min=self.x_min, x_max=self.x_max,
-            bed_size_x=self.bed_size_x,
-            bed_size_z=self.bed_size_z,
-            material=self.material
-        )
-
+        deposition = self.variables_to_deposition(variables=solution.variables)
         reclaimed_material = process_material_deposition(material=self.material, deposition=deposition)
         reclaimed_evaluator = MaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
         solution.objectives = reclaimed_evaluator.get_all_stdev_relative(self.reference)
 
     def get_objective_labels(self) -> List[str]:
         return [col + ' Stdev' for col in self.material.get_parameter_columns()] + ['Volume Stdev']
-
-    def get_variable_labels(self) -> List[str]:
-        return [f'v{(i + 1)}' for i in range(self.number_of_variables)]
 
     def create_solution(self) -> FloatSolution:
         new_solution = FloatSolution(
@@ -182,15 +175,20 @@ class HomogenizationProblem(FloatProblem):
         return new_solution
 
     @staticmethod
-    def variables_to_deposition(variables: List[float], x_min: float, x_max: float, bed_size_x: float,
-                                bed_size_z: float, material: Material):
+    def variables_to_deposition_generic(variables: List[float], x_min: float, x_max: float, bed_size_x: float,
+                                        bed_size_z: float, max_timestamp: float):
         return Deposition.from_data(DataFrame(
             data={
                 'x': [elem * (x_max - x_min) + x_min for elem in variables],
                 'z': [bed_size_z / 2] * len(variables),
-                'timestamp': np.linspace(0, material.data['timestamp'].values[-1], len(variables))
+                'timestamp': np.linspace(0, max_timestamp, len(variables))
             }),
             bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=0.5
+        )
+
+    def variables_to_deposition(self, variables: List[float]):
+        return HomogenizationProblem.variables_to_deposition_generic(
+            variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z, self.max_timestamp
         )
 
     @staticmethod
@@ -200,11 +198,13 @@ class HomogenizationProblem(FloatProblem):
             raw_material: Material,
             number_of_variables: int
     ):
+        max_timestamp = raw_material.data['timestamp'].values[-1]
+
         # Generate a Chevron deposition with maximum speed
         chevron = [i % 2 for i in range(number_of_variables)]
-        chevron_deposition = HomogenizationProblem.variables_to_deposition(
+        chevron_deposition = HomogenizationProblem.variables_to_deposition_generic(
             variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-            material=raw_material
+            max_timestamp=max_timestamp
         )
 
         # Stack and reclaim material to acquire reference reclaimed material

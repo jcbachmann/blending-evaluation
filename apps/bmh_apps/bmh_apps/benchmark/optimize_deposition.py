@@ -6,7 +6,7 @@ from typing import Tuple
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
-from bmh.optimization.optimization import optimize_deposition
+from bmh.optimization.optimization import DepositionOptimizer
 
 from bmh_apps.helpers.configure_logging import configure_logging
 
@@ -26,7 +26,7 @@ def main(path: str, material_identifier: str, verbose: bool):
     material_meta = benchmark.get_material_meta(material_identifier)
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
-    optimize_deposition(
+    optimizer = DepositionOptimizer(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
         material=material,
@@ -35,6 +35,7 @@ def main(path: str, material_identifier: str, verbose: bool):
         max_evaluations=25000,
         offspring_size=30
     )
+    optimizer.run()
 
 
 if __name__ == '__main__':

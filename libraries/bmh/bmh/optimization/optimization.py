@@ -19,16 +19,13 @@ from .jmetal_ext.problem.multiobjective.homogenization_problem import Homogeniza
 from .plot_server.bokeh_plot_server import BokehPlotServer
 from .plot_server.dash_plot_server import DashPlotServer
 from .plot_server.mpl_plot_server import MplPlotServer
-from ..benchmark.material_deposition import Material
+from ..benchmark.material_deposition import Material, Deposition
 
 
 class OptimizationResult:
-    def __init__(self, result_population, all_variables, all_objectives, variable_labels: List[str],
-                 objective_labels: List[str]):
-        self.result_population = result_population
-        self.all_variables = all_variables
-        self.all_objectives = all_objectives
-        self.variable_labels = variable_labels
+    def __init__(self, deposition: Deposition, objectives: List[float], objective_labels: List[str]):
+        self.deposition = deposition
+        self.objectives = objectives
         self.objective_labels = objective_labels
 
 
@@ -85,85 +82,94 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         return None
 
 
-def optimize_deposition(
-        bed_size_x: float,
-        bed_size_z: float,
-        material: Material,
-        variables: int = 31,
-        population_size: int = 250,
-        max_evaluations: int = 25000,
-        evaluator_str: Optional[str] = 'dask',
-        algorithm_str: Optional[str] = 'hpsea',
-        plot_server_str: Optional[str] = 'bokeh',
-        **kwargs
-) -> OptimizationResult:
-    logger = logging.getLogger(__name__)
-    logger.debug('Initializing optimization problem')
+class DepositionOptimizer:
+    def __init__(
+            self,
+            bed_size_x: float,
+            bed_size_z: float,
+            material: Material,
+            variables: int = 31,
+            population_size: int = 250,
+            max_evaluations: int = 25000,
+            evaluator_str: Optional[str] = 'dask',
+            algorithm_str: Optional[str] = 'hpsea',
+            plot_server_str: Optional[str] = 'bokeh',
+            **kwargs
+    ):
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug('Initializing optimization problem')
 
-    problem = HomogenizationProblem(
-        bed_size_x=bed_size_x,
-        bed_size_z=bed_size_z,
-        material=material,
-        number_of_variables=variables,
-    )
+        self.problem = HomogenizationProblem(
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            material=material,
+            number_of_variables=variables,
+        )
 
-    algorithm_dict = {
-        'hpsea': (HPSEA, {'offspring_size': kwargs.get('offspring_size', None)}),
-        'nsgaii': (NSGAII, {}),
-        'ssnsgaii': (SSNSGAII, {}),
-    }
-    algorithm_type, algorithm_kwargs = algorithm_dict.get(algorithm_str, (HPSEA, {}))
+        algorithm_dict = {
+            'hpsea': (HPSEA, {'offspring_size': kwargs.get('offspring_size', None)}),
+            'nsgaii': (NSGAII, {}),
+            'ssnsgaii': (SSNSGAII, {}),
+        }
+        algorithm_type, algorithm_kwargs = algorithm_dict.get(algorithm_str, (HPSEA, {}))
 
-    logger.debug('Creating evaluator observer')
-    evaluator_observer = HoardingEvaluatorObserver()
+        self.logger.debug('Creating evaluator observer')
+        self.evaluator_observer = HoardingEvaluatorObserver()
 
-    evaluator_dict = {
-        'dask': (DaskEvaluator, {'scheduler_address': kwargs.get('scheduler_address', None)}),
-        'multiprocess': (MultiprocessEvaluator, {}),
-    }
-    evaluator_type, evaluator_kwargs = evaluator_dict.get(evaluator_str, (None, {}))
-    if evaluator_type:
-        logger.debug(f'Creating evaluator {evaluator_type.__name__} with kwargs: {str(evaluator_kwargs)}')
-        algorithm_kwargs['evaluator'] = evaluator_type(observer=evaluator_observer, **evaluator_kwargs)
+        evaluator_dict = {
+            'dask': (DaskEvaluator, {'scheduler_address': kwargs.get('scheduler_address', None)}),
+            'multiprocess': (MultiprocessEvaluator, {}),
+        }
+        evaluator_type, evaluator_kwargs = evaluator_dict.get(evaluator_str, (None, {}))
+        if evaluator_type:
+            self.logger.debug(f'Creating evaluator {evaluator_type.__name__} with kwargs: {str(evaluator_kwargs)}')
+            algorithm_kwargs['evaluator'] = evaluator_type(observer=self.evaluator_observer, **evaluator_kwargs)
 
-    logger.debug(f'Creating algorithm {algorithm_type.__name__} with kwargs: {str(algorithm_kwargs)}')
-    algorithm = algorithm_type[FloatSolution, List[FloatSolution]](
-        problem=problem,
-        population_size=population_size,
-        max_evaluations=max_evaluations,
-        mutation=Polynomial(3.3 / variables, distribution_index=20),
-        crossover=SBX(0.9, distribution_index=15),
-        selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-        **algorithm_kwargs
-    )
+            self.logger.debug(f'Creating algorithm {algorithm_type.__name__} with kwargs: {str(algorithm_kwargs)}')
+        self.algorithm = algorithm_type[FloatSolution, List[FloatSolution]](
+            problem=self.problem,
+            population_size=population_size,
+            max_evaluations=max_evaluations,
+            mutation=Polynomial(3.3 / variables, distribution_index=20),
+            crossover=SBX(0.9, distribution_index=15),
+            selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
+            **algorithm_kwargs
+        )
 
-    logger.debug('Creating algorithm observer')
-    algorithm_observer = VerboseHoardingAlgorithmObserver()
-    algorithm.observable.register(algorithm_observer)
+        self.logger.debug('Creating algorithm observer')
+        algorithm_observer = VerboseHoardingAlgorithmObserver()
+        self.algorithm.observable.register(algorithm_observer)
 
-    plot_server_dict = {
-        'bokeh': BokehPlotServer,
-        'dash': DashPlotServer,
-        'mpl': MplPlotServer,
-    }
-    plot_server_type = plot_server_dict.get(plot_server_str, None)
-    logger.debug(f'Creating plot_server {plot_server_type.__name__}')
-    plot_server = plot_server_type(
-        all_callback=evaluator_observer.get_new_solutions,
-        pop_callback=algorithm_observer.get_population,
-        path_callback=evaluator_observer.get_path
-    ) if plot_server_type else None
-    if plot_server:
-        plot_server.serve_background()
+        plot_server_dict = {
+            'bokeh': BokehPlotServer,
+            'dash': DashPlotServer,
+            'mpl': MplPlotServer,
+        }
+        plot_server_type = plot_server_dict.get(plot_server_str, None)
+        self.logger.debug(f'Creating plot_server {plot_server_type.__name__}')
+        self.plot_server = plot_server_type(
+            all_callback=self.evaluator_observer.get_new_solutions,
+            pop_callback=algorithm_observer.get_population,
+            path_callback=self.evaluator_observer.get_path
+        ) if plot_server_type else None
 
-    logger.debug('Running algorithm')
-    algorithm.run()
-    logger.debug('Algorithm finished')
+    def run(self) -> None:
+        if self.plot_server:
+            self.plot_server.serve_background()
 
-    return OptimizationResult(
-        result_population=algorithm.get_result(),
-        all_variables=evaluator_observer.evaluated_variables,
-        all_objectives=evaluator_observer.evaluated_objectives,
-        variable_labels=problem.get_variable_labels(),
-        objective_labels=problem.get_objective_labels()
-    )
+        self.logger.debug('Running algorithm')
+        self.algorithm.run()
+        self.logger.debug('Algorithm finished')
+
+    def get_all_results(self) -> List[OptimizationResult]:
+        self.logger.debug('Collecting all results')
+        objective_labels = self.problem.get_objective_labels()
+        return [OptimizationResult(self.problem.variables_to_deposition(v), o, objective_labels) for v, o in
+                zip(self.evaluator_observer.evaluated_variables, self.evaluator_observer.evaluated_objectives)]
+
+    def get_final_results(self) -> List[OptimizationResult]:
+        self.logger.debug('Collecting final results')
+        result_population = self.algorithm.get_result()
+        objective_labels = self.problem.get_objective_labels()
+        return [OptimizationResult(self.problem.variables_to_deposition(s.variables), s.objectives, objective_labels)
+                for s in result_population]

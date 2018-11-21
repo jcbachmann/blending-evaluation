@@ -11,7 +11,7 @@ from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, Deposition
 from bmh.helpers.identifiers import get_identifier
-from bmh.optimization.optimization import optimize_deposition
+from bmh.optimization.optimization import DepositionOptimizer
 from pandas import DataFrame
 
 from bmh_apps.helpers.configure_logging import configure_logging
@@ -53,7 +53,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
     # TODO respect starting side
     # TODO use same simulator?
-    optimization_result = optimize_deposition(
+    optimizer = DepositionOptimizer(
         bed_size_x=deposition_meta.bed_size_x,
         bed_size_z=deposition_meta.bed_size_z,
         material=material,
@@ -61,19 +61,14 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         population_size=250,
         max_evaluations=25000
     )
+    optimizer.run()
 
-    result_population = optimization_result.result_population
-    result_population.sort(key=lambda s: s.objectives[0])
-    chosen_solution = result_population[0]
+    results = optimizer.get_final_results()
+    results.sort(key=lambda r: r.objectives[0])
+    selection = results[0]
 
-    core_length = deposition_meta.bed_size_x - deposition_meta.bed_size_z
-
-    deposition_data = DataFrame({
-        'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
-        'x': [0.5 * deposition_meta.bed_size_z + core_length * p for p in chosen_solution.variables],
-        'z': [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
-    })
-    deposition_meta.data = Deposition(data=deposition_data, meta=deposition_meta)
+    selection.deposition.meta = deposition_meta
+    deposition_meta.data = selection.deposition
     deposition_meta.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
 
 
