@@ -64,8 +64,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     optimizer.run()
 
     results = optimizer.get_final_results()
-    results.sort(key=lambda r: r.objectives[0])
-    selection = results[0]
+    selection = min(results, key=lambda r: r.objectives[0])
 
     selection.deposition.meta = deposition_meta
     deposition_meta.data = selection.deposition
