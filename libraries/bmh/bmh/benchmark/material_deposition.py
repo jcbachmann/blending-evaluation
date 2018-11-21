@@ -1,6 +1,7 @@
 import logging
 import os
-from typing import List, Optional
+import uuid
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -48,22 +49,28 @@ class Material:
     REQUIRED_COLUMNS = ['timestamp', 'volume']
     OPTIONAL_COLUMNS = ['x']
 
-    def __init__(self, *, data: DataFrame = None, data_file: Optional[str] = None, meta=None):
-        if data is not None:
-            self.data = data
-        elif data_file is not None:
-            self.data = read_data_file(data_file)
-        else:
-            raise ValueError('No data provided')
-        check_required_columns(self.data, Material.REQUIRED_COLUMNS)
-
+    def __init__(self, *, meta: 'MaterialMeta', data: DataFrame):
         self.meta = meta
+        self.data = data
+        check_required_columns(self.data, Material.REQUIRED_COLUMNS)
 
     def get_parameter_columns(self) -> List[str]:
         return list(set(self.data.columns).difference(Material.REQUIRED_COLUMNS + Material.OPTIONAL_COLUMNS))
 
     def get_volume(self):
         return self.data['volume'].sum()
+
+    @classmethod
+    def from_data(cls, data: DataFrame, *, identifier=str(uuid.uuid4())):
+        meta = MaterialMeta(identifier, path='', meta_dict={
+            'label': f'Material {identifier}',
+            'description': f'Created from data with length ({data.shape[0]})',
+            'category': 'reclaimed',
+            'time': data['timestamp'].max(),
+            'volume': data['volume'].sum(),
+            'data': None
+        })
+        return cls(meta=meta, data=data)
 
 
 class MaterialMeta:
@@ -103,7 +110,8 @@ class MaterialMeta:
         :return: Deposition object containing data for this deposition
         """
         if self.data is None:
-            self.data = Material(data_file=os.path.join(self.path, self.data_file), meta=self)
+            material_data = read_data_file(os.path.join(self.path, self.data_file))
+            self.data = Material(meta=self, data=material_data)
 
         return self.data
 
@@ -125,16 +133,25 @@ class Deposition:
 
     REQUIRED_COLUMNS = ['timestamp', 'x', 'z']
 
-    def __init__(self, meta, data_file: Optional[str] = None, data=None):
-        if data_file is not None:
-            self.data = read_data_file(data_file)
-        elif data is not None:
-            self.data = data
-        else:
-            raise ValueError('Deposition requires data_file or data to be not None')
-
-        check_required_columns(self.data, Deposition.REQUIRED_COLUMNS)
+    def __init__(self, *, meta: 'DepositionMeta', data: DataFrame):
         self.meta = meta
+        self.data = data
+        check_required_columns(self.data, Deposition.REQUIRED_COLUMNS)
+
+    @classmethod
+    def from_data(cls, data: DataFrame, *, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float,
+                  reclaim_x_per_s: float):
+        meta = DepositionMeta(identifier, path='', meta_dict={
+            'label': f'Deposition {identifier}',
+            'description': f'Created from data with length ({data.shape[0]})',
+            'category': 'from_data',
+            'time': data['timestamp'].max(),
+            'data': None,
+            'bed_size_x': bed_size_x,
+            'bed_size_z': bed_size_z,
+            'reclaim_x_per_s': reclaim_x_per_s
+        })
+        return cls(meta=meta, data=data)
 
 
 class DepositionMeta:
@@ -176,7 +193,8 @@ class DepositionMeta:
         :return: Deposition object containing data for this deposition
         """
         if self.data is None:
-            self.data = Deposition(data_file=os.path.join(self.path, self.data_file), meta=self)
+            deposition_data = read_data_file(os.path.join(self.path, self.data_file))
+            self.data = Deposition(meta=self, data=deposition_data)
 
         return self.data
 

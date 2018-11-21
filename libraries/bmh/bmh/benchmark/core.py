@@ -140,6 +140,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
         'volume': reclaimed_material.data.volume.sum(),
         'data': DATA_CSV
     })
+    reclaimed_material.meta = reclaimed_material_meta
     reclaimed_material_meta.data = reclaimed_material
 
     logger.debug(f'Creating directory "{reclaimed_material_path}"')

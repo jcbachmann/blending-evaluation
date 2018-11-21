@@ -73,7 +73,7 @@ class BslBlendingSimulator(BlendingSimulator):
         # reorganize reclaimed material into pandas DataFrame
         data = DataFrame(data_dict)
 
-        return Material(data=data)
+        return Material.from_data(data)
 
     def get_heights(self):
         return self.bsl.get_heights()

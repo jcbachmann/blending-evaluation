@@ -101,6 +101,7 @@ class HomogenizationProblem(FloatProblem):
         deposition = HomogenizationProblem.variables_to_deposition(
             variables=solution.variables,
             x_min=self.x_min, x_max=self.x_max,
+            bed_size_x=self.bed_size_x,
             bed_size_z=self.bed_size_z,
             material=self.material
         )
@@ -183,13 +184,16 @@ class HomogenizationProblem(FloatProblem):
         return new_solution
 
     @staticmethod
-    def variables_to_deposition(variables: List[float], x_min: float, x_max: float, bed_size_z: float,
-                                material: Material):
-        return Deposition(None, data=DataFrame(data={
-            'x': [elem * (x_max - x_min) + x_min for elem in variables],
-            'z': [bed_size_z / 2] * len(variables),
-            'timestamp': np.linspace(0, material.data['timestamp'].values[-1], len(variables))
-        }))
+    def variables_to_deposition(variables: List[float], x_min: float, x_max: float, bed_size_x: float,
+                                bed_size_z: float, material: Material):
+        return Deposition.from_data(DataFrame(
+            data={
+                'x': [elem * (x_max - x_min) + x_min for elem in variables],
+                'z': [bed_size_z / 2] * len(variables),
+                'timestamp': np.linspace(0, material.data['timestamp'].values[-1], len(variables))
+            }),
+            bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=0.5
+        )
 
     @staticmethod
     def get_reference(
@@ -201,7 +205,8 @@ class HomogenizationProblem(FloatProblem):
         # Generate a Chevron deposition with maximum speed
         chevron = [i % 2 for i in range(number_of_variables)]
         chevron_deposition = HomogenizationProblem.variables_to_deposition(
-            variables=chevron, x_min=x_min, x_max=x_max, bed_size_z=bed_size_z, material=raw_material
+            variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
+            material=raw_material
         )
 
         # Stack and reclaim material to acquire reference reclaimed material

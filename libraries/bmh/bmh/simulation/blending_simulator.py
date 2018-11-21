@@ -53,4 +53,4 @@ class BlendingSimulator:
         # reorder columns and remove x position
         data = data[['timestamp', 'volume'] + material_deposition.material.get_parameter_columns()]
 
-        return Material(data=data)
+        return Material.from_data(data)

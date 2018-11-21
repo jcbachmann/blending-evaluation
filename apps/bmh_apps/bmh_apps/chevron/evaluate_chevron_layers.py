@@ -30,8 +30,10 @@ def simulate(args, layers) -> DataFrame:
     deposition_data['timestamp'] = max_timestamp * path['part'] / max_part
 
     material_deposition = MaterialDeposition(
-        material=Material(data=material_data),
-        deposition=Deposition(None, data=deposition_data)
+        material=Material.from_data(material_data),
+        deposition=Deposition.from_data(
+            deposition_data, bed_size_x=args.length, bed_size_z=args.depth, reclaim_x_per_s=1.0
+        )
     )
 
     simulator = BslBlendingSimulator(
