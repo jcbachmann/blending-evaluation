@@ -12,14 +12,22 @@ class BslBlendingSimulator(BlendingSimulator):
                  bulkdensity: Optional[float] = None, dropheight: Optional[float] = None,
                  detailed: Optional[bool] = None, reclaimincrement: Optional[float] = None):
         super().__init__(bed_size_x, bed_size_z)
-        if reclaimangle is None: reclaimangle = 45.0
-        if ppm3 is None: ppm3 = 1.0
-        if circular is None: circular = False
-        if eight is None: eight = 0.87
-        if bulkdensity is None: bulkdensity = 1.0
-        if dropheight is None: dropheight = 0.5 * bed_size_z
-        if detailed is None: detailed = False
-        if reclaimincrement is None: reclaimincrement = 1.0
+        if reclaimangle is None:
+            reclaimangle = 45.0
+        if ppm3 is None:
+            ppm3 = 1.0
+        if circular is None:
+            circular = False
+        if eight is None:
+            eight = 0.87
+        if bulkdensity is None:
+            bulkdensity = 1.0
+        if dropheight is None:
+            dropheight = 0.5 * bed_size_z
+        if detailed is None:
+            detailed = False
+        if reclaimincrement is None:
+            reclaimincrement = 1.0
 
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
