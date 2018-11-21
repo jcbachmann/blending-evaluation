@@ -29,18 +29,17 @@ def simulate(args, layers) -> DataFrame:
     deposition_data['z'] = args.depth / 2
     deposition_data['timestamp'] = max_timestamp * path['part'] / max_part
 
+    material_deposition = MaterialDeposition(
+        material=Material(data=material_data),
+        deposition=Deposition(None, data=deposition_data)
+    )
+
     simulator = BslBlendingSimulator(
         bed_size_x=args.length,
         bed_size_z=args.depth,
         ppm3=10,
     )
-    reclaim = simulator.stack_reclaim(
-        material_deposition=MaterialDeposition(
-            material=Material(data=material_data),
-            deposition=Deposition(None, data=deposition_data)
-        ),
-        x_per_s=1
-    )
+    reclaim = simulator.stack_reclaim(material_deposition=material_deposition, x_per_s=1)
 
     return reclaim.data
 
