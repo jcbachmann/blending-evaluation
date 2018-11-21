@@ -16,11 +16,10 @@ class BlendingSimulator:
     def reclaim(self) -> List[List[Union[float, List[float]]]]:
         raise NotImplemented('BlendingSimulator.reclaim not implemented')
 
-    def stack_reclaim(self, material_deposition: MaterialDeposition, x_per_s: float) -> Material:
+    def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """
         Stack material according to material deposition and reclaim into new blended material.
         :param material_deposition: material and deposition data
-        :param x_per_s: speed in units of x per second
         :return: reclaimed material
         """
 
@@ -47,8 +46,11 @@ class BlendingSimulator:
         data_dict['volume'] = [row[1] for row in data_list]
         data = DataFrame(data_dict)
 
+        # Extract reclaimer speed from deposition meta
+        reclaim_x_per_s = material_deposition.deposition.meta.reclaim_x_per_s
+
         # calculate timestamp column from x positions
-        data['timestamp'] = data['x'] / x_per_s
+        data['timestamp'] = data['x'] / reclaim_x_per_s
 
         # reorder columns and remove x position
         data = data[['timestamp', 'volume'] + material_deposition.material.get_parameter_columns()]

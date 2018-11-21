@@ -12,14 +12,17 @@ from pandas import DataFrame
 from bmh_apps.helpers.stockpile_math import get_stockpile_height
 
 
-def process_material_deposition(
-        bed_size_x: float, bed_size_z: float,
-        material: Material, deposition: Deposition,
-        ppm3: float = 0.125, x_per_s: float = 0.5
-):
-    sim = BslBlendingSimulator(bed_size_x=bed_size_x, bed_size_z=bed_size_z, ppm3=ppm3)
-    material_deposition = MaterialDeposition(material=material, deposition=deposition)
-    return sim.stack_reclaim(material_deposition=material_deposition, x_per_s=x_per_s)
+def process_material_deposition(material: Material, deposition: Deposition, ppm3: float = 0.125):
+    sim = BslBlendingSimulator(
+        bed_size_x=deposition.meta.bed_size_x,
+        bed_size_z=deposition.meta.bed_size_z,
+        ppm3=ppm3
+    )
+    material_deposition = MaterialDeposition(
+        material=material,
+        deposition=deposition
+    )
+    return sim.stack_reclaim(material_deposition)
 
 
 class MaterialEvaluator:
@@ -106,12 +109,7 @@ class HomogenizationProblem(FloatProblem):
             material=self.material
         )
 
-        reclaimed_material = process_material_deposition(
-            bed_size_x=self.bed_size_x,
-            bed_size_z=self.bed_size_z,
-            material=self.material,
-            deposition=deposition
-        )
+        reclaimed_material = process_material_deposition(material=self.material, deposition=deposition)
         reclaimed_evaluator = MaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
         solution.objectives = reclaimed_evaluator.get_all_stdev_relative(self.reference)
 
@@ -210,12 +208,7 @@ class HomogenizationProblem(FloatProblem):
         )
 
         # Stack and reclaim material to acquire reference reclaimed material
-        reclaimed_material = process_material_deposition(
-            bed_size_x=bed_size_x,
-            bed_size_z=bed_size_z,
-            material=raw_material,
-            deposition=chevron_deposition
-        )
+        reclaimed_material = process_material_deposition(material=raw_material, deposition=chevron_deposition)
 
         # Set the parameter reference values to full speed Chevron stacked and reclaimed material data
         reclaimed_evaluator = MaterialEvaluator(reclaimed_material)

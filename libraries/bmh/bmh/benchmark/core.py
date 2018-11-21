@@ -102,7 +102,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     logger.debug(f'Material and deposition combined:\n{material_deposition.data.describe()}')
 
     logger.debug('Stacking and reclaiming material')
-    reclaimed_material = sim.stack_reclaim(material_deposition, x_per_s=deposition_meta.reclaim_x_per_s)
+    reclaimed_material = sim.stack_reclaim(material_deposition)
     logger.debug(f'Reclaimed material:\n{reclaimed_material.data.describe()}')
 
     directory = os.path.join(dst, identifier)

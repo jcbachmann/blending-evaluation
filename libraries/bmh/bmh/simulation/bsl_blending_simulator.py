@@ -45,11 +45,10 @@ class BslBlendingSimulator(BlendingSimulator):
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         self.bsl.stack(timestamp, x, z, volume, parameter)
 
-    def stack_reclaim(self, material_deposition: MaterialDeposition, x_per_s: float) -> Material:
+    def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """
         Stack material according to material deposition and reclaim into new blended material.
         :param material_deposition: material and deposition data
-        :param x_per_s: speed in units of x per second
         :return: reclaimed material
         """
 
@@ -67,8 +66,11 @@ class BslBlendingSimulator(BlendingSimulator):
         # reclaim stacked material
         data_dict = self.bsl.reclaim()
 
+        # Extract reclaimer speed from deposition meta
+        reclaim_x_per_s = material_deposition.deposition.meta.reclaim_x_per_s
+
         # calculate timestamp column from x positions
-        data_dict['timestamp'] = [v / x_per_s for v in data_dict['x']]
+        data_dict['timestamp'] = [v / reclaim_x_per_s for v in data_dict['x']]
 
         # reorganize reclaimed material into pandas DataFrame
         data = DataFrame(data_dict)

@@ -41,7 +41,7 @@ def simulate(args, layers) -> DataFrame:
         bed_size_z=args.depth,
         ppm3=10,
     )
-    reclaim = simulator.stack_reclaim(material_deposition=material_deposition, x_per_s=1)
+    reclaim = simulator.stack_reclaim(material_deposition)
 
     return reclaim.data
 
