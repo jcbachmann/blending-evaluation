@@ -25,6 +25,48 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
     return sim.stack_reclaim(material_deposition)
 
 
+def variables_to_deposition_generic(
+        variables: List[float], x_min: float, x_max: float, bed_size_x: float, bed_size_z: float, max_timestamp: float
+):
+    return Deposition.from_data(DataFrame(
+        data={
+            'x': [elem * (x_max - x_min) + x_min for elem in variables],
+            'z': [bed_size_z / 2] * len(variables),
+            'timestamp': np.linspace(0, max_timestamp, len(variables))
+        }),
+        bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=0.5
+    )
+
+
+def calculate_reference_objectives(
+        bed_size_x: float, bed_size_z: float,
+        x_min: float, x_max: float,
+        raw_material: Material,
+        number_of_variables: int
+):
+    max_timestamp = raw_material.data['timestamp'].values[-1]
+
+    # Generate a Chevron deposition with maximum speed
+    chevron = [i % 2 for i in range(number_of_variables)]
+    chevron_deposition = variables_to_deposition_generic(
+        variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
+        max_timestamp=max_timestamp
+    )
+
+    # Stack and reclaim material to acquire reference reclaimed material
+    reclaimed_material = process_material_deposition(material=raw_material, deposition=chevron_deposition)
+
+    # Set the parameter reference values to full speed Chevron stacked and reclaimed material data
+    reclaimed_evaluator = MaterialEvaluator(reclaimed_material)
+    chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
+
+    # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
+    volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
+    worst_acceptable_volume_stdev = stdev(np.array([4.0 / 3.0 * volume_per_slice, 2.0 / 3.0 * volume_per_slice]))
+
+    return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
+
+
 class MaterialEvaluator:
     def __init__(self, reclaimed: Material, x_min: Optional[float] = None, x_max: Optional[float] = None):
         self.reclaimed = reclaimed
@@ -86,7 +128,7 @@ class HomogenizationProblem(FloatProblem):
         self.max_timestamp = material.data['timestamp'].values[-1]
 
         # Evaluate reference data
-        self.reference = HomogenizationProblem.get_reference(
+        self.reference = calculate_reference_objectives(
             bed_size_x=bed_size_x, bed_size_z=bed_size_z,
             x_min=self.x_min, x_max=self.x_max,
             raw_material=material,
@@ -174,48 +216,7 @@ class HomogenizationProblem(FloatProblem):
 
         return new_solution
 
-    @staticmethod
-    def variables_to_deposition_generic(variables: List[float], x_min: float, x_max: float, bed_size_x: float,
-                                        bed_size_z: float, max_timestamp: float):
-        return Deposition.from_data(DataFrame(
-            data={
-                'x': [elem * (x_max - x_min) + x_min for elem in variables],
-                'z': [bed_size_z / 2] * len(variables),
-                'timestamp': np.linspace(0, max_timestamp, len(variables))
-            }),
-            bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=0.5
-        )
-
     def variables_to_deposition(self, variables: List[float]):
-        return HomogenizationProblem.variables_to_deposition_generic(
+        return variables_to_deposition_generic(
             variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z, self.max_timestamp
         )
-
-    @staticmethod
-    def get_reference(
-            bed_size_x: float, bed_size_z: float,
-            x_min: float, x_max: float,
-            raw_material: Material,
-            number_of_variables: int
-    ):
-        max_timestamp = raw_material.data['timestamp'].values[-1]
-
-        # Generate a Chevron deposition with maximum speed
-        chevron = [i % 2 for i in range(number_of_variables)]
-        chevron_deposition = HomogenizationProblem.variables_to_deposition_generic(
-            variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-            max_timestamp=max_timestamp
-        )
-
-        # Stack and reclaim material to acquire reference reclaimed material
-        reclaimed_material = process_material_deposition(material=raw_material, deposition=chevron_deposition)
-
-        # Set the parameter reference values to full speed Chevron stacked and reclaimed material data
-        reclaimed_evaluator = MaterialEvaluator(reclaimed_material)
-        chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
-
-        # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
-        volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
-        worst_acceptable_volume_stdev = stdev(np.array([4.0 / 3.0 * volume_per_slice, 2.0 / 3.0 * volume_per_slice]))
-
-        return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
