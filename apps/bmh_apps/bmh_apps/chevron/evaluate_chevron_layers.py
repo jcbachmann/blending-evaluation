@@ -17,17 +17,17 @@ from bmh_apps.helpers.material_path_io import read_material
 
 
 def simulate(args, layers) -> DataFrame:
-    material = read_material(args.material)
-    max_timestamp = material['timestamp'].values[-1]
+    material_data = read_material(args.material)
+    max_timestamp = material_data['timestamp'].values[-1]
     min_pos = args.depth / 2
     max_pos = args.length - args.depth / 2
     path = chevron_path(layers)
     max_part = path['part'].values[-1]
 
-    deposition = DataFrame()
-    deposition['x'] = path['path'] * (max_pos - min_pos) + min_pos
-    deposition['z'] = args.depth / 2
-    deposition['timestamp'] = max_timestamp * path['part'] / max_part
+    deposition_data = DataFrame()
+    deposition_data['x'] = path['path'] * (max_pos - min_pos) + min_pos
+    deposition_data['z'] = args.depth / 2
+    deposition_data['timestamp'] = max_timestamp * path['part'] / max_part
 
     simulator = BslBlendingSimulator(
         bed_size_x=args.length,
@@ -36,8 +36,8 @@ def simulate(args, layers) -> DataFrame:
     )
     reclaim = simulator.stack_reclaim(
         material_deposition=MaterialDeposition(
-            material=Material(data=material),
-            deposition=Deposition(None, data=deposition)
+            material=Material(data=material_data),
+            deposition=Deposition(None, data=deposition_data)
         ),
         x_per_s=1
     )
