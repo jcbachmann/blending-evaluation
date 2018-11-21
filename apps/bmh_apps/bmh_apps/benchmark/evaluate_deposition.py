@@ -100,7 +100,7 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     # Use as much time for reclaiming, as for stacking
     reclaim_x_per_s = bed_size_x / material_meta.time
 
-    deposition = DepositionMeta(identifier, path='', meta_dict={
+    deposition_meta = DepositionMeta(identifier, path='', meta_dict={
         'label': f'Computed {identifier}',
         'description': f'Computed deposition for {identifier}',
         'category': 'computed',
@@ -112,9 +112,9 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     })
 
     # Currently fixed amount of layers for Chevron stacking
-    set_optimized_deposition(identifier, material_meta, deposition, chevron_layers=60)
+    set_optimized_deposition(identifier, material_meta, deposition_meta, chevron_layers=60)
 
-    return deposition
+    return deposition_meta
 
 
 def write_deposition(identifier: str, deposition_meta: DepositionMeta, dst: str, dry_run: bool):
