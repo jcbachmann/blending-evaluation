@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from blending_simulator_lib import BlendingSimulatorLib
 from typing import Optional, List
 
