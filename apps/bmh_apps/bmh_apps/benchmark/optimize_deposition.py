@@ -2,6 +2,7 @@
 
 import argparse
 import math
+from typing import Tuple
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
@@ -10,7 +11,7 @@ from bmh.optimization.optimization import optimize_deposition
 from bmh_apps.helpers.configure_logging import configure_logging
 
 
-def get_bed_size(volume: float, max_stockpile_height: float = 20.0):
+def get_bed_size(volume: float, max_stockpile_height: float = 20.0) -> Tuple[float, float]:
     max_volume = volume * 1.25
     core_length = (max_volume - math.pi * math.pow(max_stockpile_height, 3) / 3) / math.pow(max_stockpile_height, 2)
     bed_size_x = core_length + 2 * max_stockpile_height
