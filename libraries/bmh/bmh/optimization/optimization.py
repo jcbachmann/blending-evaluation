@@ -45,9 +45,10 @@ class VerboseHoardingAlgorithmObserver(Observer):
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
         cps = e_diff / t_diff if t_diff > 0 else '-'
+        best = min(self.population, key=lambda s: s.objectives[0] * s.objectives[0] + s.objectives[1] * s.objectives[1])
         self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
-            f'first: {str(self.population[0].objectives)}'
+            f'first: {str(best.objectives)}'
         )
         self.last_evaluations = evaluations
         self.last_computing_time = computing_time
