@@ -23,8 +23,10 @@ from ..benchmark.material_deposition import Material, Deposition
 
 
 class OptimizationResult:
-    def __init__(self, deposition: Deposition, objectives: List[float], objective_labels: List[str]):
+    def __init__(self, deposition: Deposition, variables: List[float], objectives: List[float],
+                 objective_labels: List[str]):
         self.deposition = deposition
+        self.variables = variables
         self.objectives = objectives
         self.objective_labels = objective_labels
 
@@ -165,12 +167,12 @@ class DepositionOptimizer:
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')
         objective_labels = self.problem.get_objective_labels()
-        return [OptimizationResult(self.problem.variables_to_deposition(v), o, objective_labels) for v, o in
+        return [OptimizationResult(self.problem.variables_to_deposition(v), v, o, objective_labels) for v, o in
                 zip(self.evaluator_observer.evaluated_variables, self.evaluator_observer.evaluated_objectives)]
 
     def get_final_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting final results')
         result_population = self.algorithm.get_result()
         objective_labels = self.problem.get_objective_labels()
-        return [OptimizationResult(self.problem.variables_to_deposition(s.variables), s.objectives, objective_labels)
-                for s in result_population]
+        return [OptimizationResult(self.problem.variables_to_deposition(s.variables), s.variables, s.objectives,
+                                   objective_labels) for s in result_population]
