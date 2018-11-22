@@ -163,6 +163,9 @@ class HomogenizationProblem(FloatProblem):
         def solution_full_speed(v):
             return [i % 2 for i in range(v)]
 
+        def solution_random_end(v):
+            return [random.choice([0, 1]) for _ in range(v)]
+
         def solution_fixed_random_speed(v):
             speed = random.randint(1, 10)
 
@@ -200,6 +203,7 @@ class HomogenizationProblem(FloatProblem):
         weighted_choices = [
             (solution_random, 8),
             (solution_full_speed, 2),
+            (solution_random_end, 5),
             (solution_fixed_random_speed, 5),
             (solution_random_speed, 5)
         ]
