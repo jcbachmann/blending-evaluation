@@ -4,12 +4,11 @@ from typing import List, Optional
 import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition
 from bmh.helpers.math import weighted_avg_and_std, stdev
+from bmh.helpers.stockpile_math import get_stockpile_height
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 from pandas import DataFrame
-
-from bmh_apps.helpers.stockpile_math import get_stockpile_height
 
 
 def process_material_deposition(material: Material, deposition: Deposition, ppm3: float = 0.125):

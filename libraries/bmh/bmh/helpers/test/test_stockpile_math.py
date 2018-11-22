@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from bmh_apps.helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
+from ..stockpile_math import get_stockpile_height, get_stockpile_volume
 
 
 class TestStockpileMath(unittest.TestCase):

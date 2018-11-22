@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from bmh_apps.helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
+from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
 
 
 def read_data_file(data_file: str) -> DataFrame:
