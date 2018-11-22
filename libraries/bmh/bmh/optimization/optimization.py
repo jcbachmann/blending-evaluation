@@ -134,7 +134,7 @@ class DepositionOptimizer:
             problem=self.problem,
             population_size=population_size,
             max_evaluations=max_evaluations,
-            mutation=Polynomial(3.3 / variables, distribution_index=20),
+            mutation=Polynomial(min(3.3 / variables, 1.0), distribution_index=20),
             crossover=SBX(0.9, distribution_index=15),
             selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
             **algorithm_kwargs
