@@ -161,26 +161,28 @@ class HomogenizationProblem(FloatProblem):
             return [random.uniform(self.lower_bound[i] * 1.0, self.upper_bound[i] * 1.0) for i in range(v)]
 
         def solution_full_speed(v):
-            return [i % 2 for i in range(v)]
+            starting_side = random.choice([0, 1])
+            return [(i + starting_side) % 2 for i in range(v)]
 
         def solution_random_end(v):
             return [random.choice([0, 1]) for _ in range(v)]
 
         def solution_fixed_random_speed(v):
+            starting_side = random.choice([0, 1])
             speed = random.randint(1, 10)
 
             def pos(i):
                 nonlocal speed
 
                 p = (i % speed) / speed
-                return p if int(i / speed) % 2 == 0 else 1 - p
+                return p if (int(i / speed) + starting_side) % 2 == 0 else 1 - p
 
             return [pos(i) for i in range(v)]
 
         def solution_random_speed(v):
             offset = 0
             speed = random.randint(1, 10)
-            start_dir = True
+            start_dir = random.choice([False, True])
 
             def pos(i):
                 nonlocal offset
