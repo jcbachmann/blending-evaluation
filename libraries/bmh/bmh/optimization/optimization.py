@@ -167,6 +167,9 @@ class DepositionOptimizer:
         self.algorithm.run()
         self.logger.debug('Algorithm finished')
 
+        if self.plot_server:
+            self.plot_server.stop_background()
+
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')
         objective_labels = self.problem.get_objective_labels()

@@ -1,3 +1,5 @@
+from typing import Callable
+
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.document import Document
@@ -7,12 +9,16 @@ from bokeh.models import ColumnDataSource, Range1d
 from bokeh.palettes import Category10, Viridis256
 from bokeh.plotting import figure
 from bokeh.server.server import Server
-from tornado.ioloop import IOLoop
 
 from .plot_server import PlotServer
 
 
 class BokehPlotServer(PlotServer):
+    def __init__(self, all_callback: Callable, pop_callback: Callable, path_callback: Callable):
+        super().__init__(all_callback, pop_callback, path_callback)
+
+        self.server = None
+
     def make_document(self, doc: Document) -> None:
         doc.title = 'Optimization'
 
@@ -74,8 +80,12 @@ class BokehPlotServer(PlotServer):
         self.logger.info(f'Opening Bokeh application on http://localhost:{self.port}/')
         apps = {'/': Application(FunctionHandler(self.make_document))}
 
-        server = Server(apps, port=self.port, io_loop=IOLoop())
-        server.start()
+        self.server = Server(apps, port=self.port)
+        self.server.start()
 
-        server.io_loop.add_callback(server.show, '/')
-        server.io_loop.start()
+        self.server.io_loop.add_callback(self.server.show, '/')
+        self.server.io_loop.start()
+
+    def stop(self) -> None:
+        self.server.stop()
+        self.server.io_loop.stop()

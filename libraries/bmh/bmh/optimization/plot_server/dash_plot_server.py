@@ -9,7 +9,6 @@ from dash.dependencies import Input, Output
 from .plot_server import PlotServer
 
 app = dash.Dash('dash-plot-server')
-server = app.server
 global_all_callback: Optional[Callable] = None
 global_pop_callback: Optional[Callable] = None
 global_path_callback: Optional[Callable] = None
@@ -110,4 +109,14 @@ class DashPlotServer(PlotServer):
         global_path_callback = path_callback
 
     def serve(self) -> None:
+        app.server.env = 'development'
         app.run_server(port=self.port)
+
+    def stop(self) -> None:
+        raise NotImplementedError()
+        # This does not work :(
+        # with app.server.test_request_context():
+        #     from flask import request
+        #     if not 'werkzeug.server.shutdown' in request.environ:
+        #         raise RuntimeError('Not running the development server')
+        #     request.environ['werkzeug.server.shutdown']()

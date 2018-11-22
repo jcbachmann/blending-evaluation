@@ -12,10 +12,20 @@ class PlotServer:
         self.path_callback = path_callback
         self.port = port
         self.logger = logging.getLogger(__name__)
+        self.thread = None
 
     def serve(self) -> None:
         raise NotImplementedError()
 
     def serve_background(self) -> None:
-        t = threading.Thread(target=self.serve)
-        t.start()
+        self.thread = threading.Thread(target=self.serve)
+        self.thread.start()
+
+    def stop(self) -> None:
+        raise NotImplementedError()
+
+    def stop_background(self) -> None:
+        if self.thread:
+            self.stop()
+            self.thread.join()
+            self.thread = None

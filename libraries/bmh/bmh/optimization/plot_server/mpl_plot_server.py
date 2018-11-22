@@ -141,6 +141,8 @@ class MplPlotServer(PlotServer):
 
         self.figure, self.all_plot, self.pop_plot = MplPlotServer.create_figure()
         self.application = MyApplication(self.figure)
+        self.http_server = None
+        self.io_loop = None
 
     @staticmethod
     def create_figure():
@@ -176,10 +178,17 @@ class MplPlotServer(PlotServer):
         self.figure.canvas.draw_idle()
 
     def serve(self) -> None:
-        http_server = HTTPServer(self.application)
-        http_server.listen(self.port)
+        self.http_server = HTTPServer(self.application)
+        self.http_server.listen(self.port)
         self.logger.info(f'http://127.0.0.1:{self.port}/')
 
-        io_loop = IOLoop.instance()
+        self.io_loop = IOLoop.current()
         PeriodicCallback(self.update_figure, 100).start()
-        io_loop.start()
+        self.io_loop.start()
+
+    def stop(self) -> None:
+        if self.http_server:
+            self.http_server.stop()
+
+        if self.io_loop:
+            self.io_loop.stop()
