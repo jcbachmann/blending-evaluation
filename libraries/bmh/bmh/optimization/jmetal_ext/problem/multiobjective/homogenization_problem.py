@@ -37,7 +37,7 @@ def variables_to_deposition_generic(
     )
 
 
-def calculate_reference_objectives(
+def calculate_reference_objectives_generic(
         bed_size_x: float, bed_size_z: float,
         x_min: float, x_max: float,
         raw_material: Material,
@@ -127,12 +127,7 @@ class HomogenizationProblem(FloatProblem):
         self.max_timestamp = material.data['timestamp'].values[-1]
 
         # Evaluate reference data
-        self.reference = calculate_reference_objectives(
-            bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-            x_min=self.x_min, x_max=self.x_max,
-            raw_material=material,
-            number_of_variables=number_of_variables
-        )
+        self.reference = self.calculate_reference_objectives()
 
         # Setup problem base variables
         self.number_of_objectives = len(material.get_parameter_columns())
@@ -217,5 +212,14 @@ class HomogenizationProblem(FloatProblem):
 
     def variables_to_deposition(self, variables: List[float]):
         return variables_to_deposition_generic(
-            variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z, self.max_timestamp
+            variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z,
+            self.max_timestamp
+        )
+
+    def calculate_reference_objectives(self):
+        return calculate_reference_objectives_generic(
+            bed_size_x=self.bed_size_x, bed_size_z=self.bed_size_z,
+            x_min=self.x_min, x_max=self.x_max,
+            raw_material=self.material,
+            number_of_variables=self.number_of_variables
         )
