@@ -143,18 +143,20 @@ class DepositionOptimizer:
         algorithm_observer = VerboseHoardingAlgorithmObserver()
         self.algorithm.observable.register(algorithm_observer)
 
+        self.plot_server = None
         plot_server_dict = {
             'bokeh': BokehPlotServer,
             'dash': DashPlotServer,
             'mpl': MplPlotServer,
         }
         plot_server_type = plot_server_dict.get(plot_server_str, None)
-        self.logger.debug(f'Creating plot_server {plot_server_type.__name__}')
-        self.plot_server = plot_server_type(
-            all_callback=self.evaluator_observer.get_new_solutions,
-            pop_callback=algorithm_observer.get_population,
-            path_callback=self.evaluator_observer.get_path
-        ) if plot_server_type else None
+        if plot_server_type is not None:
+            self.logger.debug(f'Creating plot_server {plot_server_type.__name__}')
+            self.plot_server = plot_server_type(
+                all_callback=self.evaluator_observer.get_new_solutions,
+                pop_callback=algorithm_observer.get_population,
+                path_callback=self.evaluator_observer.get_path
+            )
 
     def run(self) -> None:
         if self.plot_server:
