@@ -14,7 +14,7 @@ class PlotServer:
         self.logger = logging.getLogger(__name__)
 
     def serve(self) -> None:
-        self.logger.error('PlotServer.serve method not implemented')
+        raise NotImplementedError()
 
     def serve_background(self) -> None:
         t = threading.Thread(target=self.serve)

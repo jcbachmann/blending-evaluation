@@ -11,10 +11,10 @@ class BlendingSimulator:
         self.bed_size_z = bed_size_z
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
-        raise NotImplemented('BlendingSimulator.stack not implemented')
+        raise NotImplementedError()
 
     def reclaim(self) -> List[List[Union[float, List[float]]]]:
-        raise NotImplemented('BlendingSimulator.reclaim not implemented')
+        raise NotImplementedError()
 
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """
