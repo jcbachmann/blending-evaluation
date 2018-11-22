@@ -85,6 +85,7 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
 class DepositionOptimizer:
     def __init__(
             self,
+            *,
             bed_size_x: float,
             bed_size_z: float,
             material: Material,
