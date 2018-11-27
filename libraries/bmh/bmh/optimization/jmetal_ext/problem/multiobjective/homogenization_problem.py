@@ -41,14 +41,15 @@ def calculate_reference_objectives_generic(
         bed_size_x: float, bed_size_z: float,
         x_min: float, x_max: float,
         raw_material: Material,
-        number_of_variables: int
+        number_of_variables: int,
+        variables_prefix: List[float]
 ):
     max_timestamp = raw_material.data['timestamp'].values[-1]
 
     # Generate a Chevron deposition with maximum speed
     chevron = [i % 2 for i in range(number_of_variables)]
     chevron_deposition = variables_to_deposition_generic(
-        variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
+        variables=variables_prefix + chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
         max_timestamp=max_timestamp
     )
 
@@ -125,6 +126,7 @@ class HomogenizationProblem(FloatProblem):
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
+        self.variables_prefix = []
 
         # Evaluate reference data
         self.reference = self.calculate_reference_objectives()
@@ -218,7 +220,7 @@ class HomogenizationProblem(FloatProblem):
 
     def variables_to_deposition(self, variables: List[float]):
         return variables_to_deposition_generic(
-            variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z,
+            self.variables_prefix + variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z,
             self.max_timestamp
         )
 
@@ -227,5 +229,10 @@ class HomogenizationProblem(FloatProblem):
             bed_size_x=self.bed_size_x, bed_size_z=self.bed_size_z,
             x_min=self.x_min, x_max=self.x_max,
             raw_material=self.material,
-            number_of_variables=self.number_of_variables
+            number_of_variables=self.number_of_variables,
+            variables_prefix=self.variables_prefix
         )
+
+    def set_variables_prefix(self, variables_prefix):
+        self.variables_prefix = variables_prefix
+        self.reference = self.calculate_reference_objectives()
