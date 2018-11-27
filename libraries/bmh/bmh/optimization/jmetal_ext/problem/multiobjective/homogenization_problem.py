@@ -127,6 +127,7 @@ class HomogenizationProblem(FloatProblem):
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
         self.variables_prefix = []
+        self.solution_pool = None
 
         # Evaluate reference data
         self.reference = self.calculate_reference_objectives()
@@ -204,13 +205,19 @@ class HomogenizationProblem(FloatProblem):
 
             return [pos(i) for i in range(v)]
 
+        def solution_from_pool(_):
+            return random.choice(self.solution_pool)
+
         weighted_choices = [
-            (solution_random, 8),
+            (solution_random, 5),
             (solution_full_speed, 2),
             (solution_random_end, 5),
             (solution_fixed_random_speed, 5),
             (solution_random_speed, 5)
         ]
+
+        if self.solution_pool is not None:
+            weighted_choices.append((solution_from_pool, 15))
 
         new_solution.variables = random.choices(
             [c[0] for c in weighted_choices], weights=[c[1] for c in weighted_choices]
@@ -236,3 +243,6 @@ class HomogenizationProblem(FloatProblem):
     def set_variables_prefix(self, variables_prefix):
         self.variables_prefix = variables_prefix
         self.reference = self.calculate_reference_objectives()
+
+    def set_solution_pool(self, solution_pool):
+        self.solution_pool = solution_pool
