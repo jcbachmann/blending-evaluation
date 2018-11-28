@@ -7,7 +7,7 @@ import os
 
 from bmh.helpers.identifiers import get_identifier
 
-from bmh_apps.helpers.configure_logging import configure_logging
+from ..helpers.configure_logging import configure_logging
 
 META_JSON = 'meta.json'
 

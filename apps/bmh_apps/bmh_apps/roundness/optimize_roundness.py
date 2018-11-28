@@ -7,8 +7,8 @@ import numpy as np
 from pandas import DataFrame
 from scipy.optimize import fminbound
 
-from bmh_apps.helpers.pretty_plot import pretty_line_plot
-from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
+from .roundness_evaluator import RoundnessEvaluator
+from ..helpers.pretty_plot import pretty_line_plot
 
 
 class OptEvaluator:

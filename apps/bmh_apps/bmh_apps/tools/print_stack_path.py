@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import argparse
 
-from bmh_apps.helpers.material_path_io import read_material, read_path, print_merged_material_path, merge_material_path
+from ..helpers.material_path_io import read_material, read_path, print_merged_material_path, merge_material_path
 
 
 def main(args):

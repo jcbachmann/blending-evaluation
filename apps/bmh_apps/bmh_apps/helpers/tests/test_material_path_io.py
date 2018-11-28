@@ -4,7 +4,7 @@ import unittest
 import pandas as pd
 from pandas import DataFrame
 
-from bmh_apps.helpers.material_path_io import merge_material_path
+from ..material_path_io import merge_material_path
 
 
 class TestMergeMaterialPath(unittest.TestCase):

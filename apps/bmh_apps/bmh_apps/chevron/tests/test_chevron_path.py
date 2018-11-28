@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-from bmh_apps.chevron.chevron_path import chevron_path
+from ..chevron_path import chevron_path
 
 
 class TestChevronPath(unittest.TestCase):

@@ -14,7 +14,7 @@ from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
 from pandas import DataFrame
 
-from bmh_apps.helpers.configure_logging import configure_logging
+from ..helpers.configure_logging import configure_logging
 
 
 def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,

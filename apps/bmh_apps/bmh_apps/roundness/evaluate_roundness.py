@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
 
-from bmh_apps.helpers.pretty_plot import pretty_line_plot
-from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
+from .roundness_evaluator import RoundnessEvaluator
+from ..helpers.pretty_plot import pretty_line_plot
 
 
 def evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volume):

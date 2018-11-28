@@ -10,8 +10,8 @@ from bmh.helpers.identifiers import get_identifier
 from data_explorer import app
 from data_explorer.testlet import Testlet
 
-from benchmark_explorer import testlets
-from benchmark_explorer.evaluation import Evaluation
+from . import testlets
+from .evaluation import Evaluation
 
 
 def read_evaluation(evaluation_path: str) -> Evaluation:

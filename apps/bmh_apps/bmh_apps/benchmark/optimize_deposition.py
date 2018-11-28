@@ -8,7 +8,7 @@ from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
 
-from bmh_apps.helpers.configure_logging import configure_logging
+from ..helpers.configure_logging import configure_logging
 
 
 def get_bed_size(volume: float, max_stockpile_height: float = 20.0) -> Tuple[float, float]:

@@ -9,7 +9,7 @@ from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifiers
 
-from bmh_apps.helpers.configure_logging import configure_logging
+from ..helpers.configure_logging import configure_logging
 
 
 def main(args: argparse.Namespace):

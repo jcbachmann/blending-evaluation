@@ -9,7 +9,7 @@ import pandas as pd
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from pandas import DataFrame
 
-from bmh_apps.helpers.pretty_plot import pretty_scatter_plot
+from ..helpers.pretty_plot import pretty_scatter_plot
 
 
 def get_volume(a1, a2, c, xz_scaling):
