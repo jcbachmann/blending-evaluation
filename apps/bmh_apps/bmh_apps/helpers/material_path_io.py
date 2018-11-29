@@ -1,5 +1,5 @@
 import sys
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import pandas as pd
@@ -7,7 +7,7 @@ from pandas import DataFrame
 
 
 def read_material(filepath: str, col_timestamp: str = 'timestamp', col_volume: str = 'volume',
-                  cols_p: [str] = None) -> DataFrame:
+                  cols_p: List[str] = None) -> DataFrame:
     df = pd.read_csv(filepath, delimiter='\t', index_col=None)
     if cols_p is None:
         # Use all columns except for timestamp and volume

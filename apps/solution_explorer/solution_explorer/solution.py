@@ -1,3 +1,5 @@
+from typing import List
+
 import pandas as pd
 from pandas import DataFrame
 
@@ -11,7 +13,7 @@ class Solution:
 class Meta:
     def __init__(
             self,
-            objective_maximums: [float],
+            objective_maximums: List[float],
             variables_count: int,
             variables: DataFrame,
             objectives: DataFrame,
