@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -99,7 +99,7 @@ class MaterialMeta:
         self.meta_dict = meta_dict
 
         # data buffer
-        self.data = None
+        self.data: Optional['Material'] = None
 
     def __str__(self) -> str:
         return self.identifier
@@ -182,7 +182,7 @@ class DepositionMeta:
         self.meta_dict = meta_dict
 
         # data buffer
-        self.data = None
+        self.data: Optional[Deposition] = None
 
     def __str__(self) -> str:
         return self.identifier

@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 
 from .material_deposition import MaterialMeta
 
@@ -23,6 +24,10 @@ class ReferenceMeta:
         # copy data read from json file
         self.material = meta_dict['material']
         self.deposition = meta_dict['deposition']
+
+        self.deposition_path: Optional[str]
+        self.reclaimed_path: Optional[str]
+
         if 'deposition_path' in meta_dict and meta_dict['deposition_path'] is not None:
             self.deposition_path = meta_dict['deposition_path']
         else:
@@ -36,7 +41,7 @@ class ReferenceMeta:
         self.meta_dict = meta_dict
 
         # data buffer
-        self.reclaimed_material_meta = None
+        self.reclaimed_material_meta: Optional[MaterialMeta] = None
 
     def __str__(self) -> str:
         return self.identifier

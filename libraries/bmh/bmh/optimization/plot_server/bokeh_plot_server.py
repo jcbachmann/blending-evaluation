@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Optional
 
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
@@ -17,7 +17,7 @@ class BokehPlotServer(PlotServer):
     def __init__(self, all_callback: Callable, pop_callback: Callable, path_callback: Callable):
         super().__init__(all_callback, pop_callback, path_callback)
 
-        self.server = None
+        self.server: Optional[Server] = None
 
     def make_document(self, doc: Document) -> None:
         doc.title = 'Optimization'

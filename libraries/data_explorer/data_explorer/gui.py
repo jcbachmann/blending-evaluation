@@ -132,7 +132,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def set_cell(table_widget: QTableWidget, row: int, col: int, testlet_result: TestletResult):
-        s = None
+        s: Optional[str] = None
 
         if isinstance(testlet_result.view, str):
             s = testlet_result.view

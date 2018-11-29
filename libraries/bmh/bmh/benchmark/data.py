@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from .material_deposition import MaterialMeta, DepositionMeta
 from .reference_meta import ReferenceMeta
@@ -15,9 +15,9 @@ class BenchmarkData:
     SIMULATOR_DIR = 'simulator'
 
     def __init__(self):
-        self.materials = None
-        self.depositions = None
-        self.simulators = None
+        self.materials: Optional[Dict[str, MaterialMeta]] = None
+        self.depositions: Optional[Dict[str, DepositionMeta]] = None
+        self.simulators: Optional[Dict[str, SimulatorMeta]] = None
         self.logger = logging.getLogger(__name__)
 
     def read_materials(self, path: str) -> Dict[str, MaterialMeta]:

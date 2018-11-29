@@ -1,5 +1,6 @@
 import io
 import json
+from typing import Optional
 
 import tornado
 import tornado.httpserver
@@ -141,8 +142,8 @@ class MplPlotServer(PlotServer):
 
         self.figure, self.all_plot, self.pop_plot = MplPlotServer.create_figure()
         self.application = MyApplication(self.figure)
-        self.http_server = None
-        self.io_loop = None
+        self.http_server: Optional[HTTPServer] = None
+        self.io_loop: Optional[IOLoop] = None
 
     @staticmethod
     def create_figure():

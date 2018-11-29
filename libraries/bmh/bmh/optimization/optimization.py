@@ -34,8 +34,8 @@ class OptimizationResult:
 class VerboseHoardingAlgorithmObserver(Observer):
     def __init__(self):
         self.population = []
-        self.last_evaluations = None
-        self.last_computing_time = None
+        self.last_evaluations: Optional[int] = None
+        self.last_computing_time: Optional[float] = None
         self.logger = logging.getLogger(__name__)
 
     def update(self, *args, **kwargs):

@@ -1,7 +1,7 @@
 import logging
-import threading
+from threading import Thread
 
-from typing import Callable
+from typing import Callable, Optional
 
 
 class PlotServer:
@@ -12,13 +12,13 @@ class PlotServer:
         self.path_callback = path_callback
         self.port = port
         self.logger = logging.getLogger(__name__)
-        self.thread = None
+        self.thread: Optional[Thread] = None
 
     def serve(self) -> None:
         raise NotImplementedError()
 
     def serve_background(self) -> None:
-        self.thread = threading.Thread(target=self.serve)
+        self.thread = Thread(target=self.serve)
         self.thread.start()
 
     def stop(self) -> None:
