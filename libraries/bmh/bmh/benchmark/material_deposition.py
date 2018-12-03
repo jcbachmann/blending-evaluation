@@ -153,6 +153,11 @@ class Deposition:
         })
         return cls(meta=meta, data=data)
 
+    def __str__(self):
+        out = f'{self.meta.identifier}\n'
+        out += self.data.to_string()
+        return out
+
 
 class DepositionMeta:
     """
