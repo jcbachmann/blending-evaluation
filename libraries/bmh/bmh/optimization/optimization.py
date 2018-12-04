@@ -103,7 +103,7 @@ class DepositionOptimizer:
         self.logger = logging.getLogger(__name__)
         self.logger.debug('Initializing optimization problem')
 
-        self.problem = HomogenizationProblem(
+        self.problem: HomogenizationProblem = HomogenizationProblem(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
             material=material,

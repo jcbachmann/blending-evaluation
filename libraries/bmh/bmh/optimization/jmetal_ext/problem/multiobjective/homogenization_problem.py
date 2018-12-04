@@ -47,7 +47,7 @@ def calculate_reference_objectives_generic(
     max_timestamp = raw_material.data['timestamp'].values[-1]
 
     # Generate a Chevron deposition with maximum speed
-    chevron = [i % 2 for i in range(number_of_variables)]
+    chevron = [float(i % 2) for i in range(number_of_variables)]
     chevron_deposition = variables_to_deposition_generic(
         variables=variables_prefix + chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
         max_timestamp=max_timestamp
@@ -74,9 +74,9 @@ class MaterialEvaluator:
         self.x_max = x_max
 
         # Caches
-        self._core_data = None
-        self._parameter_stdev = None
-        self._volume_stdev = None
+        self._core_data: DataFrame = None
+        self._parameter_stdev: Optional[List[float]] = None
+        self._volume_stdev: Optional[float] = None
 
     def get_core_data(self) -> DataFrame:
         if self._core_data is None:
@@ -93,7 +93,7 @@ class MaterialEvaluator:
             self._volume_stdev = stdev(core_data['volume'].values)
         return self._volume_stdev
 
-    def get_parameter_stdev(self):
+    def get_parameter_stdev(self) -> List[float]:
         if self._parameter_stdev is None:
             reclaimed_df = self.reclaimed.data
             cols = self.reclaimed.get_parameter_columns()
@@ -126,7 +126,7 @@ class HomogenizationProblem(FloatProblem):
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
-        self.variables_prefix = []
+        self.variables_prefix: List[float] = []
         self.solution_pool = None
 
         # Evaluate reference data
