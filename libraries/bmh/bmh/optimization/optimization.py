@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Tuple, Type
 
 from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
@@ -95,9 +95,9 @@ class DepositionOptimizer:
             variables: int = 31,
             population_size: int = 250,
             max_evaluations: int = 25000,
-            evaluator_str: Optional[str] = 'dask',
-            algorithm_str: Optional[str] = 'hpsea',
-            plot_server_str: Optional[str] = 'bokeh',
+            evaluator_str: str = 'dask',
+            algorithm_str: str = 'hpsea',
+            plot_server_str: str = 'bokeh',
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class DepositionOptimizer:
             number_of_variables=variables,
         )
 
-        algorithm_dict = {
+        algorithm_dict: Dict[str, Tuple[Type, Dict[str, Any]]] = {
             'hpsea': (HPSEA, {'offspring_size': kwargs.get('offspring_size', None)}),
             'nsgaii': (NSGAII, {}),
             'ssnsgaii': (SSNSGAII, {}),

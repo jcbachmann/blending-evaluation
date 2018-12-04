@@ -1,5 +1,5 @@
 import random
-from typing import List, Optional
+from typing import List, Optional, Callable, Tuple
 
 import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition
@@ -11,7 +11,7 @@ from jmetal.core.solution import FloatSolution
 from pandas import DataFrame
 
 
-def process_material_deposition(material: Material, deposition: Deposition, ppm3: float = 0.125):
+def process_material_deposition(material: Material, deposition: Deposition, ppm3: float = 0.125) -> Material:
     sim = BslBlendingSimulator(
         bed_size_x=deposition.meta.bed_size_x,
         bed_size_z=deposition.meta.bed_size_z,
@@ -26,7 +26,7 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
 
 def variables_to_deposition_generic(
         variables: List[float], x_min: float, x_max: float, bed_size_x: float, bed_size_z: float, max_timestamp: float
-):
+) -> Deposition:
     return Deposition.from_data(DataFrame(
         data={
             'x': [elem * (x_max - x_min) + x_min for elem in variables],
@@ -43,7 +43,7 @@ def calculate_reference_objectives_generic(
         raw_material: Material,
         number_of_variables: int,
         variables_prefix: List[float]
-):
+) -> List[float]:
     max_timestamp = raw_material.data['timestamp'].values[-1]
 
     # Generate a Chevron deposition with maximum speed
@@ -100,13 +100,13 @@ class MaterialEvaluator:
             self._parameter_stdev = [weighted_avg_and_std(reclaimed_df[col], reclaimed_df['volume'])[1] for col in cols]
         return self._parameter_stdev
 
-    def get_all_stdev(self):
+    def get_all_stdev(self) -> List[float]:
         return self.get_parameter_stdev() + [self.get_core_volume_stdev()]
 
-    def get_all_stdev_relative(self, reference: List[float]):
+    def get_all_stdev_relative(self, reference: List[float]) -> List[float]:
         return [s / r for s, r in zip(self.get_all_stdev(), reference)]
 
-    def get_slice_count(self):
+    def get_slice_count(self) -> int:
         return self.reclaimed.data['volume'].shape[0]
 
 
@@ -127,7 +127,7 @@ class HomogenizationProblem(FloatProblem):
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
         self.variables_prefix: List[float] = []
-        self.solution_pool = None
+        self.solution_pool: Optional[List[List[float]]] = None
 
         # Evaluate reference data
         self.reference = self.calculate_reference_objectives()
@@ -160,17 +160,17 @@ class HomogenizationProblem(FloatProblem):
             self.upper_bound
         )
 
-        def solution_random(v):
+        def solution_random(v: int) -> List[float]:
             return [random.uniform(self.lower_bound[i] * 1.0, self.upper_bound[i] * 1.0) for i in range(v)]
 
-        def solution_full_speed(v):
+        def solution_full_speed(v: int) -> List[float]:
             starting_side = random.choice([0, 1])
             return [(i + starting_side) % 2 for i in range(v)]
 
-        def solution_random_end(v):
+        def solution_random_end(v: int) -> List[float]:
             return [random.choice([0, 1]) for _ in range(v)]
 
-        def solution_fixed_random_speed(v):
+        def solution_fixed_random_speed(v: int) -> List[float]:
             starting_side = random.choice([0, 1])
             speed = random.randint(1, 10)
 
@@ -182,7 +182,7 @@ class HomogenizationProblem(FloatProblem):
 
             return [pos(i) for i in range(v)]
 
-        def solution_random_speed(v):
+        def solution_random_speed(v: int) -> List[float]:
             offset = 0
             speed = random.randint(1, 10)
             start_dir = random.choice([False, True])
@@ -205,10 +205,10 @@ class HomogenizationProblem(FloatProblem):
 
             return [pos(i) for i in range(v)]
 
-        def solution_from_pool(_):
-            return random.choice(self.solution_pool)
+        def solution_from_pool(_: int) -> List[float]:
+            return random.choice(self.solution_pool) if self.solution_pool else []
 
-        weighted_choices = [
+        weighted_choices: List[Tuple[Callable[[int], List[float]], int]] = [
             (solution_random, 5),
             (solution_full_speed, 2),
             (solution_random_end, 5),
@@ -225,13 +225,13 @@ class HomogenizationProblem(FloatProblem):
 
         return new_solution
 
-    def variables_to_deposition(self, variables: List[float]):
+    def variables_to_deposition(self, variables: List[float]) -> Deposition:
         return variables_to_deposition_generic(
             self.variables_prefix + variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z,
             self.max_timestamp
         )
 
-    def calculate_reference_objectives(self):
+    def calculate_reference_objectives(self) -> List[float]:
         return calculate_reference_objectives_generic(
             bed_size_x=self.bed_size_x, bed_size_z=self.bed_size_z,
             x_min=self.x_min, x_max=self.x_max,
@@ -240,9 +240,9 @@ class HomogenizationProblem(FloatProblem):
             variables_prefix=self.variables_prefix
         )
 
-    def set_variables_prefix(self, variables_prefix):
+    def set_variables_prefix(self, variables_prefix: List[float]) -> None:
         self.variables_prefix = variables_prefix
         self.reference = self.calculate_reference_objectives()
 
-    def set_solution_pool(self, solution_pool):
+    def set_solution_pool(self, solution_pool: List[List[float]]) -> None:
         self.solution_pool = solution_pool
