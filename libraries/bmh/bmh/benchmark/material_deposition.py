@@ -164,6 +164,21 @@ class Deposition:
             data=self.data.copy()
         )
 
+    @staticmethod
+    def create_empty(*, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float,
+                     reclaim_x_per_s: float):
+        meta = DepositionMeta.create_empty(
+            identifier=identifier,
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            reclaim_x_per_s=reclaim_x_per_s,
+        )
+        return meta.data
+
+    @staticmethod
+    def create_empty_data():
+        return DataFrame(dict([(c, pd.Series(dtype=np.dtype('float'))) for c in Deposition.REQUIRED_COLUMNS]))
+
 
 class DepositionMeta:
     """
@@ -227,6 +242,29 @@ class DepositionMeta:
             path=self.path,
             meta_dict=self.to_dict()
         )
+
+    @classmethod
+    def create_empty(cls, *, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float,
+                     reclaim_x_per_s: float):
+        meta = cls(
+            identifier=identifier,
+            path='',
+            meta_dict={
+                'label': f'Deposition {identifier}',
+                'description': f'Created empty',
+                'category': 'empty',
+                'time': 0.0,
+                'data': None,
+                'bed_size_x': bed_size_x,
+                'bed_size_z': bed_size_z,
+                'reclaim_x_per_s': reclaim_x_per_s
+            }
+        )
+        meta.data = Deposition(
+            meta=meta,
+            data=Deposition.create_empty_data()
+        )
+        return meta
 
 
 class MaterialDeposition:
