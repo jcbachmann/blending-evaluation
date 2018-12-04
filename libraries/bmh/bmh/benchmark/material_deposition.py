@@ -158,6 +158,12 @@ class Deposition:
         out += self.data.to_string()
         return out
 
+    def copy(self):
+        return Deposition(
+            meta=self.meta.copy(),
+            data=self.data.copy()
+        )
+
 
 class DepositionMeta:
     """
@@ -214,6 +220,13 @@ class DepositionMeta:
             'bed_size_z': self.bed_size_z,
             'reclaim_x_per_s': self.reclaim_x_per_s
         }
+
+    def copy(self):
+        return DepositionMeta(
+            identifier=self.identifier,
+            path=self.path,
+            meta_dict=self.to_dict()
+        )
 
 
 class MaterialDeposition:
