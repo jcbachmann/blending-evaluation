@@ -1,22 +1,13 @@
 #!/usr/bin/env python
 
 import argparse
-import math
-from typing import Tuple
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
 
+from ..helpers.bed_size import get_bed_size
 from ..helpers.configure_logging import configure_logging
-
-
-def get_bed_size(volume: float, max_stockpile_height: float = 20.0) -> Tuple[float, float]:
-    max_volume = volume * 1.25
-    core_length = (max_volume - math.pi * math.pow(max_stockpile_height, 3) / 3) / math.pow(max_stockpile_height, 2)
-    bed_size_x = core_length + 2 * max_stockpile_height
-    bed_size_z = 2 * max_stockpile_height
-    return bed_size_x, bed_size_z
 
 
 def main(path: str, material_identifier: str, verbose: bool):
