@@ -131,12 +131,15 @@ class MaterialMeta:
             'data': self.data_file
         }
 
-    def copy(self):
-        return MaterialMeta(
+    def copy(self, copy_data: bool = False):
+        meta = MaterialMeta(
             identifier=self.identifier,
             path=self.path,
             meta_dict=self.to_dict()
         )
+        if copy_data:
+            meta.data = self.data.copy()
+        return meta
 
 
 class Deposition:
@@ -249,12 +252,15 @@ class DepositionMeta:
             'reclaim_x_per_s': self.reclaim_x_per_s
         }
 
-    def copy(self):
-        return DepositionMeta(
+    def copy(self, copy_data: bool = False):
+        meta = DepositionMeta(
             identifier=self.identifier,
             path=self.path,
             meta_dict=self.to_dict()
         )
+        if copy_data:
+            meta.data = self.data.copy()
+        return meta
 
     @classmethod
     def create_empty(cls, *, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float,
