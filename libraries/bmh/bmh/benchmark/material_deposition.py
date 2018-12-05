@@ -72,6 +72,12 @@ class Material:
         })
         return cls(meta=meta, data=data)
 
+    def copy(self):
+        return Material(
+            meta=self.meta.copy(),
+            data=self.data.copy()
+        )
+
 
 class MaterialMeta:
     """
@@ -124,6 +130,13 @@ class MaterialMeta:
             'volume': self.volume,
             'data': self.data_file
         }
+
+    def copy(self):
+        return MaterialMeta(
+            identifier=self.identifier,
+            path=self.path,
+            meta_dict=self.to_dict()
+        )
 
 
 class Deposition:
