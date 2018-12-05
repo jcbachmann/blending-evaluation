@@ -61,9 +61,9 @@ def merge_material_path(length: float, depth: float, material: DataFrame, path: 
                 path['timestamp'] = [0]
 
     material_with_path = material.copy()
-    material_with_path['z'] = depth / 2
     material_with_path['x'] = np.interp(material_with_path['timestamp'], path['timestamp'], path['path']) * (
             max_pos - min_pos) + min_pos
+    material_with_path['z'] = depth / 2
 
     return material_with_path
 

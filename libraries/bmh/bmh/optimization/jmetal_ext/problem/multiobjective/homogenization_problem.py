@@ -37,9 +37,9 @@ def variables_to_deposition_generic(
     deposition = Deposition(
         meta=deposition_meta.copy(),
         data=DataFrame({
+            'timestamp': np.linspace(min_timestamp, max_timestamp, len(variables)),
             'x': [elem * (x_max - x_min) + x_min for elem in variables],
             'z': [deposition_meta.bed_size_z / 2] * len(variables),
-            'timestamp': np.linspace(min_timestamp, max_timestamp, len(variables))
         })
     )
 

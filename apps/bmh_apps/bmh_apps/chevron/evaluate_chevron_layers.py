@@ -26,9 +26,9 @@ def simulate(args, layers) -> DataFrame:
     max_part = path['part'].values[-1]
 
     deposition_data = DataFrame()
+    deposition_data['timestamp'] = max_timestamp * path['part'] / max_part
     deposition_data['x'] = path['path'] * (max_pos - min_pos) + min_pos
     deposition_data['z'] = args.depth / 2
-    deposition_data['timestamp'] = max_timestamp * path['part'] / max_part
 
     material_deposition = MaterialDeposition(
         material=Material.from_data(material_data),

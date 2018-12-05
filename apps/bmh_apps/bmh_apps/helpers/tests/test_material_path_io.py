@@ -22,10 +22,9 @@ class TestMergeMaterialPath(unittest.TestCase):
         pd.testing.assert_frame_equal(
             material_path,
             DataFrame(
-                [[0.0, 2.0, 0.0, 1.0, 0.25]],
-                columns=['timestamp', 'x', 'z', 'volume', 'p_1']
+                [[0.0, 1.0, 0.25, 2.0, 0.0]],
+                columns=['timestamp', 'volume', 'p_1', 'x', 'z']
             ),
-            check_like=True
         )
 
     def test_two(self):
@@ -42,10 +41,9 @@ class TestMergeMaterialPath(unittest.TestCase):
         pd.testing.assert_frame_equal(
             material_path,
             DataFrame(
-                [[0.0, 0.0, 0.0, 1.0, 0.25], [1.0, 2.0, 0.0, 1.0, 0.75]],
-                columns=['timestamp', 'x', 'z', 'volume', 'p_1']
+                [[0.0, 1.0, 0.25, 0.0, 0.0], [1.0, 1.0, 0.75, 2.0, 0.0]],
+                columns=['timestamp', 'volume', 'p_1', 'x', 'z']
             ),
-            check_like=True
         )
 
     def test_interpolate(self):
@@ -63,8 +61,7 @@ class TestMergeMaterialPath(unittest.TestCase):
         pd.testing.assert_frame_equal(
             material_path,
             DataFrame(
-                [[0.0, 0.0, 0.0, 1.0, 0.25], [1.0, 1.0, 0.0, 1.0, 0.1], [2.0, 2.0, 0.0, 1.0, 0.75]],
-                columns=['timestamp', 'x', 'z', 'volume', 'p_1']
+                [[0.0, 1.0, 0.25, 0.0, 0.0], [1.0, 1.0, 0.1, 1.0, 0.0], [2.0, 1.0, 0.75, 2.0, 0.0]],
+                columns=['timestamp', 'volume', 'p_1', 'x', 'z']
             ),
-            check_like=True
         )

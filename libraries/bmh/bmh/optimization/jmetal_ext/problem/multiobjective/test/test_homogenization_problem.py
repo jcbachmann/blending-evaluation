@@ -39,7 +39,7 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
             'z': [z, z],
         })
 
-        assert_frame_equal(reference_data, deposition.data, check_like=True)
+        assert_frame_equal(reference_data, deposition.data)
 
     def test_prefix_empty(self):
         variables = [0.0, 1.0]
@@ -71,7 +71,7 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
             'z': [z, z],
         })
 
-        assert_frame_equal(reference_data, deposition.data, check_like=True)
+        assert_frame_equal(reference_data, deposition.data)
 
     def test_prefix_simple(self):
         variables = [0.0, 1.0]
@@ -108,4 +108,4 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
             'z': [z, z, z, z],
         })
 
-        assert_frame_equal(reference_data, deposition.data, check_like=True)
+        assert_frame_equal(reference_data, deposition.data)

@@ -359,6 +359,6 @@ class MaterialDeposition:
         dep_df = dep_df.append(waits, ignore_index=True)
         dep_df.sort_values(['timestamp'], inplace=True)
 
-        dep_df = dep_df[['x', 'z', 'timestamp']].copy()
+        dep_df = dep_df[['timestamp', 'x', 'z']].copy()
         dep_df.dropna(inplace=True)
         return dep_df
