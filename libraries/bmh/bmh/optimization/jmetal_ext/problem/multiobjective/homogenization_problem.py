@@ -25,16 +25,30 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
 
 
 def variables_to_deposition_generic(
-        variables: List[float], x_min: float, x_max: float, bed_size_x: float, bed_size_z: float, max_timestamp: float
+        variables: List[float], *, x_min: float, x_max: float, bed_size_x: float, bed_size_z: float,
+        max_timestamp: float, deposition_prefix: Optional[Deposition]
 ) -> Deposition:
-    return Deposition.from_data(DataFrame(
+    if deposition_prefix and deposition_prefix.data.shape[0] > 0:
+        start_timestamp = deposition_prefix.data['timestamp'].values[-1]
+        min_timestamp = start_timestamp + (max_timestamp - start_timestamp) / len(variables)
+    else:
+        min_timestamp = 0.0
+
+    deposition = Deposition.from_data(DataFrame(
         data={
             'x': [elem * (x_max - x_min) + x_min for elem in variables],
             'z': [bed_size_z / 2] * len(variables),
-            'timestamp': np.linspace(0, max_timestamp, len(variables))
+            'timestamp': np.linspace(min_timestamp, max_timestamp, len(variables))
         }),
-        bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=0.5
+        bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=1.0
     )
+
+    if deposition_prefix and deposition_prefix.data.shape[0] > 0:
+        deposition.data = deposition_prefix.data.append(deposition.data, ignore_index=True)
+
+    deposition.meta.time = deposition.data['timestamp'].values[-1]
+
+    return deposition
 
 
 def calculate_reference_objectives_generic(
@@ -42,15 +56,15 @@ def calculate_reference_objectives_generic(
         x_min: float, x_max: float,
         raw_material: Material,
         number_of_variables: int,
-        variables_prefix: List[float]
+        deposition_prefix: Optional[Deposition]
 ) -> List[float]:
     max_timestamp = raw_material.data['timestamp'].values[-1]
 
     # Generate a Chevron deposition with maximum speed
     chevron = [float(i % 2) for i in range(number_of_variables)]
     chevron_deposition = variables_to_deposition_generic(
-        variables=variables_prefix + chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-        max_timestamp=max_timestamp
+        variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
+        max_timestamp=max_timestamp, deposition_prefix=deposition_prefix
     )
 
     # Stack and reclaim material to acquire reference reclaimed material
@@ -126,7 +140,7 @@ class HomogenizationProblem(FloatProblem):
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
-        self.variables_prefix: List[float] = []
+        self.deposition_prefix: Optional[Deposition] = None
         self.solution_pool: Optional[List[List[float]]] = None
 
         # Evaluate reference data
@@ -227,8 +241,8 @@ class HomogenizationProblem(FloatProblem):
 
     def variables_to_deposition(self, variables: List[float]) -> Deposition:
         return variables_to_deposition_generic(
-            self.variables_prefix + variables, self.x_min, self.x_max, self.bed_size_x, self.bed_size_z,
-            self.max_timestamp
+            variables, x_min=self.x_min, x_max=self.x_max, bed_size_x=self.bed_size_x, bed_size_z=self.bed_size_z,
+            max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix
         )
 
     def calculate_reference_objectives(self) -> List[float]:
@@ -237,11 +251,11 @@ class HomogenizationProblem(FloatProblem):
             x_min=self.x_min, x_max=self.x_max,
             raw_material=self.material,
             number_of_variables=self.number_of_variables,
-            variables_prefix=self.variables_prefix
+            deposition_prefix=self.deposition_prefix
         )
 
-    def set_variables_prefix(self, variables_prefix: List[float]) -> None:
-        self.variables_prefix = variables_prefix
+    def set_deposition_prefix(self, deposition_prefix: Deposition) -> None:
+        self.deposition_prefix = deposition_prefix
         self.reference = self.calculate_reference_objectives()
 
     def set_solution_pool(self, solution_pool: List[List[float]]) -> None:
