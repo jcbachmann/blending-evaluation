@@ -1,7 +1,6 @@
-import functools
 from typing import List, Optional
 
-from dask.distributed import Client, LocalCluster
+import dask
 from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
 
@@ -14,16 +13,18 @@ def evaluate_solution(solution, problem):
 
 
 class DaskEvaluator(Evaluator[S]):
-    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler_address: Optional[str] = None):
+    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler='processes'):
         self.observer = observer
-        if scheduler_address is None:
-            self.client = Client(LocalCluster())
-        else:
-            self.client = Client(address=scheduler_address)
+        self.scheduler = scheduler
 
     def evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
-        calcs = self.client.map(functools.partial(evaluate_solution, problem=problem), solution_list)
-        solution_list = list(self.client.gather(calcs))
+        with dask.config.set(scheduler=self.scheduler):
+            calculations = [
+                dask.delayed(evaluate_solution)(solution=solution, problem=problem) for solution in solution_list
+            ]
+            solution_list = list(dask.compute(*calculations))
+
         if self.observer is not None:
             self.observer.notify(solution_list)
+
         return solution_list

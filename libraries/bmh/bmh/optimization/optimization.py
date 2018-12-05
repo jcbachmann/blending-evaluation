@@ -13,6 +13,7 @@ from jmetal.operator.selection import BinaryTournamentSelection
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.dask_evaluator import DaskEvaluator
+from .jmetal_ext.component.distributed_evaluator import DistributedEvaluator
 from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
@@ -123,7 +124,8 @@ class DepositionOptimizer:
         self.evaluator_observer = HoardingEvaluatorObserver()
 
         evaluator_dict = {
-            'dask': (DaskEvaluator, {'scheduler_address': kwargs.get('scheduler_address', None)}),
+            'dask': (DaskEvaluator, {'scheduler': kwargs.get('scheduler', None)}),
+            'distributed': (DistributedEvaluator, {'scheduler': kwargs.get('scheduler', None)}),
             'multiprocess': (MultiprocessEvaluator, {}),
         }
         evaluator_type, evaluator_kwargs = evaluator_dict.get(evaluator_str, (None, {}))
