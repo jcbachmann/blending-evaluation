@@ -3,6 +3,7 @@
 import argparse
 
 from bmh.benchmark.data import BenchmarkData
+from bmh.benchmark.material_deposition import DepositionMeta
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
 
@@ -17,9 +18,17 @@ def main(path: str, material_identifier: str, verbose: bool):
     material_meta = benchmark.get_material_meta(material_identifier)
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
-    optimizer = DepositionOptimizer(
+    x_min = 0.5 * bed_size_z
+    x_max = bed_size_x - x_min
+    deposition_meta = DepositionMeta.create_empty(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
+        reclaim_x_per_s=1.0,
+    )
+    optimizer = DepositionOptimizer(
+        deposition_meta=deposition_meta,
+        x_min=x_min,
+        x_max=x_max,
         material=material,
         variables=100 + 1,
         population_size=300,

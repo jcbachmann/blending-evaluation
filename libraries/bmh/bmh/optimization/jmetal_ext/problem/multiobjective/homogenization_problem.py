@@ -2,7 +2,7 @@ import random
 from typing import List, Optional, Callable, Tuple
 
 import numpy as np
-from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition
+from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
 from bmh.helpers.math import weighted_avg_and_std, stdev
 from bmh.helpers.stockpile_math import get_stockpile_height
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
@@ -25,8 +25,8 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
 
 
 def variables_to_deposition_generic(
-        variables: List[float], *, x_min: float, x_max: float, bed_size_x: float, bed_size_z: float,
-        max_timestamp: float, deposition_prefix: Optional[Deposition]
+        variables: List[float], *, x_min: float, x_max: float, max_timestamp: float,
+        deposition_meta: DepositionMeta, deposition_prefix: Optional[Deposition] = None
 ) -> Deposition:
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
         start_timestamp = deposition_prefix.data['timestamp'].values[-1]
@@ -34,13 +34,13 @@ def variables_to_deposition_generic(
     else:
         min_timestamp = 0.0
 
-    deposition = Deposition.from_data(DataFrame(
-        data={
+    deposition = Deposition(
+        meta=deposition_meta.copy(),
+        data=DataFrame({
             'x': [elem * (x_max - x_min) + x_min for elem in variables],
-            'z': [bed_size_z / 2] * len(variables),
+            'z': [deposition_meta.bed_size_z / 2] * len(variables),
             'timestamp': np.linspace(min_timestamp, max_timestamp, len(variables))
-        }),
-        bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=1.0
+        })
     )
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
@@ -52,19 +52,16 @@ def variables_to_deposition_generic(
 
 
 def calculate_reference_objectives_generic(
-        bed_size_x: float, bed_size_z: float,
-        x_min: float, x_max: float,
-        raw_material: Material,
-        number_of_variables: int,
-        deposition_prefix: Optional[Deposition]
+        x_min: float, x_max: float, raw_material: Material, number_of_variables: int,
+        deposition_meta: DepositionMeta, deposition_prefix: Optional[Deposition]
 ) -> List[float]:
     max_timestamp = raw_material.data['timestamp'].values[-1]
 
     # Generate a Chevron deposition with maximum speed
     chevron = [float(i % 2) for i in range(number_of_variables)]
     chevron_deposition = variables_to_deposition_generic(
-        variables=chevron, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-        max_timestamp=max_timestamp, deposition_prefix=deposition_prefix
+        variables=chevron, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
+        deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
     )
 
     # Stack and reclaim material to acquire reference reclaimed material
@@ -125,18 +122,16 @@ class MaterialEvaluator:
 
 
 class HomogenizationProblem(FloatProblem):
-    def __init__(self, bed_size_x: float, bed_size_z: float, material: Material, number_of_variables: int = 2):
+    def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
+                 number_of_variables: int = 2):
         super().__init__()
 
         # Copy parameters
-        self.bed_size_x = bed_size_x
-        self.bed_size_z = bed_size_z
+        self.deposition_meta = deposition_meta
+        self.x_min = x_min
+        self.x_max = x_max
         self.material = material
         self.number_of_variables = number_of_variables
-
-        # Calculate stacker travel range
-        self.x_min = 0.5 * self.bed_size_z
-        self.x_max = self.bed_size_x - 0.5 * self.bed_size_z
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
@@ -241,17 +236,16 @@ class HomogenizationProblem(FloatProblem):
 
     def variables_to_deposition(self, variables: List[float]) -> Deposition:
         return variables_to_deposition_generic(
-            variables, x_min=self.x_min, x_max=self.x_max, bed_size_x=self.bed_size_x, bed_size_z=self.bed_size_z,
-            max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix
+            variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp,
+            deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix
         )
 
     def calculate_reference_objectives(self) -> List[float]:
         return calculate_reference_objectives_generic(
-            bed_size_x=self.bed_size_x, bed_size_z=self.bed_size_z,
             x_min=self.x_min, x_max=self.x_max,
             raw_material=self.material,
             number_of_variables=self.number_of_variables,
-            deposition_prefix=self.deposition_prefix
+            deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix
         )
 
     def set_deposition_prefix(self, deposition_prefix: Deposition) -> None:

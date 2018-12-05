@@ -53,9 +53,13 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
     # TODO respect starting side
     # TODO use same simulator?
+    x_min = 0.5 * deposition_meta.bed_size_z
+    x_max = deposition_meta.bed_size_x - x_min
+
     optimizer = DepositionOptimizer(
-        bed_size_x=deposition_meta.bed_size_x,
-        bed_size_z=deposition_meta.bed_size_z,
+        deposition_meta=deposition_meta,
+        x_min=x_min,
+        x_max=x_max,
         material=material,
         variables=chevron_layers + 1,
         population_size=250,

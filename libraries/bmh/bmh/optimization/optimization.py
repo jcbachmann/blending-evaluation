@@ -19,7 +19,7 @@ from .jmetal_ext.problem.multiobjective.homogenization_problem import Homogeniza
 from .plot_server.bokeh_plot_server import BokehPlotServer
 from .plot_server.dash_plot_server import DashPlotServer
 from .plot_server.mpl_plot_server import MplPlotServer
-from ..benchmark.material_deposition import Material, Deposition
+from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
 
 
 class OptimizationResult:
@@ -89,8 +89,9 @@ class DepositionOptimizer:
     def __init__(
             self,
             *,
-            bed_size_x: float,
-            bed_size_z: float,
+            deposition_meta: DepositionMeta,
+            x_min: float,
+            x_max: float,
             material: Material,
             variables: int = 31,
             population_size: int = 250,
@@ -104,8 +105,9 @@ class DepositionOptimizer:
         self.logger.debug('Initializing optimization problem')
 
         self.problem: HomogenizationProblem = HomogenizationProblem(
-            bed_size_x=bed_size_x,
-            bed_size_z=bed_size_z,
+            deposition_meta=deposition_meta,
+            x_min=x_min,
+            x_max=x_max,
             material=material,
             number_of_variables=variables,
         )
