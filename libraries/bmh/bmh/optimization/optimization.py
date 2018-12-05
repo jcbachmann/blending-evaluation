@@ -1,10 +1,12 @@
 import logging
-from typing import List, Optional, Dict, Any, Tuple, Type
+from typing import List, Optional, Dict, Any, Callable
 
 from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
-from jmetal.component.evaluator import S
+from jmetal.component.evaluator import S, Evaluator
 from jmetal.component.observer import Observer
+from jmetal.core.algorithm import Algorithm
+from jmetal.core.problem import Problem
 from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
@@ -12,14 +14,10 @@ from jmetal.operator.selection import BinaryTournamentSelection
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
-from .jmetal_ext.component.dask_evaluator import DaskEvaluator
-from .jmetal_ext.component.distributed_evaluator import DistributedEvaluator
 from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
-from .plot_server.bokeh_plot_server import BokehPlotServer
-from .plot_server.dash_plot_server import DashPlotServer
-from .plot_server.mpl_plot_server import MplPlotServer
+from .plot_server.plot_server import PlotServer
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
 
 
@@ -49,7 +47,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         best = min(self.population, key=lambda s: s.objectives[0] * s.objectives[0] + s.objectives[1] * s.objectives[1])
         self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
-            f'first: {str(best.objectives)}'
+            f'first: {best.objectives}'
         )
         self.last_evaluations = evaluations
         self.last_computing_time = computing_time
@@ -86,6 +84,170 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         return None
 
 
+def get_evaluator(
+        evaluator_str: Optional[str], *, kwargs: Dict[str, Any], evaluator_observer: EvaluatorObserver
+) -> Optional[Evaluator[S]]:
+    logger = logging.getLogger(__name__)
+
+    evaluator_kwargs = {'observer': evaluator_observer}
+
+    def get_dask_evaluator():
+        nonlocal evaluator_kwargs
+        try:
+            from .jmetal_ext.component.dask_evaluator import DaskEvaluator
+            if 'scheduler' in kwargs and kwargs.get('scheduler'):
+                evaluator_kwargs['scheduler'] = kwargs.get('scheduler')
+            return DaskEvaluator
+        except ImportError:
+            logger.error(f'Please install DaskEvaluator requirements')
+            raise
+
+    def get_distributed_evaluator():
+        nonlocal evaluator_kwargs
+        try:
+            from .jmetal_ext.component.distributed_evaluator import DistributedEvaluator
+            if 'scheduler' in kwargs:
+                if 'scheduler' in kwargs and kwargs.get('scheduler'):
+                    evaluator_kwargs['scheduler'] = kwargs.get('scheduler')
+            return DistributedEvaluator
+        except ImportError:
+            logger.error(f'Please install DistributedEvaluator requirements')
+            raise
+
+    def get_multiprocess_evaluator():
+        return MultiprocessEvaluator
+
+    def get_none():
+        return None
+
+    evaluator_dict = {
+        'dask': get_dask_evaluator,
+        'distributed': get_distributed_evaluator,
+        'multiprocess': get_multiprocess_evaluator,
+        'none': get_none,
+        'None': get_none,
+        'default': get_none,
+    }
+
+    if evaluator_str:
+        if evaluator_str in evaluator_dict:
+            evaluator_type = evaluator_dict[evaluator_str]()
+            if evaluator_type:
+                logger.debug(f'Creating evaluator {evaluator_type.__name__} with kwargs: {evaluator_kwargs}')
+                return evaluator_type(**evaluator_kwargs)
+        else:
+            raise ValueError(f'Invalid evaluator {evaluator_str} (please choose one of these: {evaluator_dict.keys()})')
+
+    return None
+
+
+def get_algorithm(
+        algorithm_str: str, *,
+        problem: Problem,
+        variables: int,
+        population_size: int,
+        max_evaluations: int,
+        evaluator: Evaluator[S],
+        kwargs: Dict[str, Any]
+) -> Algorithm:
+    logger = logging.getLogger(__name__)
+
+    algorithm_kwargs = {}
+    if evaluator:
+        algorithm_kwargs['evaluator'] = evaluator
+
+    def get_hpsea():
+        nonlocal algorithm_kwargs
+        if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
+            algorithm_kwargs['offspring_size'] = kwargs.get('offspring_size')
+        return HPSEA[FloatSolution, List[FloatSolution]]
+
+    def get_nsgaii():
+        return NSGAII[FloatSolution, List[FloatSolution]]
+
+    def get_ssnsgaii():
+        return SSNSGAII[FloatSolution, List[FloatSolution]]
+
+    algorithm_dict = {
+        'hpsea': get_hpsea,
+        'nsgaii': get_nsgaii,
+        'ssnsgaii': get_ssnsgaii,
+    }
+
+    if algorithm_str in algorithm_dict:
+        algorithm_type = algorithm_dict[algorithm_str]()
+        logger.debug(f'Creating algorithm {algorithm_type} with kwargs: {algorithm_kwargs}')
+        return algorithm_type(
+            problem=problem,
+            population_size=population_size,
+            max_evaluations=max_evaluations,
+            mutation=Polynomial(min(3.3 / variables, 1.0), distribution_index=20),
+            crossover=SBX(0.9, distribution_index=15),
+            selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
+            **algorithm_kwargs
+        )
+    else:
+        raise ValueError(f'Invalid algorithm {algorithm_str} (please choose one of these: {algorithm_dict.keys()})')
+
+
+def get_plot_server(
+        plot_server_str: Optional[str], *, all_callback: Callable, pop_callback: Callable, path_callback: Callable
+) -> Optional[PlotServer]:
+    logger = logging.getLogger(__name__)
+
+    def get_bokeh_plot_server():
+        try:
+            from .plot_server.bokeh_plot_server import BokehPlotServer
+            return BokehPlotServer
+        except ImportError:
+            logger.error(f'Please install BokehPlotServer requirements')
+            raise
+
+    def get_dash_plot_server():
+        try:
+            from .plot_server.dash_plot_server import DashPlotServer
+            return DashPlotServer
+        except ImportError:
+            logger.error(f'Please install DashPlotServer requirements')
+            raise
+
+    def get_mpl_plot_server():
+        try:
+            from .plot_server.mpl_plot_server import MplPlotServer
+            return MplPlotServer
+        except ImportError:
+            logger.error(f'Please install MplPlotServer requirements')
+            raise
+
+    def get_none():
+        return None
+
+    plot_server_dict = {
+        'bokeh': get_bokeh_plot_server,
+        'dash': get_dash_plot_server,
+        'mpl': get_mpl_plot_server,
+        'none': get_none,
+        'None': get_none,
+        'default': get_bokeh_plot_server,
+    }
+
+    if plot_server_str:
+        if plot_server_str in plot_server_dict:
+            plot_server_type = plot_server_dict[plot_server_str]()
+            if plot_server_type:
+                logger.debug(f'Creating plot server {plot_server_type.__name__}')
+                return plot_server_type(
+                    all_callback=all_callback,
+                    pop_callback=pop_callback,
+                    path_callback=path_callback
+                )
+        else:
+            raise ValueError(
+                f'Invalid plot server {plot_server_str} (please choose one of these: {plot_server_dict.keys()})')
+
+    return None
+
+
 class DepositionOptimizer:
     def __init__(
             self,
@@ -97,9 +259,9 @@ class DepositionOptimizer:
             variables: int = 31,
             population_size: int = 250,
             max_evaluations: int = 25000,
-            evaluator_str: str = 'dask',
+            evaluator_str: Optional[str] = 'dask',
             algorithm_str: str = 'hpsea',
-            plot_server_str: str = 'bokeh',
+            plot_server_str: Optional[str] = 'bokeh',
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -113,55 +275,26 @@ class DepositionOptimizer:
             number_of_variables=variables,
         )
 
-        algorithm_dict: Dict[str, Tuple[Type, Dict[str, Any]]] = {
-            'hpsea': (HPSEA, {'offspring_size': kwargs.get('offspring_size', None)}),
-            'nsgaii': (NSGAII, {}),
-            'ssnsgaii': (SSNSGAII, {}),
-        }
-        algorithm_type, algorithm_kwargs = algorithm_dict.get(algorithm_str, (HPSEA, {}))
-
         self.logger.debug('Creating evaluator observer')
         self.evaluator_observer = HoardingEvaluatorObserver()
 
-        evaluator_dict = {
-            'dask': (DaskEvaluator, {'scheduler': kwargs.get('scheduler', None)}),
-            'distributed': (DistributedEvaluator, {'scheduler': kwargs.get('scheduler', None)}),
-            'multiprocess': (MultiprocessEvaluator, {}),
-        }
-        evaluator_type, evaluator_kwargs = evaluator_dict.get(evaluator_str, (None, {}))
-        if evaluator_type:
-            self.logger.debug(f'Creating evaluator {evaluator_type.__name__} with kwargs: {str(evaluator_kwargs)}')
-            algorithm_kwargs['evaluator'] = evaluator_type(observer=self.evaluator_observer, **evaluator_kwargs)
+        self.evaluator = get_evaluator(evaluator_str, kwargs=kwargs, evaluator_observer=self.evaluator_observer)
 
-            self.logger.debug(f'Creating algorithm {algorithm_type.__name__} with kwargs: {str(algorithm_kwargs)}')
-        self.algorithm = algorithm_type[FloatSolution, List[FloatSolution]](
-            problem=self.problem,
-            population_size=population_size,
-            max_evaluations=max_evaluations,
-            mutation=Polynomial(min(3.3 / variables, 1.0), distribution_index=20),
-            crossover=SBX(0.9, distribution_index=15),
-            selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-            **algorithm_kwargs
+        self.algorithm = get_algorithm(
+            algorithm_str, problem=self.problem, variables=variables, population_size=population_size,
+            max_evaluations=max_evaluations, evaluator=self.evaluator, kwargs=kwargs
         )
 
         self.logger.debug('Creating algorithm observer')
         algorithm_observer = VerboseHoardingAlgorithmObserver()
         self.algorithm.observable.register(algorithm_observer)
 
-        self.plot_server = None
-        plot_server_dict = {
-            'bokeh': BokehPlotServer,
-            'dash': DashPlotServer,
-            'mpl': MplPlotServer,
-        }
-        plot_server_type = plot_server_dict.get(plot_server_str, None)
-        if plot_server_type is not None:
-            self.logger.debug(f'Creating plot_server {plot_server_type.__name__}')
-            self.plot_server = plot_server_type(
-                all_callback=self.evaluator_observer.get_new_solutions,
-                pop_callback=algorithm_observer.get_population,
-                path_callback=self.evaluator_observer.get_path
-            )
+        self.plot_server = get_plot_server(
+            plot_server_str,
+            all_callback=self.evaluator_observer.get_new_solutions,
+            pop_callback=algorithm_observer.get_population,
+            path_callback=self.evaluator_observer.get_path
+        )
 
     def run(self) -> None:
         if self.plot_server:
@@ -173,6 +306,11 @@ class DepositionOptimizer:
 
         if self.plot_server:
             self.plot_server.stop_background()
+
+        if self.evaluator:
+            evaluator_stop = getattr(self.evaluator, 'stop', None)
+            if callable(evaluator_stop):
+                evaluator_stop()
 
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')

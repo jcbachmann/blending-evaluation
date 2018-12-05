@@ -1,7 +1,15 @@
+import asyncio
 import logging
 from threading import Thread
 
 from typing import Callable, Optional
+
+
+def ensure_event_loop_exists():
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
 
 
 class PlotServer:
@@ -17,8 +25,12 @@ class PlotServer:
     def serve(self) -> None:
         raise NotImplementedError()
 
+    def wrap_serve(self):
+        ensure_event_loop_exists()
+        self.serve()
+
     def serve_background(self) -> None:
-        self.thread = Thread(target=self.serve)
+        self.thread = Thread(target=self.wrap_serve)
         self.thread.start()
 
     def stop(self) -> None:

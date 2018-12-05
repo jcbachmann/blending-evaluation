@@ -80,21 +80,17 @@ setup(
         'Operating System :: OS Independent',
     ],
     install_requires=[
-        'bokeh',
-        'dask',
-        'distributed',
-        'dash',
-        'dash-html-components',
-        'dash-core-components',
-        'dask',
-        'distributed',
         # 'jmetalpy',  # TODO
-        'matplotlib',
         'numpy',
         'pandas',
-        'plotly',
-        'tornado',
     ],
+    extras_require={
+        'BokehPlotServer': ['bokeh'],
+        'DashPlotServer': ['dash', 'dash-html-components', 'dash-core-components', 'plotly'],
+        'DaskEvaluator': ['dask'],
+        'DistributedEvaluator': ['dask', 'distributed'],
+        'MplPlotServer': ['matplotlib', 'tornado'],
+    },
     ext_modules=[
         CMakeExtension(
             'blending_simulator_lib',
