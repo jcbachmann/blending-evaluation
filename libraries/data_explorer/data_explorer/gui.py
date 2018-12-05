@@ -173,11 +173,12 @@ class MainWindow(QMainWindow):
         self.testlet_evaluated.emit(row, testlet_results)
 
     def update_row(self, row: int, testlet_results: List[TestletResult]):
-        for col, testlet_result in enumerate(testlet_results):
-            MainWindow.set_cell(self.table_widget, row, col, testlet_result)
+        if self.table_widget:
+            for col, testlet_result in enumerate(testlet_results):
+                MainWindow.set_cell(self.table_widget, row, col, testlet_result)
 
-        self.table_widget.resizeRowToContents(row)
-        self.table_widget.resizeColumnsToContents()
+            self.table_widget.resizeRowToContents(row)
+            self.table_widget.resizeColumnsToContents()
 
     def evaluate_testlets_in_background(self):
         self.testlet_evaluated.connect(self.update_row)

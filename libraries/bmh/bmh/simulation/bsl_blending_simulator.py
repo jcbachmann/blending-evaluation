@@ -1,5 +1,5 @@
 from blending_simulator_lib import BlendingSimulatorLib
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from pandas import DataFrame
 
@@ -44,6 +44,9 @@ class BslBlendingSimulator(BlendingSimulator):
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         self.bsl.stack(timestamp, x, z, volume, parameter)
+
+    def reclaim(self) -> List[List[Union[float, List[float]]]]:
+        raise NotImplementedError()
 
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """

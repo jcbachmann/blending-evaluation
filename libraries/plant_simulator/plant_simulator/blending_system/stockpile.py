@@ -1,3 +1,5 @@
+from typing import Optional
+
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from bmh.simulation.mathematical_blending_simulator import MathematicalBlendingSimulator
 from bmh.simulation.smooth_blending_simulator import SmoothBlendingSimulator
@@ -10,12 +12,12 @@ class Stockpile:
         self.length = length
         self.depth = depth
         self.max_tons = (length - depth) * 0.25 * depth * depth
-        self.stacked_tons = 0
-        self.stack_time_start = None
-        self.stack_time_end = None
+        self.stacked_tons = 0.0
+        self.stack_time_start: Optional[float] = None
+        self.stack_time_end: Optional[float] = None
         self._stacking_finished = False
         self.reclaimed_buffer = None
-        self.reclaimer_position = 0
+        self.reclaimer_position = 0.0
 
         self.simulator = {
             'fast': lambda: BslBlendingSimulator(
@@ -35,8 +37,8 @@ class Stockpile:
         }[simulator]()
 
     def stack(self, timestamp: float, x: float, z: float, tons: float, q):
-        if tons > 0:
-            if self.stacked_tons == 0:
+        if tons > 0.0:
+            if self.stacked_tons == 0.0:
                 self.stack_time_start = timestamp - Plant.TIME_INCREMENT
             self.stack_time_end = timestamp
 

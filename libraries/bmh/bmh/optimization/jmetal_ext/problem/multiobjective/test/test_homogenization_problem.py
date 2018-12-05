@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import unittest
 
-from bmh.benchmark.material_deposition import Deposition
+from bmh.benchmark.material_deposition import Deposition, DepositionMeta
 from pandas import DataFrame
 from pandas.util.testing import assert_frame_equal
 
@@ -17,11 +17,16 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         bed_size_z = 50.0
         z = 0.5 * bed_size_z
         max_timestamp = 10.0
+        deposition_meta = DepositionMeta.create_empty(
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            reclaim_x_per_s=1.0
+        )
         deposition_prefix = None
 
         deposition = variables_to_deposition_generic(
-            variables=variables, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-            max_timestamp=max_timestamp, deposition_prefix=deposition_prefix
+            variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
+            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
@@ -44,11 +49,16 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         bed_size_z = 50.0
         z = 0.5 * bed_size_z
         max_timestamp = 10.0
+        deposition_meta = DepositionMeta.create_empty(
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            reclaim_x_per_s=1.0
+        )
         deposition_prefix = Deposition.create_empty(bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=1.0)
 
         deposition = variables_to_deposition_generic(
-            variables=variables, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-            max_timestamp=max_timestamp, deposition_prefix=deposition_prefix
+            variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
+            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
@@ -71,6 +81,11 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         bed_size_z = 50.0
         z = 0.5 * bed_size_z
         max_timestamp = 10.0
+        deposition_meta = DepositionMeta.create_empty(
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            reclaim_x_per_s=1.0
+        )
         deposition_prefix = Deposition.create_empty(bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=1.0)
         deposition_prefix.data = DataFrame({
             'timestamp': [0, 1.0 / 3.0 * max_timestamp],
@@ -79,8 +94,8 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         })
 
         deposition = variables_to_deposition_generic(
-            variables=variables, x_min=x_min, x_max=x_max, bed_size_x=bed_size_x, bed_size_z=bed_size_z,
-            max_timestamp=max_timestamp, deposition_prefix=deposition_prefix
+            variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
+            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)

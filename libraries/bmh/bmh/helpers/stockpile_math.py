@@ -19,7 +19,8 @@ def get_stockpile_height(volume, core_length):
 
     https://www.wolframalpha.com/input/?i=solve+v%3Dpi%2F3*h%5E3%2Bl*h%5E2+for+h
 
-    h = (sqrt(3) π sqrt(3 π^2 v^2 - 4 l^3 v) - 2 l^3 + 3 π^2 v)^(1/3)/(2^(1/3) π) + (2^(1/3) l^2)/(π (sqrt(3) π sqrt(3 π^2 v^2 - 4 l^3 v) - 2 l^3 + 3 π^2 v)^(1/3)) - l/π
+    h = (sqrt(3) π sqrt(3 π^2 v^2 - 4 l^3 v) - 2 l^3 + 3 π^2 v)^(1/3)/(2^(1/3) π)
+        + (2^(1/3) l^2)/(π (sqrt(3) π sqrt(3 π^2 v^2 - 4 l^3 v) - 2 l^3 + 3 π^2 v)^(1/3)) - l/π
 
     :param volume: stockpile volume
     :param core_length: stockpile core length

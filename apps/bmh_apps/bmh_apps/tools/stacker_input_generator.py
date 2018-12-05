@@ -74,14 +74,15 @@ class Generator:
 
     def run_circular(self):
         # Stacker path parameters
-        l = min(self.length, self.depth) / 2
-        r = self.depth_fill_factor * l / 2
+        half_size = min(self.length, self.depth) / 2
+        r = self.depth_fill_factor * half_size / 2
 
         a_min = 40
         a_max = 300
 
         # Total volume in cubic meters
-        m3_total = math.pi / 3 * (pow(0.5 * l + r, 3) - 2 * pow(0.5 * l, 3) + pow(0.5 * l - r, 3))
+        m3_total = math.pi / 3 * (
+                pow(0.5 * half_size + r, 3) - 2 * pow(0.5 * half_size, 3) + pow(0.5 * half_size - r, 3))
         m3_total *= (a_max - a_min) / 360
         m3_pile = 0.9 * math.pi / 3 * pow(r, 3)
         m3_afterpile = m3_total - m3_pile
@@ -103,8 +104,8 @@ class Generator:
             else:
                 a = a_min
             r = a / 360 * 2 * math.pi - 0.5 * math.pi
-            x = 0.5 * l * math.sin(r) + self.length / 2
-            z = 0.5 * l * math.cos(r) + self.depth / 2
+            x = 0.5 * half_size * math.sin(r) + self.length / 2
+            z = 0.5 * half_size * math.cos(r) + self.depth / 2
 
             # Mixture
             red_part = 0.5 + 0.5 * math.sin((t_mat * 0.001) * 2 * math.pi)

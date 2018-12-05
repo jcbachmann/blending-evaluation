@@ -44,7 +44,7 @@ def variables_to_deposition_generic(
     )
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        deposition.data = deposition_prefix.data.append(deposition.data, ignore_index=True)
+        deposition.data = deposition_prefix.data.append(deposition.data, ignore_index=True, sort=False)
 
     deposition.meta.time = deposition.data['timestamp'].values[-1]
 

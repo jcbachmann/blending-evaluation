@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+from typing import List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,10 +10,20 @@ from .roundness_evaluator import RoundnessEvaluator
 from ..helpers.pretty_plot import pretty_line_plot
 
 
-def evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volume):
+def evaluate_likelihoods(
+        *,
+        dist_seg_size: float,
+        angle_seg_count: int,
+        pos: int,
+        start: float,
+        stop: float,
+        steps: int,
+        runs: int,
+        volume: float
+):
     likelihoods = np.linspace(start, stop, steps)
 
-    results = []
+    results: List[List[Union[float, int]]] = []
 
     for run in range(runs):
         for likelihood in likelihoods:
@@ -24,11 +35,30 @@ def evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps
     return results
 
 
-def evaluate_volumes(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volumes) -> DataFrame:
-    results = []
+def evaluate_volumes(
+        *,
+        dist_seg_size: float,
+        angle_seg_count: int,
+        pos: int,
+        start: float,
+        stop: float,
+        steps: int,
+        runs: int,
+        volumes: List[float]
+) -> DataFrame:
+    results: List[List[Union[float, int]]] = []
 
     for volume in volumes:
-        v_results = evaluate_likelihoods(dist_seg_size, angle_seg_count, pos, start, stop, steps, runs, volume)
+        v_results = evaluate_likelihoods(
+            dist_seg_size=dist_seg_size,
+            angle_seg_count=angle_seg_count,
+            pos=pos,
+            start=start,
+            stop=stop,
+            steps=steps,
+            runs=runs,
+            volume=volume
+        )
         results.extend(v_results)
 
     return DataFrame(

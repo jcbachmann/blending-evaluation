@@ -1,7 +1,7 @@
 import logging
-import queue
 import random
 from abc import abstractmethod
+from typing import List, Tuple
 
 import numpy as np
 
@@ -58,17 +58,17 @@ class MaterialBuffer(MaterialHandler):
     def __init__(self, label, plant, src, steps: int):
         super().__init__(label + ' [' + str(steps) + ']', plant, 'cds')
         self.src_gen = self.unpack_src_gen(src)
-        self.buffer = queue.Queue()
+        self.buffer: List[Tuple[float, float]] = []
         for _ in range(steps):
-            self.buffer.put((0, 0))
-        self._sample = (0, 0)
+            self.buffer.append((0.0, 0.0))
+        self._sample = (0.0, 0.0)
 
     def gen(self, i: int = 0):
         while True:
-            self.buffer.put(next(self.src_gen))
-            tph, q = self.buffer.get()
+            self.buffer.append(next(self.src_gen))
+            tph, q = self.buffer.pop(0)
             self.logger.debug(
-                f'Buffer {self.label}: {", ".join([f"({tph:.1f}, {q:.1f})" for tph, q in self.buffer.queue])}')
+                f'Buffer {self.label}: {", ".join([f"({tph:.1f}, {q:.1f})" for tph, q in self.buffer])}')
             self.logger.debug(f'Buffer {self.label} out: ({tph:.1f}, {q:.1f})')
             self._sample = (tph, q)
             yield tph, q
@@ -81,7 +81,7 @@ class MaterialJoiner(MaterialHandler):
     def __init__(self, label, plant, src_x):
         super().__init__(label, plant, 'trapezium')
         self.src_gens = self.unpack_src_gen(src_x)
-        self._sample = (0, 0)
+        self._sample = (0.0, 0.0)
 
     def gen(self, i: int = 0):
         while True:
@@ -101,21 +101,21 @@ class MaterialSplitter(MaterialHandler):
         super().__init__(label, plant, 'invtrapezium')
         self.src_gen = self.unpack_src_gen(src)
         self.weights = weights
-        self.buffer = [queue.Queue() for _ in range(len(weights))]
-        self._sample = [(0, 0)] * len(weights)
+        self.buffer: List[List[Tuple[float, float]]] = [[] for _ in range(len(weights))]
+        self._sample = [(0.0, 0.0)] * len(weights)
 
     def gen(self, i: int = 0):
         while True:
-            if self.buffer[i].empty():
+            if len(self.buffer[i]) == 0:
                 self.acquire_buffer()
-            tph, q = self.buffer[i].get()
+            tph, q = self.buffer[i].pop(0)
             self.logger.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
             yield tph, q
 
     def acquire_buffer(self):
         tph, q = next(self.src_gen)
         for i, weight in enumerate(self.weights):
-            self.buffer[i].put((weight * tph, q))
+            self.buffer[i].append((weight * tph, q))
             self._sample[i] = (weight * tph, q)
 
     def sample(self):
@@ -129,17 +129,17 @@ class MaterialMux(MaterialHandler):
         self.weight_matrix = weight_matrix
         self.flip_probability = flip_probability
         self.flip = False
-        self.buffer = [queue.Queue() for _ in range(len(weight_matrix))]
-        self._sample = [(0, 0)] * len(weight_matrix)
+        self.buffer: List[List[Tuple[float, float]]] = [[] for _ in range(len(weight_matrix))]
+        self._sample = [(0.0, 0.0)] * len(weight_matrix)
 
     def sample(self):
         return self._sample
 
     def gen(self, i: int = 0):
         while True:
-            if self.buffer[i].empty():
+            if len(self.buffer[i]) == 0:
                 self.acquire_buffer()
-            tph, q = self.buffer[i].get()
+            tph, q = self.buffer[i].pop(0)
             self.logger.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
             yield tph, q
 
@@ -147,7 +147,7 @@ class MaterialMux(MaterialHandler):
         m = [next(src_gen) for src_gen in self.src_gens]
         in_tphs = [tph for tph, _ in m]
         in_qs = [q for _, q in m]
-        out_tphs = [np.dot(in_tphs, weights) for weights in self.weight_matrix]
+        out_tphs = [float(np.dot(in_tphs, weights)) for weights in self.weight_matrix]
         out_qs = [
             np.average(in_qs, weights=np.multiply(in_tphs, weights)) if sum(np.multiply(in_tphs, weights)) > 0 else 0
             for i, weights in enumerate(self.weight_matrix)]
@@ -157,29 +157,29 @@ class MaterialMux(MaterialHandler):
         if random.random() < self.flip_probability:
             self.flip = not self.flip
         for i, s in enumerate(self._sample):
-            self.buffer[i].put(s)
+            self.buffer[i].append(s)
 
 
 class MaterialDuplicator(MaterialHandler):
     def __init__(self, label, plant, src, count):
         super().__init__(label, plant, 'Mdiamond')
         self.src_gen = self.unpack_src_gen(src)
-        self.buffer = [queue.Queue() for _ in range(count)]
-        self._sample = [(0, 0)] * count
+        self.buffer: List[List[Tuple[float, float]]] = [[] for _ in range(count)]
+        self._sample = [(0.0, 0.0)] * count
         self.count = count
 
     def gen(self, i: int = 0):
         while True:
-            if self.buffer[i].empty():
+            if len(self.buffer[i]) == 0:
                 self.acquire_buffer()
-            tph, q = self.buffer[i].get()
+            tph, q = self.buffer[i].pop(0)
             self.logger.debug(f'Splitter {self.label}.{i}: ({tph:.1f}, {q:.1f})')
             yield tph, q
 
     def acquire_buffer(self):
         tph, q = next(self.src_gen)
         for i in range(self.count):
-            self.buffer[i].put((tph, q))
+            self.buffer[i].append((tph, q))
             self._sample[i] = (tph, q)
 
     def sample(self):
@@ -190,7 +190,7 @@ class MaterialOut(MaterialHandler):
     def __init__(self, label, plant, src):
         super().__init__(label, plant, 'doubleoctagon')
         self.src_gen = self.unpack_src_gen(src)
-        self._sample = (0, 0)
+        self._sample = (0.0, 0.0)
 
     def step(self):
         tph, q = next(self.src_gen)

@@ -141,7 +141,7 @@ class PlotServer:
 
         # Create data sources
         live_source = ColumnDataSource(DataFrame(columns=self.columns).to_dict(orient='list'))
-        stats_source = ColumnDataSource(DataFrame(columns=get_stats_columns(self.columns)).to_dict(orient='list'))
+        # stats_source = ColumnDataSource(DataFrame(columns=get_stats_columns(self.columns)).to_dict(orient='list'))
 
         # Add and arrange graphs
         palette = Category10[10]

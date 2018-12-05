@@ -205,9 +205,8 @@ class ZoomOnWheel(MplInteraction):
             ax.set_xlim(xlim)
 
         for ax in y_axes:
-            # TODO?
-            # transform = ax.transData.inverted()
-            # xdata, ydata = transform.transform_point((event.x, event.y))
+            transform = ax.transData.inverted()
+            xdata, ydata = transform.transform_point((event.x, event.y))
 
             ylim = ax.get_ylim()
             ylim = self._zoom_range(ylim[0], ylim[1],

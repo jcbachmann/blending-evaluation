@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import numpy as np
 import pandas as pd
@@ -137,7 +137,7 @@ class MaterialMeta:
             path=self.path,
             meta_dict=self.to_dict()
         )
-        if copy_data:
+        if copy_data and self.data:
             meta.data = self.data.copy()
         return meta
 
@@ -258,7 +258,7 @@ class DepositionMeta:
             path=self.path,
             meta_dict=self.to_dict()
         )
-        if copy_data:
+        if copy_data and self.data:
             meta.data = self.data.copy()
         return meta
 
@@ -328,7 +328,7 @@ class MaterialDeposition:
             t_per_step = (t_curr - t_last) / sub_steps
             volume_per_step = row['volume'] / sub_steps
             parameter = row['parameter']  # TODO WTF?
-            sub_rows = {
+            sub_rows: Dict[str, List[float]] = {
                 'timestamp': [],
                 'volume': [],
                 'parameter': []
@@ -338,7 +338,7 @@ class MaterialDeposition:
                 sub_rows['volume'].append(volume_per_step)
                 sub_rows['parameter'].append(parameter)
 
-            data = data.append(DataFrame(sub_rows))
+            data = data.append(DataFrame(sub_rows), ignore_index=True, sort=False)
         return data
 
     @staticmethod

@@ -33,6 +33,5 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='script converting height map to png visualization')
     parser.add_argument('filename', type=str, help='heightmap file to process')
-    args = parser.parse_args()
 
-    main(args)
+    main(parser.parse_args())

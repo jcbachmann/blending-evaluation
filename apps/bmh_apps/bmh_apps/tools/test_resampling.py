@@ -12,8 +12,8 @@ def resample(df, rule: str):
     df['t'] = pd.to_datetime(df['t'], unit='s')
     df.set_index('t', inplace=True)
     resampler = df.resample(rule, closed='right', label='right')
-    df = resampler.backfill()
-    df = resampler.interpolate()
+    # df = resampler.backfill()
+    # df = resampler.interpolate()
     df = resampler.agg({'q': np.mean, 'v': np.sum})
     df.reset_index(inplace=True)
     # df['t'] = (df['t'] / np.timedelta64(1, 's')).astype(int)
@@ -22,7 +22,7 @@ def resample(df, rule: str):
     return df
 
 
-@unittest.skip
+@unittest.skip('Resample not finished and not actively developed')
 class TestResampling(unittest.TestCase):
     def test_downsampling_t(self):
         df = pd.DataFrame({

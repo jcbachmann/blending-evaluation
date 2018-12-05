@@ -8,9 +8,9 @@ class MathematicalBlendingSimulator(BlendingSimulator):
     def __init__(self, bed_size_x: float, buffer_size: int, **kwargs):
         super().__init__(bed_size_x, 0)
         self.buffer_size = buffer_size
-        self.positions = []
-        self.volumes = []
-        self.qualities = []
+        self.positions: List[float] = []
+        self.volumes: List[float] = []
+        self.qualities: List[List[float]] = []
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
         self.positions.append(max(0, min(int(x / self.bed_size_x * self.buffer_size), self.buffer_size - 1)))

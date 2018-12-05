@@ -87,5 +87,6 @@ class BokehPlotServer(PlotServer):
         self.server.io_loop.start()
 
     def stop(self) -> None:
-        self.server.stop()
-        self.server.io_loop.stop()
+        if self.server:
+            self.server.stop()
+            self.server.io_loop.stop()
