@@ -34,8 +34,6 @@ def check_required_columns(data: DataFrame, required_columns: List[str]) -> None
     :param data: data for which the check is performed
     :param required_columns: list of required columns
     """
-    logger = logging.getLogger(__name__)
-    logger.debug(f'Checking required columns')
     required_columns_str = ', '.join(required_columns)
     if not set(required_columns).issubset(data.columns):
         raise ValueError(f'Data does not contain all required columns: {required_columns_str}')
