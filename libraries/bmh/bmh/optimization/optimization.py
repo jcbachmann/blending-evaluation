@@ -14,8 +14,8 @@ from jmetal.operator.selection import BinaryTournamentSelection
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
-from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
+from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
 from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
@@ -58,6 +58,11 @@ class VerboseHoardingAlgorithmObserver(Observer):
             'f2': [o.objectives[1] for o in self.population]
         }
 
+    def reset(self):
+        self.population = []
+        self.last_evaluations = None
+        self.last_computing_time = None
+
 
 class HoardingEvaluatorObserver(EvaluatorObserver):
     def __init__(self):
@@ -82,6 +87,10 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
             return self.evaluated_variables[path_id]
 
         raise ValueError(f'Invalid path ID {path_id}')
+
+    def reset(self):
+        self.evaluated_variables = []
+        self.evaluated_objectives = []
 
 
 def get_evaluator(
@@ -251,50 +260,78 @@ class DepositionOptimizer(PlotServerInterface):
             deposition_meta: DepositionMeta,
             x_min: float,
             x_max: float,
-            material: Material,
-            variables: int = 31,
             population_size: int = 250,
             max_evaluations: int = 25000,
             evaluator_str: Optional[str] = 'dask',
             algorithm_str: str = 'hpsea',
             plot_server_str: Optional[str] = 'bokeh',
+            auto_start: bool = True,
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
         self.logger.debug('Initializing optimization problem')
 
-        self.problem: HomogenizationProblem = HomogenizationProblem(
-            deposition_meta=deposition_meta,
-            x_min=x_min,
-            x_max=x_max,
-            material=material,
-            number_of_variables=variables,
-        )
+        # Copy arguments
+        self.deposition_meta = deposition_meta
+        self.x_min = x_min
+        self.x_max = x_max
+        self.population_size = population_size
+        self.max_evaluations = max_evaluations
+        self.evaluator_str = evaluator_str
+        self.algorithm_str = algorithm_str
+        self.plot_server_str = plot_server_str
+        self.auto_start = auto_start
+        self.kwargs = kwargs
 
-        self.logger.debug('Creating evaluator observer')
-        self.evaluator_observer = HoardingEvaluatorObserver()
+        # Cache
+        self.problem: Optional[HomogenizationProblem] = None
+        self.algorithm: Optional[Algorithm] = None
 
-        self.evaluator = get_evaluator(evaluator_str, kwargs=kwargs, evaluator_observer=self.evaluator_observer)
-
-        self.algorithm = get_algorithm(
-            algorithm_str, problem=self.problem, variables=variables, population_size=population_size,
-            max_evaluations=max_evaluations, evaluator=self.evaluator, kwargs=kwargs
-        )
-
-        self.logger.debug('Creating algorithm observer')
         self.algorithm_observer = VerboseHoardingAlgorithmObserver()
-        self.algorithm.observable.register(self.algorithm_observer)
+        self.evaluator_observer = HoardingEvaluatorObserver()
+        self.evaluator = get_evaluator(
+            self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
+        )
+        self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self)
 
-        self.plot_server = get_plot_server(plot_server_str, plot_server_interface=self)
-
-    def run(self) -> None:
+    def start(self):
         if self.plot_server:
             self.plot_server.serve_background()
+
+    def run(self, *, material: Material, variables: int, deposition_prefix: Deposition = None) -> None:
+        self.algorithm_observer.reset()
+        self.evaluator_observer.reset()
+        if self.plot_server:
+            self.plot_server.reset()
+
+        self.problem = HomogenizationProblem(
+            deposition_meta=self.deposition_meta,
+            x_min=self.x_min,
+            x_max=self.x_max,
+            material=material,
+            number_of_variables=variables,
+            deposition_prefix=deposition_prefix,
+        )
+
+        self.algorithm = get_algorithm(
+            self.algorithm_str, problem=self.problem, variables=variables, population_size=self.population_size,
+            max_evaluations=self.max_evaluations, evaluator=self.evaluator, kwargs=self.kwargs
+        )
+        self.algorithm.observable.register(self.algorithm_observer)
+
+        if self.auto_start:
+            self.logger.debug('Starting DepositionOptimizer')
+            self.start()
 
         self.logger.debug('Running algorithm')
         self.algorithm.run()
         self.logger.debug('Algorithm finished')
 
+        if self.auto_start:
+            self.logger.debug('Stopping DepositionOptimizer')
+            self.stop()
+
+    def stop(self):
         if self.plot_server:
             self.plot_server.stop_background()
 

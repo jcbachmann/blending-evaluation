@@ -123,7 +123,7 @@ class MaterialEvaluator:
 
 class HomogenizationProblem(FloatProblem):
     def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
-                 number_of_variables: int = 2):
+                 number_of_variables: int = 2, deposition_prefix: Deposition = None):
         super().__init__()
 
         # Copy parameters
@@ -135,7 +135,7 @@ class HomogenizationProblem(FloatProblem):
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
-        self.deposition_prefix: Optional[Deposition] = None
+        self.deposition_prefix: Optional[Deposition] = deposition_prefix
         self.solution_pool: Optional[List[List[float]]] = None
 
         # Evaluate reference data
@@ -247,10 +247,6 @@ class HomogenizationProblem(FloatProblem):
             number_of_variables=self.number_of_variables,
             deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix
         )
-
-    def set_deposition_prefix(self, deposition_prefix: Deposition) -> None:
-        self.deposition_prefix = deposition_prefix
-        self.reference = self.calculate_reference_objectives()
 
     def set_solution_pool(self, solution_pool: List[List[float]]) -> None:
         self.solution_pool = solution_pool

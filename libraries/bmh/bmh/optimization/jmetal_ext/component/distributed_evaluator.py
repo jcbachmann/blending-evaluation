@@ -5,7 +5,7 @@ from dask.distributed import Client, LocalCluster
 from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
 
-from .evaluator_observer import EvaluatorObserver
+from .observable_evaluator import ObservableEvaluator, EvaluatorObserver
 
 
 def evaluate_solution(solution, problem):
@@ -13,9 +13,9 @@ def evaluate_solution(solution, problem):
     return solution
 
 
-class DistributedEvaluator(Evaluator[S]):
+class DistributedEvaluator(ObservableEvaluator[S]):
     def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler: Optional[str] = None):
-        self.observer = observer
+        super().__init__(observer)
 
         if scheduler is None:
             self.local_cluster = LocalCluster()
@@ -24,14 +24,9 @@ class DistributedEvaluator(Evaluator[S]):
             self.local_cluster = None
             self.client = Client(address=scheduler)
 
-    def evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
+    def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
         calculations = self.client.map(functools.partial(evaluate_solution, problem=problem), solution_list)
-        solution_list = list(self.client.gather(calculations))
-
-        if self.observer is not None:
-            self.observer.notify(solution_list)
-
-        return solution_list
+        return list(self.client.gather(calculations))
 
     def stop(self):
         if self.client:

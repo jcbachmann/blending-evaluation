@@ -18,6 +18,7 @@ class BokehPlotServer(PlotServer):
         super().__init__(plot_server_interface)
 
         self.server: Optional[Server] = None
+        self.do_reset = False
 
     def make_document(self, doc: Document) -> None:
         doc.title = 'Optimization'
@@ -48,9 +49,10 @@ class BokehPlotServer(PlotServer):
         scatter_fig.y_range = Range1d(0, 2)
 
         def path_callback(_attr, _old, new):
-            path = self.plot_server_interface.get_path(new[0])
-            path_source.data['i'] = list(range(len(path)))
-            path_source.data['x'] = path
+            if len(new) > 0:
+                path = self.plot_server_interface.get_path(new[0])
+                path_source.data['i'] = list(range(len(path)))
+                path_source.data['x'] = path
 
         all_source.selected.on_change('indices', path_callback)
 
@@ -66,13 +68,16 @@ class BokehPlotServer(PlotServer):
         doc.add_root(gridplot([[scatter_fig], [path_fig]], toolbar_location='left'))
 
         def update() -> None:
+            if self.do_reset:
+                all_source.data = {'f1': [], 'f2': [], 'color': []}
+                self.do_reset = False
+
             start = len(all_source.data['f1'])
             all_data = self.plot_server_interface.get_new_solutions(start)
             all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
             all_source.stream(all_data)
 
-            pop_data = self.plot_server_interface.get_population()
-            pop_source.stream(pop_data, len(pop_data['f1']))
+            pop_source.data = self.plot_server_interface.get_population()
 
         doc.add_periodic_callback(update, 500)
 
@@ -90,3 +95,6 @@ class BokehPlotServer(PlotServer):
         if self.server:
             self.server.stop()
             self.server.io_loop.stop()
+
+    def reset(self) -> None:
+        self.do_reset = True

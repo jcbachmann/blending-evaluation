@@ -55,3 +55,7 @@ class PlotServer(ABC):
             self.stop()
             self.thread.join()
             self.thread = None
+
+    def reset(self) -> None:
+        # Optional method for resetting the plot server state
+        pass

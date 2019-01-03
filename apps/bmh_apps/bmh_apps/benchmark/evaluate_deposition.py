@@ -60,12 +60,13 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         deposition_meta=deposition_meta,
         x_min=x_min,
         x_max=x_max,
-        material=material,
-        variables=chevron_layers + 1,
         population_size=250,
         max_evaluations=25000
     )
-    optimizer.run()
+    optimizer.run(
+        material=material,
+        variables=chevron_layers + 1
+    )
 
     results = optimizer.get_final_results()
     selection = min(results, key=lambda r: r.objectives[0])

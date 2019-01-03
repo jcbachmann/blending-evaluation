@@ -29,13 +29,14 @@ def main(path: str, material_identifier: str, verbose: bool):
         deposition_meta=deposition_meta,
         x_min=x_min,
         x_max=x_max,
-        material=material,
-        variables=100 + 1,
         population_size=300,
         max_evaluations=25000,
         offspring_size=30
     )
-    optimizer.run()
+    optimizer.run(
+        material=material,
+        variables=100 + 1
+    )
 
 
 if __name__ == '__main__':
