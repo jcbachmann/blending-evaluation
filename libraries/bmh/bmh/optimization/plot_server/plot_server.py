@@ -1,8 +1,9 @@
 import asyncio
 import logging
+from abc import ABC, abstractmethod
 from threading import Thread
 
-from typing import Callable, Optional
+from typing import Optional, Dict, List
 
 
 def ensure_event_loop_exists():
@@ -12,18 +13,30 @@ def ensure_event_loop_exists():
         asyncio.set_event_loop(asyncio.new_event_loop())
 
 
-class PlotServer:
-    def __init__(self, all_callback: Callable, pop_callback: Callable, path_callback: Callable,
-                 port: int = 5001) -> None:
-        self.all_callback = all_callback
-        self.pop_callback = pop_callback
-        self.path_callback = path_callback
+class PlotServerInterface(ABC):
+    @abstractmethod
+    def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
+        pass
+
+    @abstractmethod
+    def get_population(self) -> Dict[str, List[float]]:
+        pass
+
+    @abstractmethod
+    def get_path(self, path_id: int) -> List[float]:
+        pass
+
+
+class PlotServer(ABC):
+    def __init__(self, plot_server_interface: PlotServerInterface, port: int = 5001) -> None:
+        self.plot_server_interface = plot_server_interface
         self.port = port
         self.logger = logging.getLogger(__name__)
         self.thread: Optional[Thread] = None
 
+    @abstractmethod
     def serve(self) -> None:
-        raise NotImplementedError()
+        pass
 
     def wrap_serve(self):
         ensure_event_loop_exists()
@@ -33,8 +46,9 @@ class PlotServer:
         self.thread = Thread(target=self.wrap_serve)
         self.thread.start()
 
+    @abstractmethod
     def stop(self) -> None:
-        raise NotImplementedError()
+        pass
 
     def stop_background(self) -> None:
         if self.thread:

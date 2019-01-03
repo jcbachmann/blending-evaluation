@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Optional
 
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
@@ -10,12 +10,12 @@ from bokeh.palettes import Category10, Viridis256
 from bokeh.plotting import figure
 from bokeh.server.server import Server
 
-from .plot_server import PlotServer
+from .plot_server import PlotServer, PlotServerInterface
 
 
 class BokehPlotServer(PlotServer):
-    def __init__(self, all_callback: Callable, pop_callback: Callable, path_callback: Callable):
-        super().__init__(all_callback, pop_callback, path_callback)
+    def __init__(self, plot_server_interface: PlotServerInterface):
+        super().__init__(plot_server_interface)
 
         self.server: Optional[Server] = None
 
@@ -48,7 +48,7 @@ class BokehPlotServer(PlotServer):
         scatter_fig.y_range = Range1d(0, 2)
 
         def path_callback(_attr, _old, new):
-            path = self.path_callback(new[0])
+            path = self.plot_server_interface.get_path(new[0])
             path_source.data['i'] = list(range(len(path)))
             path_source.data['x'] = path
 
@@ -67,11 +67,11 @@ class BokehPlotServer(PlotServer):
 
         def update() -> None:
             start = len(all_source.data['f1'])
-            all_data = self.all_callback(start)
+            all_data = self.plot_server_interface.get_new_solutions(start)
             all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
             all_source.stream(all_data)
 
-            pop_data = self.pop_callback()
+            pop_data = self.plot_server_interface.get_population()
             pop_source.stream(pop_data, len(pop_data['f1']))
 
         doc.add_periodic_callback(update, 500)

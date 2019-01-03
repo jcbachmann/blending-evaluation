@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from .plot_server import PlotServer
+from .plot_server import PlotServer, PlotServerInterface
 
 html_content = '''
 <html>
@@ -137,8 +137,8 @@ class MyApplication(tornado.web.Application):
 
 
 class MplPlotServer(PlotServer):
-    def __init__(self, all_callback, pop_callback, path_callback):
-        super().__init__(all_callback, pop_callback, path_callback)
+    def __init__(self, plot_server_interface: PlotServerInterface):
+        super().__init__(plot_server_interface)
 
         self.figure, self.all_plot, self.pop_plot = MplPlotServer.create_figure()
         self.application = MyApplication(self.figure)
@@ -170,10 +170,10 @@ class MplPlotServer(PlotServer):
         return fig, all_plot, pop_plot
 
     def update_figure(self) -> None:
-        all_data = self.all_callback(0)
+        all_data = self.plot_server_interface.get_new_solutions(0)
         self.all_plot.set_data(all_data['f1'], all_data['f2'])
 
-        pop_data = self.pop_callback()
+        pop_data = self.plot_server_interface.get_population()
         self.pop_plot.set_data(pop_data['f1'], pop_data['f2'])
 
         self.figure.canvas.draw_idle()

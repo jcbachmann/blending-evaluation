@@ -1,17 +1,13 @@
-from typing import Callable, Optional
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 from dash.dependencies import Input, Output
 
-from .plot_server import PlotServer
+from .plot_server import PlotServer, PlotServerInterface
 
 app = dash.Dash('dash-plot-server')
-global_all_callback: Optional[Callable] = None
-global_pop_callback: Optional[Callable] = None
-global_path_callback: Optional[Callable] = None
+global_plot_server_interface: PlotServerInterface = None
 
 app.layout = html.Div([
     html.Div([
@@ -29,8 +25,8 @@ app.layout = html.Div([
 
 @app.callback(Output('scatter', 'figure'), [Input('scatter-update', 'n_intervals')])
 def update_scatter(_interval):
-    all_data = global_all_callback(0)
-    pop_data = global_pop_callback()
+    all_data = global_plot_server_interface.get_new_solutions(0)
+    pop_data = global_plot_server_interface.get_population()
 
     all_data_scatter = go.Scattergl(
         name='All Evaluations',
@@ -78,7 +74,7 @@ def update_scatter(_interval):
 @app.callback(Output('path', 'figure'), [Input('scatter', 'hoverData')])
 def update_path(hover_data):
     path_id = hover_data['points'][0]['customdata']
-    path = global_path_callback(path_id)
+    path = global_plot_server_interface.get_path(path_id)
 
     layout = go.Layout(
         height=700,
@@ -98,15 +94,11 @@ def update_path(hover_data):
 
 
 class DashPlotServer(PlotServer):
-    def __init__(self, all_callback, pop_callback, path_callback):
-        super().__init__(all_callback, pop_callback, path_callback)
+    def __init__(self, plot_server_interface: PlotServerInterface):
+        super().__init__(plot_server_interface)
 
-        global global_all_callback
-        global global_pop_callback
-        global global_path_callback
-        global_all_callback = all_callback
-        global_pop_callback = pop_callback
-        global_path_callback = path_callback
+        global global_plot_server_interface
+        global_plot_server_interface = plot_server_interface
 
     def serve(self) -> None:
         app.server.env = 'development'

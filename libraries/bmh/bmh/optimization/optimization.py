@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional, Dict, Any, Callable
+from typing import List, Optional, Dict, Any
 
 from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
@@ -17,7 +17,7 @@ from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.evaluator_observer import EvaluatorObserver
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
-from .plot_server.plot_server import PlotServer
+from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
 
 
@@ -191,7 +191,7 @@ def get_algorithm(
 
 
 def get_plot_server(
-        plot_server_str: Optional[str], *, all_callback: Callable, pop_callback: Callable, path_callback: Callable
+        plot_server_str: Optional[str], *, plot_server_interface: PlotServerInterface
 ) -> Optional[PlotServer]:
     logger = logging.getLogger(__name__)
 
@@ -236,11 +236,7 @@ def get_plot_server(
             plot_server_type = plot_server_dict[plot_server_str]()
             if plot_server_type:
                 logger.debug(f'Creating plot server {plot_server_type.__name__}')
-                return plot_server_type(
-                    all_callback=all_callback,
-                    pop_callback=pop_callback,
-                    path_callback=path_callback
-                )
+                return plot_server_type(plot_server_interface=plot_server_interface)
         else:
             raise ValueError(
                 f'Invalid plot server {plot_server_str} (please choose one of these: {plot_server_dict.keys()})')
@@ -248,7 +244,7 @@ def get_plot_server(
     return None
 
 
-class DepositionOptimizer:
+class DepositionOptimizer(PlotServerInterface):
     def __init__(
             self,
             *,
@@ -286,15 +282,10 @@ class DepositionOptimizer:
         )
 
         self.logger.debug('Creating algorithm observer')
-        algorithm_observer = VerboseHoardingAlgorithmObserver()
-        self.algorithm.observable.register(algorithm_observer)
+        self.algorithm_observer = VerboseHoardingAlgorithmObserver()
+        self.algorithm.observable.register(self.algorithm_observer)
 
-        self.plot_server = get_plot_server(
-            plot_server_str,
-            all_callback=self.evaluator_observer.get_new_solutions,
-            pop_callback=algorithm_observer.get_population,
-            path_callback=self.evaluator_observer.get_path
-        )
+        self.plot_server = get_plot_server(plot_server_str, plot_server_interface=self)
 
     def run(self) -> None:
         if self.plot_server:
@@ -311,6 +302,21 @@ class DepositionOptimizer:
             evaluator_stop = getattr(self.evaluator, 'stop', None)
             if callable(evaluator_stop):
                 evaluator_stop()
+
+    def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
+        if self.evaluator_observer:
+            return self.evaluator_observer.get_new_solutions(start)
+        return {}
+
+    def get_population(self) -> Dict[str, List[float]]:
+        if self.algorithm_observer:
+            return self.algorithm_observer.get_population()
+        return {}
+
+    def get_path(self, path_id: int) -> List[float]:
+        if self.evaluator_observer:
+            return self.evaluator_observer.get_path(path_id)
+        return []
 
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')
