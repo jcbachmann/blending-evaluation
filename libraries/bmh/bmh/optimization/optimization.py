@@ -52,7 +52,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         self.last_evaluations = evaluations
         self.last_computing_time = computing_time
 
-    def get_population(self):
+    def get_population(self) -> Dict[str, List[float]]:
         return {
             'f1': [o.objectives[0] for o in self.population],
             'f2': [o.objectives[1] for o in self.population]
@@ -69,7 +69,7 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
             self.evaluated_variables.append(solution.variables)
             self.evaluated_objectives.append(solution.objectives)
 
-    def get_new_solutions(self, start: int):
+    def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
         new_solutions = self.evaluated_objectives[start:]
 
         return {
@@ -77,11 +77,11 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
             'f2': [o[1] for o in new_solutions]
         }
 
-    def get_path(self, path_id: int):
+    def get_path(self, path_id: int) -> List[float]:
         if 0 <= path_id < len(self.evaluated_variables):
             return self.evaluated_variables[path_id]
 
-        return None
+        raise ValueError(f'Invalid path ID {path_id}')
 
 
 def get_evaluator(
