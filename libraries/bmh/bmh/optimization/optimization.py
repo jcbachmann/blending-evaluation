@@ -1,4 +1,5 @@
 import logging
+import math
 from typing import List, Optional, Dict, Any
 
 from jmetal.algorithm import NSGAII
@@ -17,17 +18,9 @@ from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
+from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
-
-
-class OptimizationResult:
-    def __init__(self, deposition: Deposition, variables: List[float], objectives: List[float],
-                 objective_labels: List[str]):
-        self.deposition = deposition
-        self.variables = variables
-        self.objectives = objectives
-        self.objective_labels = objective_labels
 
 
 class VerboseHoardingAlgorithmObserver(Observer):
@@ -66,31 +59,28 @@ class VerboseHoardingAlgorithmObserver(Observer):
 
 class HoardingEvaluatorObserver(EvaluatorObserver):
     def __init__(self):
-        self.evaluated_variables = []
-        self.evaluated_objectives = []
+        self.solutions: List[S] = []
 
     def notify(self, solution_list: List[S]):
         for solution in solution_list:
-            self.evaluated_variables.append(solution.variables)
-            self.evaluated_objectives.append(solution.objectives)
+            self.solutions.append(solution)
 
     def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
-        new_solutions = self.evaluated_objectives[start:]
+        new_solutions = self.solutions[start:]
 
         return {
-            'f1': [o[0] for o in new_solutions],
-            'f2': [o[1] for o in new_solutions]
+            'f1': [o.objectives[0] for o in new_solutions],
+            'f2': [o.objectives[1] for o in new_solutions]
         }
 
-    def get_solution_variables(self, solution_id: int) -> List[float]:
-        if 0 <= solution_id < len(self.evaluated_variables):
-            return self.evaluated_variables[solution_id]
+    def get_solution(self, solution_id: int) -> S:
+        if 0 <= solution_id < len(self.solutions):
+            return self.solutions[solution_id]
 
         raise ValueError(f'Invalid solution ID {solution_id}')
 
     def reset(self):
-        self.evaluated_variables = []
-        self.evaluated_objectives = []
+        self.solutions = []
 
 
 def get_evaluator(
@@ -350,21 +340,46 @@ class DepositionOptimizer(PlotServerInterface):
             return self.algorithm_observer.get_population()
         return {}
 
-    def get_deposition(self, solution_id: int) -> Deposition:
+    def get_solution(self, solution_id: int) -> OptimizationResult:
         if self.evaluator_observer and self.problem:
-            return self.problem.variables_to_deposition(self.evaluator_observer.get_solution_variables(solution_id))
+            solution = self.evaluator_observer.get_solution(solution_id)
+            return OptimizationResult(
+                self.problem.variables_to_deposition(solution.variables),
+                solution.variables,
+                solution.objectives,
+                self.problem.get_objective_labels()
+            )
+
+        raise RuntimeError('DepositionOptimizer not initialized')
+
+    def get_best_solution(self) -> Optional[OptimizationResult]:
+        if self.evaluator_observer and self.problem:
+            if len(self.algorithm_observer.population) > 0:
+                solution = min(
+                    self.algorithm_observer.population, key=lambda r: math.hypot(r.objectives[0], r.objectives[1])
+                )
+                return OptimizationResult(
+                    self.problem.variables_to_deposition(solution.variables),
+                    solution.variables,
+                    solution.objectives,
+                    self.problem.get_objective_labels()
+                )
+            else:
+                return None
 
         raise RuntimeError('DepositionOptimizer not initialized')
 
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')
         objective_labels = self.problem.get_objective_labels()
-        return [OptimizationResult(self.problem.variables_to_deposition(v), v, o, objective_labels) for v, o in
-                zip(self.evaluator_observer.evaluated_variables, self.evaluator_observer.evaluated_objectives)]
+        return [OptimizationResult(
+            self.problem.variables_to_deposition(s.variables), s.variables, s.objectives, objective_labels
+        ) for s in self.evaluator_observer.solutions]
 
     def get_final_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting final results')
         result_population = self.algorithm.get_result()
         objective_labels = self.problem.get_objective_labels()
-        return [OptimizationResult(self.problem.variables_to_deposition(s.variables), s.variables, s.objectives,
-                                   objective_labels) for s in result_population]
+        return [OptimizationResult(
+            self.problem.variables_to_deposition(s.variables), s.variables, s.objectives, objective_labels
+        ) for s in result_population]

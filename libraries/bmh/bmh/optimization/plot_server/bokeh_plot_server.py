@@ -25,51 +25,82 @@ class BokehPlotServer(PlotServer):
 
         all_source = ColumnDataSource({'f1': [], 'f2': [], 'color': []})
         pop_source = ColumnDataSource({'f1': [], 'f2': []})
-        path_source = ColumnDataSource({'x': [], 'timestamp': []})
+        best_source = ColumnDataSource({'f1': [], 'f2': []})
+        selected_source = ColumnDataSource({'f1': [], 'f2': []})
+
+        best_path_source = ColumnDataSource({'timestamp': [], 'x': []})
+        selected_path_source = ColumnDataSource({'timestamp': [], 'x': []})
+
         palette = Category10[10]
 
         scatter_fig = figure(
+            title='Solutions',
             plot_width=750,
             plot_height=750,
-            tools='pan,wheel_zoom,reset,hover,tap,crosshair,zoom_in,zoom_out,box_zoom,undo,redo,save,box_select',
+            tools='pan,wheel_zoom,reset,tap,zoom_in,zoom_out,box_zoom,undo,redo,save',
             x_axis_label='f1 Homogenization Effect',
-            y_axis_label='f2 Volume StDev'
+            y_axis_label='f2 Volume StDev',
+            x_range=Range1d(0, 2),
+            y_range=Range1d(0, 2),
         )
-
         scatter_fig.scatter(
             x='f1', y='f2', source=all_source, legend='All Evaluations',
-            marker='x', size=5, line_color='color', alpha=0.7
+            marker='x', size=5, line_color='color', alpha=0.7,
+            nonselection_line_alpha=1.0
         )
         scatter_fig.scatter(
             x='f1', y='f2', source=pop_source, legend='Population',
-            marker='o', size=8, line_color=palette[1], fill_alpha=0
+            marker='o', size=8, line_color=palette[1], fill_alpha=0,
+        )
+        scatter_fig.scatter(
+            x='f1', y='f2', source=best_source, legend='Best',
+            marker='o', size=11, line_color=palette[2], fill_alpha=0.5,
+        )
+        scatter_fig.scatter(
+            x='f1', y='f2', source=selected_source, legend='Selected',
+            marker='o', size=11, line_color=palette[3], fill_alpha=0.5,
         )
         scatter_fig.legend.location = 'top_right'
-        scatter_fig.x_range = Range1d(0, 2)
-        scatter_fig.y_range = Range1d(0, 2)
-
-        def path_callback(_attr, _old, new):
-            if len(new) > 0:
-                deposition = self.plot_server_interface.get_deposition(new[0])
-                path_source.data['timestamp'] = deposition.data['timestamp']
-                path_source.data['x'] = deposition.data['x']
-
-        all_source.selected.on_change('indices', path_callback)
 
         path_fig = figure(
+            title='Deposition',
             plot_width=750,
             plot_height=400,
             tools='pan,wheel_zoom,reset,hover',
             x_axis_label='Timestamp',
-            y_axis_label='Position'
+            y_axis_label='Position',
+            x_range=Range1d(0, None),
+            y_range=Range1d(0, None),
         )
-        path_fig.line(x='timestamp', y='x', source=path_source)
+        path_fig.line(x='timestamp', y='x', legend='Best Deposition', source=best_path_source, color=palette[2])
+        path_fig.line(x='timestamp', y='x', legend='Selected Deposition', source=selected_path_source, color=palette[3])
+        path_fig.legend.location = 'top_right'
 
         doc.add_root(gridplot([[scatter_fig], [path_fig]], toolbar_location='left'))
+
+        def path_selected_callback(_attr, _old, new):
+            if len(new) > 0:
+                solution = self.plot_server_interface.get_solution(new[0])
+                selected_path_source.data = {
+                    'timestamp': solution.deposition.data['timestamp'],
+                    'x': solution.deposition.data['x']
+                }
+                selected_source.data = {
+                    'f1': [solution.objectives[0]],
+                    'f2': [solution.objectives[1]]
+                }
+
+        all_source.selected.on_change('indices', path_selected_callback)
 
         def update() -> None:
             if self.do_reset:
                 all_source.data = {'f1': [], 'f2': [], 'color': []}
+                pop_source.data = {'f1': [], 'f2': []}
+                best_source.data = {'f1': [], 'f2': []}
+                selected_source.data = {'f1': [], 'f2': []}
+                best_path_source.data = {'timestamp': [], 'x': []}
+                selected_path_source.data = {'timestamp': [], 'x': []}
+
                 self.do_reset = False
 
             start = len(all_source.data['f1'])
@@ -78,6 +109,16 @@ class BokehPlotServer(PlotServer):
             all_source.stream(all_data)
 
             pop_source.data = self.plot_server_interface.get_population()
+
+            best_solution = self.plot_server_interface.get_best_solution()
+            if best_solution:
+                best_path_source.data = {
+                    'timestamp': best_solution.deposition.data['timestamp'],
+                    'x': best_solution.deposition.data['x']
+                }
+                path_fig.x_range.end = best_solution.deposition.meta.time
+                path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
+                best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
 
         doc.add_periodic_callback(update, 500)
 

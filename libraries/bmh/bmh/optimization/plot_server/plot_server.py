@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from threading import Thread
 from typing import Optional, Dict, List
 
-from ...benchmark.material_deposition import Deposition
+from ..optimization_result import OptimizationResult
 
 
 def ensure_event_loop_exists():
@@ -24,7 +24,11 @@ class PlotServerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_deposition(self, solution_id: int) -> Deposition:
+    def get_solution(self, solution_id: int) -> OptimizationResult:
+        pass
+
+    @abstractmethod
+    def get_best_solution(self) -> Optional[OptimizationResult]:
         pass
 
 
