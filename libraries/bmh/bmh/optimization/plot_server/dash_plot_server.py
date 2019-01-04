@@ -73,21 +73,21 @@ def update_scatter(_interval):
 
 @app.callback(Output('path', 'figure'), [Input('scatter', 'hoverData')])
 def update_path(hover_data):
-    path_id = hover_data['points'][0]['customdata']
-    path = global_plot_server_interface.get_path(path_id)
-
-    layout = go.Layout(
-        height=700,
-    )
+    deposition = global_plot_server_interface.get_deposition(hover_data['points'][0]['customdata'])
 
     path = go.Scattergl(
         name='Population',
-        x=path,
-        y=list(range(len(path))),
+        x=deposition.data['timestamp'],
+        y=deposition.data['x'],
         line=go.scattergl.Line(
             color='#FF0000',
         ),
         mode='lines'
+    )
+
+    layout = go.Layout(
+        height=700,
+        yaxis=dict(range=[0, deposition.meta.bed_size_x])
     )
 
     return go.Figure(data=[path], layout=layout)

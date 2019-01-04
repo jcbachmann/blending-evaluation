@@ -2,8 +2,9 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from threading import Thread
-
 from typing import Optional, Dict, List
+
+from ...benchmark.material_deposition import Deposition
 
 
 def ensure_event_loop_exists():
@@ -23,7 +24,7 @@ class PlotServerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_path(self, path_id: int) -> List[float]:
+    def get_deposition(self, solution_id: int) -> Deposition:
         pass
 
 

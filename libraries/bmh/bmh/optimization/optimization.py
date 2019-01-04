@@ -82,11 +82,11 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
             'f2': [o[1] for o in new_solutions]
         }
 
-    def get_path(self, path_id: int) -> List[float]:
-        if 0 <= path_id < len(self.evaluated_variables):
-            return self.evaluated_variables[path_id]
+    def get_solution_variables(self, solution_id: int) -> List[float]:
+        if 0 <= solution_id < len(self.evaluated_variables):
+            return self.evaluated_variables[solution_id]
 
-        raise ValueError(f'Invalid path ID {path_id}')
+        raise ValueError(f'Invalid solution ID {solution_id}')
 
     def reset(self):
         self.evaluated_variables = []
@@ -350,10 +350,11 @@ class DepositionOptimizer(PlotServerInterface):
             return self.algorithm_observer.get_population()
         return {}
 
-    def get_path(self, path_id: int) -> List[float]:
-        if self.evaluator_observer:
-            return self.evaluator_observer.get_path(path_id)
-        return []
+    def get_deposition(self, solution_id: int) -> Deposition:
+        if self.evaluator_observer and self.problem:
+            return self.problem.variables_to_deposition(self.evaluator_observer.get_solution_variables(solution_id))
+
+        raise RuntimeError('DepositionOptimizer not initialized')
 
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')

@@ -25,7 +25,7 @@ class BokehPlotServer(PlotServer):
 
         all_source = ColumnDataSource({'f1': [], 'f2': [], 'color': []})
         pop_source = ColumnDataSource({'f1': [], 'f2': []})
-        path_source = ColumnDataSource({'x': [], 'i': []})
+        path_source = ColumnDataSource({'x': [], 'timestamp': []})
         palette = Category10[10]
 
         scatter_fig = figure(
@@ -50,9 +50,9 @@ class BokehPlotServer(PlotServer):
 
         def path_callback(_attr, _old, new):
             if len(new) > 0:
-                path = self.plot_server_interface.get_path(new[0])
-                path_source.data['i'] = list(range(len(path)))
-                path_source.data['x'] = path
+                deposition = self.plot_server_interface.get_deposition(new[0])
+                path_source.data['timestamp'] = deposition.data['timestamp']
+                path_source.data['x'] = deposition.data['x']
 
         all_source.selected.on_change('indices', path_callback)
 
@@ -60,10 +60,10 @@ class BokehPlotServer(PlotServer):
             plot_width=750,
             plot_height=400,
             tools='pan,wheel_zoom,reset,hover',
-            x_axis_label='Position',
-            y_axis_label='Layer'
+            x_axis_label='Timestamp',
+            y_axis_label='Position'
         )
-        path_fig.line(x='x', y='i', source=path_source)
+        path_fig.line(x='timestamp', y='x', source=path_source)
 
         doc.add_root(gridplot([[scatter_fig], [path_fig]], toolbar_location='left'))
 
