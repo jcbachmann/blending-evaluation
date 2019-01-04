@@ -142,7 +142,7 @@ class HomogenizationProblem(FloatProblem):
         self.reference = self.calculate_reference_objectives()
 
         # Setup problem base variables
-        self.number_of_objectives = len(material.get_parameter_columns())
+        self.number_of_objectives = len(material.get_parameter_columns()) + 1
         self.number_of_constraints = 0
 
         self.lower_bound = [0.0 for _ in range(number_of_variables)]
