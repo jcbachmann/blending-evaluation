@@ -71,6 +71,7 @@ class BokehPlotServer(PlotServer):
             y_axis_label='Position',
             x_range=Range1d(0, None),
             y_range=Range1d(0, None),
+            x_axis_type='datetime',
         )
         path_fig.line(x='timestamp', y='x', legend='Best Deposition', source=best_path_source, color=palette[2])
         path_fig.line(x='timestamp', y='x', legend='Selected Deposition', source=selected_path_source, color=palette[3])
@@ -82,7 +83,7 @@ class BokehPlotServer(PlotServer):
             if len(new) > 0:
                 solution = self.plot_server_interface.get_solution(new[0])
                 selected_path_source.data = {
-                    'timestamp': solution.deposition.data['timestamp'],
+                    'timestamp': solution.deposition.data['timestamp'] * 1000,
                     'x': solution.deposition.data['x']
                 }
                 selected_source.data = {
@@ -113,10 +114,10 @@ class BokehPlotServer(PlotServer):
             best_solution = self.plot_server_interface.get_best_solution()
             if best_solution:
                 best_path_source.data = {
-                    'timestamp': best_solution.deposition.data['timestamp'],
+                    'timestamp': best_solution.deposition.data['timestamp'] * 1000,
                     'x': best_solution.deposition.data['x']
                 }
-                path_fig.x_range.end = best_solution.deposition.meta.time
+                path_fig.x_range.end = best_solution.deposition.meta.time * 1000
                 path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
                 best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
 
