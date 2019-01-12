@@ -61,7 +61,8 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         x_min=x_min,
         x_max=x_max,
         population_size=250,
-        max_evaluations=25000
+        max_evaluations=25000,
+        v_max=0.1
     )
     optimizer.run(
         material=material,

@@ -1,3 +1,4 @@
+import math
 import random
 from typing import List, Optional, Callable, Tuple
 
@@ -24,9 +25,28 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
     return sim.stack_reclaim(material_deposition)
 
 
+def verify_timestamps(timestamps: List[float], *, number_of_variables: int, max_timestamp: float,
+                      deposition_prefix: Deposition = None):
+    if len(timestamps) != number_of_variables:
+        raise ValueError(f'Length of timestamps {len(timestamps)}'
+                         f' does not match length of variables {number_of_variables}')
+
+    if deposition_prefix and deposition_prefix.data.shape[0] > 0:
+        if timestamps[0] <= deposition_prefix.data['timestamp'].values[-1]:
+            raise ValueError(f'First timestamp {timestamps[0]} must be greater than '
+                             f"last deposition prefix timestamp {deposition_prefix.data['timestamp'].values[-1]}")
+    else:
+        if timestamps[0] != 0.0:
+            raise ValueError(f'First timestamp {timestamps[0]} != 0.0')
+
+    if timestamps[-1] != max_timestamp:
+        raise ValueError(f'Last timestamp {timestamps[-1]} does not match max timestamp {max_timestamp}')
+
+
 def variables_to_deposition_generic(
-        variables: List[float], *, x_min: float, x_max: float, max_timestamp: float,
-        deposition_meta: DepositionMeta, deposition_prefix: Optional[Deposition] = None
+        variables: List[float], *, x_min: float, x_max: float, max_timestamp: float, v_max: float,
+        deposition_meta: DepositionMeta, deposition_prefix: Optional[Deposition] = None,
+        timestamps: Optional[List[float]] = None
 ) -> Deposition:
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
         start_timestamp = deposition_prefix.data['timestamp'].values[-1]
@@ -37,11 +57,29 @@ def variables_to_deposition_generic(
     deposition = Deposition(
         meta=deposition_meta.copy(),
         data=DataFrame({
-            'timestamp': np.linspace(min_timestamp, max_timestamp, len(variables)),
+            'timestamp': timestamps if timestamps else np.linspace(min_timestamp, max_timestamp, len(variables)),
             'x': [elem * (x_max - x_min) + x_min for elem in variables],
             'z': [deposition_meta.bed_size_z / 2] * len(variables),
         })
     )
+
+    # Check and fix speed always below v_max
+    if deposition_prefix and deposition_prefix.data.shape[0] > 0:
+        t_last = deposition_prefix.data['timestamp'].values[-1]
+        x_last = deposition_prefix.data['x'].values[-1]
+    else:
+        t_last = deposition.data['timestamp'].values[0]
+        x_last = deposition.data['x'].values[0]
+    for i in deposition.data.index:
+        t = deposition.data.at[i, 'timestamp']
+        x = deposition.data.at[i, 'x']
+        x_diff_max = v_max * (t - t_last)
+        x_diff = x - x_last
+        if abs(x_diff) > x_diff_max:
+            x = x_last + math.copysign(x_diff_max, x_diff)
+        deposition.data.at[i, 'x'] = x
+        t_last = t
+        x_last = x
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
         deposition.data = deposition_prefix.data.append(deposition.data, ignore_index=True, sort=False)
@@ -52,17 +90,30 @@ def variables_to_deposition_generic(
 
 
 def calculate_reference_objectives_generic(
-        x_min: float, x_max: float, raw_material: Material, number_of_variables: int,
-        deposition_meta: DepositionMeta, deposition_prefix: Optional[Deposition]
+        x_min: float, x_max: float, raw_material: Material, deposition_meta: DepositionMeta, v_max: float
 ) -> List[float]:
-    max_timestamp = raw_material.data['timestamp'].values[-1]
+    t_max = raw_material.data['timestamp'].values[-1]
 
     # Generate a Chevron deposition with maximum speed
-    chevron = [float(i % 2) for i in range(number_of_variables)]
-    chevron_deposition = variables_to_deposition_generic(
-        variables=chevron, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-        deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
-    )
+    x_center = 0.5 * (x_min + x_max)
+    z_center = deposition_meta.bed_size_z / 2
+    data = DataFrame({'timestamp': [0.0], 'x': [x_min], 'z': [z_center], })
+
+    time_per_section = (x_max - x_min) / v_max
+    t = 0.0
+    x = x_min
+    while t < t_max:
+        t_last = t
+        t = min(t + time_per_section, t_max)
+        x_diff = (t - t_last) * v_max
+        x = x_min + x_diff if x < x_center else x_max - x_diff
+        data = data.append(
+            DataFrame({'timestamp': [t], 'x': [x], 'z': [z_center]}),
+            ignore_index=True, sort=False
+        )
+
+    chevron_deposition = Deposition(meta=deposition_meta.copy(), data=data)
+    chevron_deposition.meta.time = chevron_deposition.data['timestamp'].values[-1]
 
     # Stack and reclaim material to acquire reference reclaimed material
     reclaimed_material = process_material_deposition(material=raw_material, deposition=chevron_deposition)
@@ -123,7 +174,8 @@ class MaterialEvaluator:
 
 class HomogenizationProblem(FloatProblem):
     def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
-                 number_of_variables: int = 2, deposition_prefix: Deposition = None):
+                 number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float,
+                 timestamps: Optional[List[float]] = None):
         super().__init__()
 
         # Copy parameters
@@ -132,11 +184,18 @@ class HomogenizationProblem(FloatProblem):
         self.x_max = x_max
         self.material = material
         self.number_of_variables = number_of_variables
+        self.v_max = v_max
+        self.timestamps = timestamps
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
         self.deposition_prefix: Optional[Deposition] = deposition_prefix
         self.solution_pool: Optional[List[List[float]]] = None
+
+        # Check timestamps
+        if timestamps:
+            verify_timestamps(self.timestamps, number_of_variables=self.number_of_variables,
+                              max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix)
 
         # Evaluate reference data
         self.reference = self.calculate_reference_objectives()
@@ -156,6 +215,11 @@ class HomogenizationProblem(FloatProblem):
         reclaimed_material = process_material_deposition(material=self.material, deposition=deposition)
         reclaimed_evaluator = MaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
         solution.objectives = reclaimed_evaluator.get_all_stdev_relative(self.reference)
+
+    def evaluate_constraints(self, solution: FloatSolution) -> None:
+        # if constraint violation should be used set the number of constraints accordingly
+        # don't forget that constraints are disregarded in HPSEA
+        pass
 
     def get_objective_labels(self) -> List[str]:
         return [col + ' Stdev' for col in self.material.get_parameter_columns()] + ['Volume Stdev']
@@ -215,7 +279,7 @@ class HomogenizationProblem(FloatProblem):
             return [pos(i) for i in range(v)]
 
         def solution_from_pool(_: int) -> List[float]:
-            return random.choice(self.solution_pool) if self.solution_pool else []
+            return random.choice(self.solution_pool)
 
         weighted_choices: List[Tuple[Callable[[int], List[float]], int]] = [
             (solution_random, 5),
@@ -225,7 +289,7 @@ class HomogenizationProblem(FloatProblem):
             (solution_random_speed, 5)
         ]
 
-        if self.solution_pool is not None:
+        if self.solution_pool:
             weighted_choices.append((solution_from_pool, 15))
 
         new_solution.variables = random.choices(
@@ -236,16 +300,17 @@ class HomogenizationProblem(FloatProblem):
 
     def variables_to_deposition(self, variables: List[float]) -> Deposition:
         return variables_to_deposition_generic(
-            variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp,
-            deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix
+            variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v_max=self.v_max,
+            deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix,
+            timestamps=self.timestamps
         )
 
     def calculate_reference_objectives(self) -> List[float]:
         return calculate_reference_objectives_generic(
             x_min=self.x_min, x_max=self.x_max,
             raw_material=self.material,
-            number_of_variables=self.number_of_variables,
-            deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix
+            deposition_meta=self.deposition_meta,
+            v_max=self.v_max
         )
 
     def set_solution_pool(self, solution_pool: List[List[float]]) -> None:

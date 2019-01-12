@@ -31,7 +31,8 @@ def main(path: str, material_identifier: str, verbose: bool):
         x_max=x_max,
         population_size=300,
         max_evaluations=25000,
-        offspring_size=30
+        offspring_size=30,
+        v_max=0.1
     )
     optimizer.run(
         material=material,

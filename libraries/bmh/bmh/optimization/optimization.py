@@ -40,7 +40,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         best = min(self.population, key=lambda s: s.objectives[0] * s.objectives[0] + s.objectives[1] * s.objectives[1])
         self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
-            f'first: {best.objectives}'
+            f'best: {best.objectives}'
         )
         self.last_evaluations = evaluations
         self.last_computing_time = computing_time
@@ -256,6 +256,7 @@ class DepositionOptimizer(PlotServerInterface):
             algorithm_str: str = 'hpsea',
             plot_server_str: Optional[str] = 'bokeh',
             auto_start: bool = True,
+            v_max: float,
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -271,6 +272,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.algorithm_str = algorithm_str
         self.plot_server_str = plot_server_str
         self.auto_start = auto_start
+        self.v_max = v_max
         self.kwargs = kwargs
 
         # Cache
@@ -288,7 +290,8 @@ class DepositionOptimizer(PlotServerInterface):
         if self.plot_server:
             self.plot_server.serve_background()
 
-    def run(self, *, material: Material, variables: int, deposition_prefix: Deposition = None) -> None:
+    def run(self, *, material: Material, variables: int, deposition_prefix: Deposition = None,
+            timestamps: Optional[List[float]] = None, solution_pool: Optional[List[List[float]]] = None) -> None:
         self.algorithm_observer.reset()
         self.evaluator_observer.reset()
         if self.plot_server:
@@ -301,7 +304,11 @@ class DepositionOptimizer(PlotServerInterface):
             material=material,
             number_of_variables=variables,
             deposition_prefix=deposition_prefix,
+            v_max=self.v_max,
+            timestamps=timestamps,
         )
+
+        self.problem.set_solution_pool(solution_pool)
 
         self.algorithm = get_algorithm(
             self.algorithm_str, problem=self.problem, variables=variables, population_size=self.population_size,

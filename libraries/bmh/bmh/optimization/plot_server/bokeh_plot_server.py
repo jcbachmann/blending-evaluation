@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from bokeh.application import Application
@@ -19,6 +20,7 @@ class BokehPlotServer(PlotServer):
 
         self.server: Optional[Server] = None
         self.do_reset = False
+        self.logger = logging.getLogger(__name__)
 
     def make_document(self, doc: Document) -> None:
         doc.title = 'Optimization'
@@ -93,33 +95,37 @@ class BokehPlotServer(PlotServer):
 
         all_source.selected.on_change('indices', path_selected_callback)
 
+        # noinspection PyBroadException
         def update() -> None:
-            if self.do_reset:
-                all_source.data = {'f1': [], 'f2': [], 'color': []}
-                pop_source.data = {'f1': [], 'f2': []}
-                best_source.data = {'f1': [], 'f2': []}
-                selected_source.data = {'f1': [], 'f2': []}
-                best_path_source.data = {'timestamp': [], 'x': []}
-                selected_path_source.data = {'timestamp': [], 'x': []}
+            try:
+                if self.do_reset:
+                    all_source.data = {'f1': [], 'f2': [], 'color': []}
+                    pop_source.data = {'f1': [], 'f2': []}
+                    best_source.data = {'f1': [], 'f2': []}
+                    selected_source.data = {'f1': [], 'f2': []}
+                    best_path_source.data = {'timestamp': [], 'x': []}
+                    selected_path_source.data = {'timestamp': [], 'x': []}
 
-                self.do_reset = False
+                    self.do_reset = False
 
-            start = len(all_source.data['f1'])
-            all_data = self.plot_server_interface.get_new_solutions(start)
-            all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
-            all_source.stream(all_data)
+                start = len(all_source.data['f1'])
+                all_data = self.plot_server_interface.get_new_solutions(start)
+                all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
+                all_source.stream(all_data)
 
-            pop_source.data = self.plot_server_interface.get_population()
+                pop_source.data = self.plot_server_interface.get_population()
 
-            best_solution = self.plot_server_interface.get_best_solution()
-            if best_solution:
-                best_path_source.data = {
-                    'timestamp': best_solution.deposition.data['timestamp'] * 1000,
-                    'x': best_solution.deposition.data['x']
-                }
-                path_fig.x_range.end = best_solution.deposition.meta.time * 1000
-                path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
-                best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
+                best_solution = self.plot_server_interface.get_best_solution()
+                if best_solution:
+                    best_path_source.data = {
+                        'timestamp': best_solution.deposition.data['timestamp'] * 1000,
+                        'x': best_solution.deposition.data['x']
+                    }
+                    path_fig.x_range.end = best_solution.deposition.meta.time * 1000
+                    path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
+                    best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
+            except Exception as e:
+                self.logger.error(f'Periodic callback: {e}')
 
         doc.add_periodic_callback(update, 500)
 
