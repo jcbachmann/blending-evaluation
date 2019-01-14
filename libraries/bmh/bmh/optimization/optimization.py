@@ -203,32 +203,14 @@ def get_plot_server(
             logger.error(f'Please install BokehPlotServer requirements')
             raise
 
-    def get_dash_plot_server():
-        try:
-            from .plot_server.dash_plot_server import DashPlotServer
-            return DashPlotServer
-        except ImportError:
-            logger.error(f'Please install DashPlotServer requirements')
-            raise
-
-    def get_mpl_plot_server():
-        try:
-            from .plot_server.mpl_plot_server import MplPlotServer
-            return MplPlotServer
-        except ImportError:
-            logger.error(f'Please install MplPlotServer requirements')
-            raise
-
     def get_none():
         return None
 
     plot_server_dict = {
         'bokeh': get_bokeh_plot_server,
-        'dash': get_dash_plot_server,
-        'mpl': get_mpl_plot_server,
         'none': get_none,
         'None': get_none,
-        'default': get_bokeh_plot_server,
+        'default': get_none,
     }
 
     if plot_server_str:
@@ -255,7 +237,7 @@ class DepositionOptimizer(PlotServerInterface):
             max_evaluations: int = 25000,
             evaluator_str: Optional[str] = 'dask',
             algorithm_str: str = 'hpsea',
-            plot_server_str: Optional[str] = 'bokeh',
+            plot_server_str: Optional[str] = 'none',
             auto_start: bool = True,
             v_max: float,
             **kwargs

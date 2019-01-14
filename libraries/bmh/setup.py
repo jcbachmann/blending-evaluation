@@ -86,10 +86,8 @@ setup(
     ],
     extras_require={
         'BokehPlotServer': ['bokeh'],
-        'DashPlotServer': ['dash', 'dash-html-components', 'dash-core-components', 'plotly'],
         'DaskEvaluator': ['dask'],
         'DistributedEvaluator': ['dask', 'distributed'],
-        'MplPlotServer': ['matplotlib', 'tornado'],
     },
     ext_modules=[
         CMakeExtension(
