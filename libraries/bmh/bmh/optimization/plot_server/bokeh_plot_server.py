@@ -127,7 +127,6 @@ class BokehPlotServer(PlotServer):
             x_axis_type='datetime',
         )
         material_input_fig_volume.line(x='timestamp', y='tonnage', source=material_input_source, color='black')
-        material_input_fig_volume.legend.location = 'top_right'
 
         material_output_fig = figure(
             title='Material Output',
