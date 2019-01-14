@@ -141,15 +141,15 @@ class BokehPlotServer(PlotServer):
         )
         for i, p in enumerate(parameter_labels):
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Best Parameter {p}', source=best_path_material_output_source,
+                x='timestamp', y=p, legend=f'Best {p}', source=best_path_material_output_source,
                 color=palette[2 + i * 3]
             )
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Selected Parameter {p}', source=selected_path_material_output_source,
+                x='timestamp', y=p, legend=f'Selected {p}', source=selected_path_material_output_source,
                 color=palette[3 + i * 3]
             )
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Reference Parameter {p}', source=reference_path_material_output_source,
+                x='timestamp', y=p, legend=f'Reference {p}', source=reference_path_material_output_source,
                 color=palette[4 + i * 3], alpha=0.5
             )
         material_output_fig.legend.location = 'top_right'
