@@ -99,4 +99,4 @@ class MultiSolutionGenerator(SolutionGenerator):
         return random.choices(self.generators, weights=self.weights)[0].gen(v)
 
     def __str__(self):
-        return f'MultiSolutionGenerator{str(self.generators)}'
+        return f'MultiSolutionGenerator({", ".join([str(g) for g in self.generators])})'
