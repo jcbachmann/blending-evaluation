@@ -235,7 +235,7 @@ class DepositionOptimizer(PlotServerInterface):
             x_max: float,
             population_size: int = 250,
             max_evaluations: int = 25000,
-            evaluator_str: Optional[str] = 'dask',
+            evaluator_str: Optional[str] = 'multiprocess',
             algorithm_str: str = 'hpsea',
             plot_server_str: Optional[str] = 'none',
             plot_server_port: int = PlotServer.DEFAULT_PORT,
