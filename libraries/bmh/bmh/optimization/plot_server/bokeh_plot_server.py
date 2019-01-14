@@ -122,7 +122,7 @@ class BokehPlotServer(PlotServer):
             tools='pan,wheel_zoom,reset,hover',
             x_axis_label='Timestamp',
             y_axis_label='tph',
-            x_range=Range1d(0, None),
+            x_range=material_input_fig.x_range,
             y_range=DataRange1d(start=0),
             x_axis_type='datetime',
         )
@@ -264,7 +264,6 @@ class BokehPlotServer(PlotServer):
                     df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
                     data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
                     material_input_fig.x_range.end = material.meta.time * 1000
-                    material_input_fig_volume.x_range.end = material.meta.time * 1000
                     material_input_source.data = data
 
                 progress = self.plot_server_interface.get_progress()
