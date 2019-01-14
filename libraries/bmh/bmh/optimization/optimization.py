@@ -18,7 +18,7 @@ from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
-from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem
+from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem, process_material_deposition
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
@@ -339,11 +339,13 @@ class DepositionOptimizer(PlotServerInterface):
     def get_solution(self, solution_id: int) -> OptimizationResult:
         if self.evaluator_observer and self.problem:
             solution = self.evaluator_observer.get_solution(solution_id)
+            deposition = self.problem.variables_to_deposition(solution.variables)
             return OptimizationResult(
-                self.problem.variables_to_deposition(solution.variables),
-                solution.variables,
-                solution.objectives,
-                self.problem.get_objective_labels()
+                deposition=deposition,
+                variables=solution.variables,
+                objectives=solution.objectives,
+                objective_labels=self.problem.get_objective_labels(),
+                reclaimed_material=process_material_deposition(material=self.problem.material, deposition=deposition)
             )
 
         raise RuntimeError('DepositionOptimizer not initialized')
@@ -354,11 +356,14 @@ class DepositionOptimizer(PlotServerInterface):
                 solution = min(
                     self.algorithm_observer.population, key=lambda r: math.hypot(r.objectives[0], r.objectives[1])
                 )
+                deposition = self.problem.variables_to_deposition(solution.variables)
                 return OptimizationResult(
-                    self.problem.variables_to_deposition(solution.variables),
-                    solution.variables,
-                    solution.objectives,
-                    self.problem.get_objective_labels()
+                    deposition=deposition,
+                    variables=solution.variables,
+                    objectives=solution.objectives,
+                    objective_labels=self.problem.get_objective_labels(),
+                    reclaimed_material=process_material_deposition(material=self.problem.material,
+                                                                   deposition=deposition)
                 )
             else:
                 return None
@@ -366,26 +371,28 @@ class DepositionOptimizer(PlotServerInterface):
         raise RuntimeError('DepositionOptimizer not initialized')
 
     def get_reference(self) -> Optional[OptimizationResult]:
-        deposition, objectives = self.problem.get_reference_relative()
+        deposition, material, objectives = self.problem.get_reference_relative()
         return OptimizationResult(
-            deposition=deposition, variables=[], objectives=objectives,
-            objective_labels=self.problem.get_objective_labels()
+            deposition=deposition,
+            variables=[],
+            objectives=objectives,
+            objective_labels=self.problem.get_objective_labels(),
+            reclaimed_material=material
         )
 
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')
-        objective_labels = self.problem.get_objective_labels()
-        return [OptimizationResult(
-            self.problem.variables_to_deposition(s.variables), s.variables, s.objectives, objective_labels
-        ) for s in self.evaluator_observer.solutions]
+        return self.solutions_to_optimization_results(self.evaluator_observer.solutions)
 
     def get_final_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting final results')
-        result_population = self.algorithm.get_result()
+        return self.solutions_to_optimization_results(self.algorithm.get_result())
+
+    def solutions_to_optimization_results(self, solutions: List[S]) -> List[OptimizationResult]:
         objective_labels = self.problem.get_objective_labels()
         return [OptimizationResult(
             self.problem.variables_to_deposition(s.variables), s.variables, s.objectives, objective_labels
-        ) for s in result_population]
+        ) for s in solutions]
 
     def get_material(self) -> Material:
         return self.problem.material

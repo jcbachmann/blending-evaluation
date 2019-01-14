@@ -204,11 +204,11 @@ class HomogenizationProblem(FloatProblem):
             x_min=self.x_min, x_max=self.x_max, deposition_meta=self.deposition_meta,
             t_max=self.max_timestamp, v_max=self.v_max
         )
-        reference_reclaimed_material = process_material_deposition(self.material, self.reference_deposition)
+        self.reference_reclaimed_material = process_material_deposition(self.material, self.reference_deposition)
         # Biased absolute reference objectives
-        self.reference_objectives = calculate_reference_objectives(reference_reclaimed_material)
+        self.reference_objectives = calculate_reference_objectives(self.reference_reclaimed_material)
         # Objectives of the reference deposition relative to the reference objectives
-        self.reference_deposition_objectives = self.evaluate_reclaimed_material(reference_reclaimed_material)
+        self.reference_deposition_objectives = self.evaluate_reclaimed_material(self.reference_reclaimed_material)
 
         # Setup problem base variables
         self.number_of_objectives = len(material.get_parameter_columns()) + 1
@@ -257,5 +257,5 @@ class HomogenizationProblem(FloatProblem):
             timestamps=self.timestamps
         )
 
-    def get_reference_relative(self) -> Tuple[Deposition, List[float]]:
-        return self.reference_deposition, self.reference_deposition_objectives
+    def get_reference_relative(self) -> Tuple[Deposition, Material, List[float]]:
+        return self.reference_deposition, self.reference_reclaimed_material, self.reference_deposition_objectives

@@ -5,7 +5,7 @@ from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.document import Document
 from bokeh.layouts import gridplot
-from bokeh.models import ColumnDataSource, Range1d
+from bokeh.models import ColumnDataSource, Range1d, DataRange1d
 # noinspection PyUnresolvedReferences
 from bokeh.palettes import Category10, Viridis256
 from bokeh.plotting import figure
@@ -37,8 +37,11 @@ class BokehPlotServer(PlotServer):
 
         parameter_labels = self.plot_server_interface.get_material().get_parameter_columns()
         material_source_data = {p: [] for p in parameter_labels}
-        material_source_data.update({'timestamp': []})
-        material_source = ColumnDataSource(material_source_data)
+        material_source_data.update({'timestamp': [], 'tonnage': []})
+        material_input_source = ColumnDataSource(material_source_data)
+        best_path_material_output_source = ColumnDataSource(material_source_data)
+        selected_path_material_output_source = ColumnDataSource(material_source_data)
+        reference_path_material_output_source = ColumnDataSource(material_source_data)
 
         progress_source = ColumnDataSource({'t_start': [0.0], 't_end': [0.0]})
 
@@ -91,13 +94,13 @@ class BokehPlotServer(PlotServer):
         path_fig.line(x='timestamp', y='x', legend='Best', source=best_path_source, color=palette[2])
         path_fig.line(x='timestamp', y='x', legend='Selected', source=selected_path_source, color=palette[3])
         path_fig.line(x='timestamp', y='x', legend='Reference', source=reference_path_source, color=palette[4],
-                      line_dash='4 4', line_width=1, alpha=0.5)
+                      line_dash='4 4', alpha=0.5)
         path_fig.ray(x='t_start', y=0, color='black', length=0, angle=90, angle_units='deg', alpha=0.5,
                      source=progress_source)
         path_fig.legend.location = 'top_right'
 
-        material_fig = figure(
-            title='Material',
+        material_input_fig = figure(
+            title='Material Input',
             plot_width=750,
             plot_height=400,
             tools='pan,wheel_zoom,reset,hover',
@@ -107,10 +110,80 @@ class BokehPlotServer(PlotServer):
             x_axis_type='datetime',
         )
         for i, p in enumerate(parameter_labels):
-            material_fig.line(x='timestamp', y=p, legend=f'Parameter {p}', source=material_source, color=palette[i])
-        material_fig.legend.location = 'top_right'
+            material_input_fig.line(
+                x='timestamp', y=p, legend=f'Parameter {p}', source=material_input_source, color=palette[i]
+            )
+        material_input_fig.legend.location = 'top_right'
 
-        doc.add_root(gridplot([[scatter_fig], [path_fig], [material_fig]], toolbar_location='left'))
+        material_input_fig_volume = figure(
+            title='Material Input Tonnage',
+            plot_width=750,
+            plot_height=400,
+            tools='pan,wheel_zoom,reset,hover',
+            x_axis_label='Timestamp',
+            y_axis_label='tph',
+            x_range=Range1d(0, None),
+            y_range=DataRange1d(start=0),
+            x_axis_type='datetime',
+        )
+        material_input_fig_volume.line(x='timestamp', y='tonnage', source=material_input_source, color='black')
+        material_input_fig_volume.legend.location = 'top_right'
+
+        material_output_fig = figure(
+            title='Material Output',
+            plot_width=750,
+            plot_height=400,
+            tools='pan,wheel_zoom,reset,hover',
+            x_axis_label='Timestamp',
+            y_axis_label='Parameter',
+            x_axis_type='datetime',
+            x_range=Range1d(0, None),
+            y_range=material_input_fig.y_range,
+        )
+        for i, p in enumerate(parameter_labels):
+            material_output_fig.line(
+                x='timestamp', y=p, legend=f'Best Parameter {p}', source=best_path_material_output_source,
+                color=palette[2 + i * 3]
+            )
+            material_output_fig.line(
+                x='timestamp', y=p, legend=f'Selected Parameter {p}', source=selected_path_material_output_source,
+                color=palette[3 + i * 3]
+            )
+            material_output_fig.line(
+                x='timestamp', y=p, legend=f'Reference Parameter {p}', source=reference_path_material_output_source,
+                color=palette[4 + i * 3], alpha=0.5
+            )
+        material_output_fig.legend.location = 'top_right'
+
+        material_output_fig_volume = figure(
+            title='Material Output Tonnage',
+            plot_width=750,
+            plot_height=400,
+            tools='pan,wheel_zoom,reset,hover',
+            x_axis_label='Timestamp',
+            y_axis_label='tph',
+            x_axis_type='datetime',
+            x_range=material_output_fig.x_range,
+            y_range=material_input_fig_volume.y_range,
+        )
+        material_output_fig_volume.line(
+            x='timestamp', y='tonnage', legend=f'Best', source=best_path_material_output_source,
+            color=palette[2]
+        )
+        material_output_fig_volume.line(
+            x='timestamp', y='tonnage', legend=f'Selected', source=selected_path_material_output_source,
+            color=palette[3]
+        )
+        material_output_fig_volume.line(
+            x='timestamp', y='tonnage', legend=f'Reference', source=reference_path_material_output_source,
+            color=palette[4], alpha=0.5
+        )
+        material_output_fig_volume.legend.location = 'top_right'
+
+        doc.add_root(gridplot([
+            [scatter_fig], [path_fig], [material_input_fig, material_output_fig],
+            [material_input_fig_volume, material_output_fig_volume]
+        ], toolbar_location='left'))
 
         def path_selected_callback(_attr, _old, new):
             if len(new) > 0:
@@ -123,6 +196,13 @@ class BokehPlotServer(PlotServer):
                     'f1': [solution.objectives[0]],
                     'f2': [solution.objectives[1]]
                 }
+
+                df = solution.reclaimed_material.data.copy()
+                df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
+                df = df[df['tonnage'] > 0.0]
+                data = {p: df[p] for p in parameter_labels}
+                data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
+                selected_path_material_output_source.data = data
 
         all_source.selected.on_change('indices', path_selected_callback)
 
@@ -155,6 +235,12 @@ class BokehPlotServer(PlotServer):
                     path_fig.x_range.end = best_solution.deposition.meta.time * 1000
                     path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
                     best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
+                    df = best_solution.reclaimed_material.data.copy()
+                    df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
+                    df = df[df['tonnage'] > 0.0]
+                    data = {p: df[p] for p in parameter_labels}
+                    data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
+                    best_path_material_output_source.data = data
 
                 reference = self.plot_server_interface.get_reference()
                 if reference:
@@ -164,12 +250,23 @@ class BokehPlotServer(PlotServer):
                     }
                     reference_source.data = {'f1': [reference.objectives[0]], 'f2': [reference.objectives[1]]}
 
+                    df = reference.reclaimed_material.data.copy()
+                    df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
+                    df = df[df['tonnage'] > 0.0]
+                    data = {p: df[p] for p in parameter_labels}
+                    data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
+                    reference_path_material_output_source.data = data
+                    material_output_fig.x_range.end = reference.reclaimed_material.meta.time * 1000
+
                 material = self.plot_server_interface.get_material()
                 if material:
                     data = {p: material.data[p] for p in parameter_labels}
-                    data.update({'timestamp': material.data['timestamp'] * 1000})
-                    material_fig.x_range.end = material.meta.time * 1000
-                    material_source.data = data
+                    df = material.data.copy()
+                    df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
+                    data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
+                    material_input_fig.x_range.end = material.meta.time * 1000
+                    material_input_fig_volume.x_range.end = material.meta.time * 1000
+                    material_input_source.data = data
 
                 progress = self.plot_server_interface.get_progress()
                 if progress:
