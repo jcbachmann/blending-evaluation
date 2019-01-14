@@ -51,11 +51,12 @@ class BokehPlotServer(PlotServer):
             title='Solutions',
             plot_width=750,
             plot_height=750,
-            tools='pan,wheel_zoom,reset,tap,zoom_in,zoom_out,box_zoom,undo,redo,save',
             x_axis_label='f1 Homogenization Effect',
             y_axis_label='f2 Volume StDev',
             x_range=Range1d(0, 2),
             y_range=Range1d(0, 2),
+            tools='pan,wheel_zoom,reset,hover,tap',
+            active_scroll='wheel_zoom',
         )
         scatter_fig.scatter(
             x='f1', y='f2', source=all_source, legend='All Evaluations',
