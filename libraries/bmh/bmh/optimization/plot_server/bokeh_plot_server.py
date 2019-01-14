@@ -28,7 +28,7 @@ class BokehPlotServer(PlotServer):
         all_source = ColumnDataSource({'f1': [], 'f2': [], 'color': []})
         pop_source = ColumnDataSource({'f1': [], 'f2': []})
         best_source = ColumnDataSource({'f1': [], 'f2': []})
-        selected_source = ColumnDataSource({'f1': [], 'f2': []})
+        selected_source = ColumnDataSource({'f1': [-1.0], 'f2': [-1.0]})
         reference_source = ColumnDataSource({'f1': [], 'f2': []})
 
         best_path_source = ColumnDataSource({'timestamp': [], 'x': []})
