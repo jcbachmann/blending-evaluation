@@ -214,8 +214,17 @@ class BokehPlotServer(PlotServer):
                     pop_source.data = {'f1': [], 'f2': []}
                     best_source.data = {'f1': [], 'f2': []}
                     selected_source.data = {'f1': [-1.0], 'f2': [-1.0]}
+                    reference_source.data = {'f1': [], 'f2': []}
                     best_path_source.data = {'timestamp': [], 'x': []}
                     selected_path_source.data = {'timestamp': [], 'x': []}
+
+                    reference_path_source.data = {'timestamp': [], 'x': []}
+                    material_input_source.data = material_source_data
+                    best_path_material_output_source.data = material_source_data
+                    selected_path_material_output_source.data = material_source_data
+                    reference_path_material_output_source.data = material_source_data
+
+                    progress_source.data = {'t_start': [0.0], 't_end': [0.0]}
 
                     self.do_reset = False
 
