@@ -53,10 +53,10 @@ class BokehPlotServer(PlotServer):
             plot_height=750,
             x_axis_label='f1 Homogenization Effect',
             y_axis_label='f2 Volume StDev',
-            x_range=Range1d(0, 2),
-            y_range=Range1d(0, 2),
             tools='pan,wheel_zoom,reset,hover,tap',
             active_scroll='wheel_zoom',
+            x_range=Range1d(0.0, 2.0),
+            y_range=Range1d(0.0, 2.0),
         )
         scatter_fig.scatter(
             x='f1', y='f2', source=all_source, legend='All Evaluations',
