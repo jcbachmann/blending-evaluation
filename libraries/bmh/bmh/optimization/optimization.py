@@ -191,7 +191,7 @@ def get_algorithm(
 
 
 def get_plot_server(
-        plot_server_str: Optional[str], *, plot_server_interface: PlotServerInterface
+        plot_server_str: Optional[str], *, plot_server_interface: PlotServerInterface, port: int
 ) -> Optional[PlotServer]:
     logger = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ def get_plot_server(
             plot_server_type = plot_server_dict[plot_server_str]()
             if plot_server_type:
                 logger.debug(f'Creating plot server {plot_server_type.__name__}')
-                return plot_server_type(plot_server_interface=plot_server_interface)
+                return plot_server_type(plot_server_interface=plot_server_interface, port=port)
         else:
             raise ValueError(
                 f'Invalid plot server {plot_server_str} (please choose one of these: {plot_server_dict.keys()})')
@@ -238,6 +238,7 @@ class DepositionOptimizer(PlotServerInterface):
             evaluator_str: Optional[str] = 'dask',
             algorithm_str: str = 'hpsea',
             plot_server_str: Optional[str] = 'none',
+            plot_server_port: int = PlotServer.DEFAULT_PORT,
             auto_start: bool = True,
             v_max: float,
             **kwargs
@@ -267,7 +268,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.evaluator = get_evaluator(
             self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
         )
-        self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self)
+        self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self, port=plot_server_port)
         self.deposition_prefix: Deposition = None
 
     def start(self):

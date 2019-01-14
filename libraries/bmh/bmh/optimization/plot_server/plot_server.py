@@ -46,7 +46,9 @@ class PlotServerInterface(ABC):
 
 
 class PlotServer(ABC):
-    def __init__(self, plot_server_interface: PlotServerInterface, port: int = 5001) -> None:
+    DEFAULT_PORT = 5001
+
+    def __init__(self, plot_server_interface: PlotServerInterface, port: int) -> None:
         self.plot_server_interface = plot_server_interface
         self.port = port
         self.logger = logging.getLogger(__name__)

@@ -15,8 +15,8 @@ from .plot_server import PlotServer, PlotServerInterface
 
 
 class BokehPlotServer(PlotServer):
-    def __init__(self, plot_server_interface: PlotServerInterface):
-        super().__init__(plot_server_interface)
+    def __init__(self, plot_server_interface: PlotServerInterface, port: int = PlotServer.DEFAULT_PORT):
+        super().__init__(plot_server_interface, port)
 
         self.server: Optional[Server] = None
         self.do_reset = False
