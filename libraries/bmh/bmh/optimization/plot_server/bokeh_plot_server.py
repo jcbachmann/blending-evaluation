@@ -29,9 +29,18 @@ class BokehPlotServer(PlotServer):
         pop_source = ColumnDataSource({'f1': [], 'f2': []})
         best_source = ColumnDataSource({'f1': [], 'f2': []})
         selected_source = ColumnDataSource({'f1': [], 'f2': []})
+        reference_source = ColumnDataSource({'f1': [], 'f2': []})
 
         best_path_source = ColumnDataSource({'timestamp': [], 'x': []})
         selected_path_source = ColumnDataSource({'timestamp': [], 'x': []})
+        reference_path_source = ColumnDataSource({'timestamp': [], 'x': []})
+
+        parameter_labels = self.plot_server_interface.get_material().get_parameter_columns()
+        material_source_data = {p: [] for p in parameter_labels}
+        material_source_data.update({'timestamp': []})
+        material_source = ColumnDataSource(material_source_data)
+
+        progress_source = ColumnDataSource({'t_start': [0.0], 't_end': [0.0]})
 
         palette = Category10[10]
 
@@ -62,6 +71,10 @@ class BokehPlotServer(PlotServer):
             x='f1', y='f2', source=selected_source, legend='Selected',
             marker='o', size=11, line_color=palette[3], fill_alpha=0.5,
         )
+        scatter_fig.scatter(
+            x='f1', y='f2', source=reference_source, legend='Reference',
+            marker='*', size=11, line_color=palette[4], fill_alpha=0.5,
+        )
         scatter_fig.legend.location = 'top_right'
 
         path_fig = figure(
@@ -75,11 +88,29 @@ class BokehPlotServer(PlotServer):
             y_range=Range1d(0, None),
             x_axis_type='datetime',
         )
-        path_fig.line(x='timestamp', y='x', legend='Best Deposition', source=best_path_source, color=palette[2])
-        path_fig.line(x='timestamp', y='x', legend='Selected Deposition', source=selected_path_source, color=palette[3])
+        path_fig.line(x='timestamp', y='x', legend='Best', source=best_path_source, color=palette[2])
+        path_fig.line(x='timestamp', y='x', legend='Selected', source=selected_path_source, color=palette[3])
+        path_fig.line(x='timestamp', y='x', legend='Reference', source=reference_path_source, color=palette[4],
+                      line_dash='4 4', line_width=1, alpha=0.5)
+        path_fig.ray(x='t_start', y=0, color='black', length=0, angle=90, angle_units='deg', alpha=0.5,
+                     source=progress_source)
         path_fig.legend.location = 'top_right'
 
-        doc.add_root(gridplot([[scatter_fig], [path_fig]], toolbar_location='left'))
+        material_fig = figure(
+            title='Material',
+            plot_width=750,
+            plot_height=400,
+            tools='pan,wheel_zoom,reset,hover',
+            x_axis_label='Timestamp',
+            y_axis_label='Parameter',
+            x_range=Range1d(0, None),
+            x_axis_type='datetime',
+        )
+        for i, p in enumerate(parameter_labels):
+            material_fig.line(x='timestamp', y=p, legend=f'Parameter {p}', source=material_source, color=palette[i])
+        material_fig.legend.location = 'top_right'
+
+        doc.add_root(gridplot([[scatter_fig], [path_fig], [material_fig]], toolbar_location='left'))
 
         def path_selected_callback(_attr, _old, new):
             if len(new) > 0:
@@ -124,6 +155,27 @@ class BokehPlotServer(PlotServer):
                     path_fig.x_range.end = best_solution.deposition.meta.time * 1000
                     path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
                     best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
+
+                reference = self.plot_server_interface.get_reference()
+                if reference:
+                    reference_path_source.data = {
+                        'timestamp': reference.deposition.data['timestamp'] * 1000,
+                        'x': reference.deposition.data['x']
+                    }
+                    reference_source.data = {'f1': [reference.objectives[0]], 'f2': [reference.objectives[1]]}
+
+                material = self.plot_server_interface.get_material()
+                if material:
+                    data = {p: material.data[p] for p in parameter_labels}
+                    data.update({'timestamp': material.data['timestamp'] * 1000})
+                    material_fig.x_range.end = material.meta.time * 1000
+                    material_source.data = data
+
+                progress = self.plot_server_interface.get_progress()
+                if progress:
+                    progress_source.data = {
+                        't_start': [progress['t_start'] * 1000],
+                    }
             except Exception as e:
                 self.logger.error(f'Periodic callback: {e}')
 

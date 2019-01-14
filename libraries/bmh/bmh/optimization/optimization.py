@@ -285,6 +285,7 @@ class DepositionOptimizer(PlotServerInterface):
             self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
         )
         self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self)
+        self.deposition_prefix: Deposition = None
 
     def start(self):
         if self.plot_server:
@@ -296,6 +297,8 @@ class DepositionOptimizer(PlotServerInterface):
         self.evaluator_observer.reset()
         if self.plot_server:
             self.plot_server.reset()
+
+        self.deposition_prefix = deposition_prefix
 
         self.problem = HomogenizationProblem(
             deposition_meta=self.deposition_meta,
@@ -376,6 +379,13 @@ class DepositionOptimizer(PlotServerInterface):
 
         raise RuntimeError('DepositionOptimizer not initialized')
 
+    def get_reference(self) -> Optional[OptimizationResult]:
+        deposition, objectives = self.problem.get_reference_relative()
+        return OptimizationResult(
+            deposition=deposition, variables=[], objectives=objectives,
+            objective_labels=self.problem.get_objective_labels()
+        )
+
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')
         objective_labels = self.problem.get_objective_labels()
@@ -390,3 +400,12 @@ class DepositionOptimizer(PlotServerInterface):
         return [OptimizationResult(
             self.problem.variables_to_deposition(s.variables), s.variables, s.objectives, objective_labels
         ) for s in result_population]
+
+    def get_material(self) -> Material:
+        return self.problem.material
+
+    def get_progress(self) -> Dict[str, float]:
+        if self.deposition_prefix:
+            return {
+                't_start': self.deposition_prefix.meta.time
+            }

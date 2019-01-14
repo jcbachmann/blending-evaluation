@@ -89,19 +89,17 @@ def variables_to_deposition_generic(
     return deposition
 
 
-def calculate_reference_objectives_generic(
-        x_min: float, x_max: float, raw_material: Material, deposition_meta: DepositionMeta, v_max: float
-) -> List[float]:
-    t_max = raw_material.data['timestamp'].values[-1]
-
+def get_full_speed_deposition(
+        x_min: float, x_max: float, deposition_meta: DepositionMeta, t_max: float, v_max: float
+) -> Deposition:
     # Generate a Chevron deposition with maximum speed
     x_center = 0.5 * (x_min + x_max)
     z_center = deposition_meta.bed_size_z / 2
-    data = DataFrame({'timestamp': [0.0], 'x': [x_min], 'z': [z_center], })
-
     time_per_section = (x_max - x_min) / v_max
+
     t = 0.0
     x = x_min
+    data = DataFrame({'timestamp': [0.0], 'x': [x_min], 'z': [z_center], })
     while t < t_max:
         t_last = t
         t = min(t + time_per_section, t_max)
@@ -112,19 +110,18 @@ def calculate_reference_objectives_generic(
             ignore_index=True, sort=False
         )
 
-    chevron_deposition = Deposition(meta=deposition_meta.copy(), data=data)
-    chevron_deposition.meta.time = chevron_deposition.data['timestamp'].values[-1]
+    deposition = Deposition(meta=deposition_meta.copy(), data=data)
+    deposition.meta.time = deposition.data['timestamp'].values[-1]
+    return deposition
 
-    # Stack and reclaim material to acquire reference reclaimed material
-    reclaimed_material = process_material_deposition(material=raw_material, deposition=chevron_deposition)
 
-    # Set the parameter reference values to full speed Chevron stacked and reclaimed material data
+def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
     reclaimed_evaluator = MaterialEvaluator(reclaimed_material)
     chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
 
     # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
     volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
-    worst_acceptable_volume_stdev = stdev(np.array([4.0 / 3.0 * volume_per_slice, 2.0 / 3.0 * volume_per_slice]))
+    worst_acceptable_volume_stdev = stdev(np.array([3.5 / 3.0 * volume_per_slice, 2.5 / 3.0 * volume_per_slice]))
 
     return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
 
@@ -165,8 +162,9 @@ class MaterialEvaluator:
     def get_all_stdev(self) -> List[float]:
         return self.get_parameter_stdev() + [self.get_core_volume_stdev()]
 
-    def get_all_stdev_relative(self, reference: List[float]) -> List[float]:
-        return [s / r for s, r in zip(self.get_all_stdev(), reference)]
+    @staticmethod
+    def get_relative(objectives: List[float], reference: List[float]) -> List[float]:
+        return [s / r for s, r in zip(objectives, reference)]
 
     def get_slice_count(self) -> int:
         return self.reclaimed.data['volume'].shape[0]
@@ -184,21 +182,31 @@ class HomogenizationProblem(FloatProblem):
         self.x_max = x_max
         self.material = material
         self.number_of_variables = number_of_variables
+        self.deposition_prefix: Optional[Deposition] = deposition_prefix
         self.v_max = v_max
         self.timestamps = timestamps
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
-        self.deposition_prefix: Optional[Deposition] = deposition_prefix
         self.solution_pool: Optional[List[List[float]]] = None
 
         # Check timestamps
         if timestamps:
-            verify_timestamps(self.timestamps, number_of_variables=self.number_of_variables,
-                              max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix)
+            verify_timestamps(
+                self.timestamps, number_of_variables=self.number_of_variables,
+                max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix
+            )
 
-        # Evaluate reference data
-        self.reference = self.calculate_reference_objectives()
+        # Reference deposition (full speed Chevron deposition)
+        self.reference_deposition = get_full_speed_deposition(
+            x_min=self.x_min, x_max=self.x_max, deposition_meta=self.deposition_meta,
+            t_max=self.max_timestamp, v_max=self.v_max
+        )
+        reference_reclaimed_material = process_material_deposition(self.material, self.reference_deposition)
+        # Biased absolute reference objectives
+        self.reference_objectives = calculate_reference_objectives(reference_reclaimed_material)
+        # Objectives of the reference deposition relative to the reference objectives
+        self.reference_deposition_objectives = self.evaluate_reclaimed_material(reference_reclaimed_material)
 
         # Setup problem base variables
         self.number_of_objectives = len(material.get_parameter_columns()) + 1
@@ -213,8 +221,13 @@ class HomogenizationProblem(FloatProblem):
     def evaluate(self, solution: FloatSolution) -> None:
         deposition = self.variables_to_deposition(variables=solution.variables)
         reclaimed_material = process_material_deposition(material=self.material, deposition=deposition)
-        reclaimed_evaluator = MaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
-        solution.objectives = reclaimed_evaluator.get_all_stdev_relative(self.reference)
+        solution.objectives = self.evaluate_reclaimed_material(reclaimed_material)
+
+    def evaluate_reclaimed_material(self, reclaimed_material: Material) -> List[float]:
+        return MaterialEvaluator.get_relative(
+            MaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max).get_all_stdev(),
+            self.reference_objectives
+        )
 
     def evaluate_constraints(self, solution: FloatSolution) -> None:
         # if constraint violation should be used set the number of constraints accordingly
@@ -305,13 +318,8 @@ class HomogenizationProblem(FloatProblem):
             timestamps=self.timestamps
         )
 
-    def calculate_reference_objectives(self) -> List[float]:
-        return calculate_reference_objectives_generic(
-            x_min=self.x_min, x_max=self.x_max,
-            raw_material=self.material,
-            deposition_meta=self.deposition_meta,
-            v_max=self.v_max
-        )
-
     def set_solution_pool(self, solution_pool: List[List[float]]) -> None:
         self.solution_pool = solution_pool
+
+    def get_reference_relative(self) -> Tuple[Deposition, List[float]]:
+        return self.reference_deposition, self.reference_deposition_objectives
