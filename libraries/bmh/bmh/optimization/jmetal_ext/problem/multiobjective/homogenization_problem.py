@@ -1,6 +1,5 @@
 import math
-import random
-from typing import List, Optional, Callable, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
@@ -10,6 +9,8 @@ from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 from pandas import DataFrame
+
+from .solution_generator import SolutionGenerator, RandomSolutionGenerator
 
 
 def process_material_deposition(material: Material, deposition: Deposition, ppm3: float = 0.125) -> Material:
@@ -173,7 +174,8 @@ class MaterialEvaluator:
 class HomogenizationProblem(FloatProblem):
     def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
                  number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float,
-                 timestamps: Optional[List[float]] = None):
+                 timestamps: Optional[List[float]] = None,
+                 solution_generator: SolutionGenerator = RandomSolutionGenerator()):
         super().__init__()
 
         # Copy parameters
@@ -185,10 +187,10 @@ class HomogenizationProblem(FloatProblem):
         self.deposition_prefix: Optional[Deposition] = deposition_prefix
         self.v_max = v_max
         self.timestamps = timestamps
+        self.solution_generator = solution_generator
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
-        self.solution_pool: Optional[List[List[float]]] = None
 
         # Check timestamps
         if timestamps:
@@ -245,70 +247,7 @@ class HomogenizationProblem(FloatProblem):
             self.lower_bound,
             self.upper_bound
         )
-
-        def solution_random(v: int) -> List[float]:
-            return [random.uniform(self.lower_bound[i] * 1.0, self.upper_bound[i] * 1.0) for i in range(v)]
-
-        def solution_full_speed(v: int) -> List[float]:
-            starting_side = random.choice([0, 1])
-            return [(i + starting_side) % 2 for i in range(v)]
-
-        def solution_random_end(v: int) -> List[float]:
-            return [random.choice([0, 1]) for _ in range(v)]
-
-        def solution_fixed_random_speed(v: int) -> List[float]:
-            starting_side = random.choice([0, 1])
-            speed = random.randint(1, 10)
-
-            def pos(i):
-                nonlocal speed
-
-                p = (i % speed) / speed
-                return p if (int(i / speed) + starting_side) % 2 == 0 else 1 - p
-
-            return [pos(i) for i in range(v)]
-
-        def solution_random_speed(v: int) -> List[float]:
-            offset = 0
-            speed = random.randint(1, 10)
-            start_dir = random.choice([False, True])
-
-            def pos(i):
-                nonlocal offset
-                nonlocal speed
-                nonlocal start_dir
-
-                i_rel = i - offset
-
-                if i_rel > 0 and i_rel % speed == 0:
-                    offset = i
-                    speed = random.randint(1, 10)
-                    start_dir = not start_dir
-                    i_rel = 0
-
-                p = (i_rel % speed) / speed
-                return p if start_dir else 1 - p
-
-            return [pos(i) for i in range(v)]
-
-        def solution_from_pool(_: int) -> List[float]:
-            return random.choice(self.solution_pool)
-
-        weighted_choices: List[Tuple[Callable[[int], List[float]], int]] = [
-            (solution_random, 5),
-            (solution_full_speed, 2),
-            (solution_random_end, 5),
-            (solution_fixed_random_speed, 5),
-            (solution_random_speed, 5)
-        ]
-
-        if self.solution_pool:
-            weighted_choices.append((solution_from_pool, 15))
-
-        new_solution.variables = random.choices(
-            [c[0] for c in weighted_choices], weights=[c[1] for c in weighted_choices]
-        )[0](self.number_of_variables)
-
+        new_solution.variables = self.solution_generator.gen(self.number_of_variables)
         return new_solution
 
     def variables_to_deposition(self, variables: List[float]) -> Deposition:
@@ -317,9 +256,6 @@ class HomogenizationProblem(FloatProblem):
             deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix,
             timestamps=self.timestamps
         )
-
-    def set_solution_pool(self, solution_pool: List[List[float]]) -> None:
-        self.solution_pool = solution_pool
 
     def get_reference_relative(self) -> Tuple[Deposition, List[float]]:
         return self.reference_deposition, self.reference_deposition_objectives

@@ -2,6 +2,7 @@ import logging
 import math
 from typing import List, Optional, Dict, Any
 
+from bmh.optimization.jmetal_ext.problem.multiobjective.solution_generator import RandomSolutionGenerator
 from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S, Evaluator
@@ -291,8 +292,11 @@ class DepositionOptimizer(PlotServerInterface):
         if self.plot_server:
             self.plot_server.serve_background()
 
-    def run(self, *, material: Material, variables: int, deposition_prefix: Deposition = None,
-            timestamps: Optional[List[float]] = None, solution_pool: Optional[List[List[float]]] = None) -> None:
+    def run(
+            self, *, material: Material, variables: int, deposition_prefix: Deposition = None,
+            timestamps: Optional[List[float]] = None,
+            solution_generator=RandomSolutionGenerator()
+    ) -> None:
         self.algorithm_observer.reset()
         self.evaluator_observer.reset()
         if self.plot_server:
@@ -309,9 +313,8 @@ class DepositionOptimizer(PlotServerInterface):
             deposition_prefix=deposition_prefix,
             v_max=self.v_max,
             timestamps=timestamps,
+            solution_generator=solution_generator,
         )
-
-        self.problem.set_solution_pool(solution_pool)
 
         self.algorithm = get_algorithm(
             self.algorithm_str, problem=self.problem, variables=variables, population_size=self.population_size,
