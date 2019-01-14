@@ -213,7 +213,7 @@ class BokehPlotServer(PlotServer):
                     all_source.data = {'f1': [], 'f2': [], 'color': []}
                     pop_source.data = {'f1': [], 'f2': []}
                     best_source.data = {'f1': [], 'f2': []}
-                    selected_source.data = {'f1': [], 'f2': []}
+                    selected_source.data = {'f1': [-1.0], 'f2': [-1.0]}
                     best_path_source.data = {'timestamp': [], 'x': []}
                     selected_path_source.data = {'timestamp': [], 'x': []}
 
