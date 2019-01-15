@@ -35,7 +35,7 @@ class BokehPlotServer(PlotServer):
         selected_path_source = ColumnDataSource({'timestamp': [], 'x': []})
         reference_path_source = ColumnDataSource({'timestamp': [], 'x': []})
 
-        parameter_labels = self.plot_server_interface.get_material().get_parameter_columns()
+        parameter_labels = self.plot_server_interface.get_parameter_labels()
         material_source_data = {p: [] for p in parameter_labels}
         material_source_data.update({'timestamp': [], 'tonnage': []})
         material_input_source = ColumnDataSource(material_source_data)

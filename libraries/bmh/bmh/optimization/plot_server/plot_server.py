@@ -44,6 +44,10 @@ class PlotServerInterface(ABC):
     def get_progress(self) -> Dict[str, float]:
         pass
 
+    @abstractmethod
+    def get_parameter_labels(self) -> List[str]:
+        pass
+
 
 class PlotServer(ABC):
     DEFAULT_PORT = 5001

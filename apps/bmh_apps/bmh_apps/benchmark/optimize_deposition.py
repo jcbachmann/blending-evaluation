@@ -32,7 +32,8 @@ def main(path: str, material_identifier: str, verbose: bool):
         population_size=300,
         max_evaluations=25000,
         offspring_size=30,
-        v_max=0.1
+        v_max=0.1,
+        parameter_labels=material.get_parameter_columns(),
     )
     optimizer.run(
         material=material,

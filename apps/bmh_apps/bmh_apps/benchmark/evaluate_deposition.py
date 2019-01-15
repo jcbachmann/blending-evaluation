@@ -62,7 +62,8 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         x_max=x_max,
         population_size=250,
         max_evaluations=25000,
-        v_max=0.1
+        v_max=0.1,
+        parameter_labels=material.get_parameter_columns(),
     )
     optimizer.run(
         material=material,

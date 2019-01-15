@@ -241,6 +241,7 @@ class DepositionOptimizer(PlotServerInterface):
             plot_server_port: int = PlotServer.DEFAULT_PORT,
             auto_start: bool = True,
             v_max: float,
+            parameter_labels: List[str],
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -257,6 +258,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.plot_server_str = plot_server_str
         self.auto_start = auto_start
         self.v_max = v_max
+        self.parameter_labels = parameter_labels
         self.kwargs = kwargs
 
         # Cache
@@ -395,10 +397,16 @@ class DepositionOptimizer(PlotServerInterface):
         ) for s in solutions]
 
     def get_material(self) -> Material:
-        return self.problem.material
+        if self.problem:
+            return self.problem.material
+
+        raise RuntimeError('DepositionOptimizer not initialized')
 
     def get_progress(self) -> Dict[str, float]:
         if self.deposition_prefix:
             return {
                 't_start': self.deposition_prefix.meta.time
             }
+
+    def get_parameter_labels(self) -> List[str]:
+        return self.parameter_labels
