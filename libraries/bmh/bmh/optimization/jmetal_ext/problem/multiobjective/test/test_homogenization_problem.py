@@ -17,6 +17,7 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         bed_size_z = 50.0
         z = 0.5 * bed_size_z
         max_timestamp = 10.0
+        v_max = (x_max - x_min) / max_timestamp
         deposition_meta = DepositionMeta.create_empty(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
@@ -26,7 +27,8 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
 
         deposition = variables_to_deposition_generic(
             variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
+            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix,
+            v_max=v_max
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
@@ -49,6 +51,7 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         bed_size_z = 50.0
         z = 0.5 * bed_size_z
         max_timestamp = 10.0
+        v_max = (x_max - x_min) / max_timestamp
         deposition_meta = DepositionMeta.create_empty(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
@@ -58,7 +61,8 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
 
         deposition = variables_to_deposition_generic(
             variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
+            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix,
+            v_max=v_max
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
@@ -81,6 +85,7 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         bed_size_z = 50.0
         z = 0.5 * bed_size_z
         max_timestamp = 10.0
+        v_max = 3.0 * (x_max - x_min) / max_timestamp
         deposition_meta = DepositionMeta.create_empty(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
@@ -95,7 +100,8 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
 
         deposition = variables_to_deposition_generic(
             variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix
+            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix,
+            v_max=v_max
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
