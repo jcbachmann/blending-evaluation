@@ -3,42 +3,58 @@ import pandas as pd
 from bmh.benchmark.material_deposition import Material
 
 
-def resample(material: Material, rule: str):
-    df = material.data.copy()
-    df = df.append(pd.DataFrame([[0 for _ in df.columns]], columns=df.columns))
-    df = df.sort_values(by=['timestamp'])
-    df['t_diff'] = df['timestamp'] - df['timestamp'].shift(+1)
-    df.fillna(method='backfill', inplace=True)
-    df['tph'] = df['volume'] / df['t_diff']
+def get_resampled_max_timestamp(df: pd.DataFrame, rule: str) -> float:
     df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
     df.set_index('timestamp', inplace=True)
-    resampler = df.resample(rule, closed='right', label='right')
 
-    def parameter_average(s: pd.Series):
-        weights = df['volume'][s.index]
-        if weights.sum() > 0.0:
-            return np.average(s, weights=weights)
-        else:
-            return float('nan')
+    df = df.resample(rule, closed='right', label='right').sum()
+    df.reset_index(inplace=True)
+    return df['timestamp'].values[-1].astype(int) / 10 ** 9
 
-    def tph_average(s: pd.Series):
-        weights = df['t_diff'][s.index]
-        if weights.sum() > 0.0:
-            return np.average(s, weights=weights)
-        else:
-            return float('nan')
 
-    func_dict = {
-        'volume': np.sum,
-        'tph': tph_average
-    }
-    func_dict.update({
-        p: parameter_average for p in material.get_parameter_columns()
-    })
-    df = resampler.apply(func_dict).fillna(method='backfill')
+def resample(material: Material, rule: str):
+    # Create new material
+    df = material.data.copy()
+
+    # Preparation
+    pad = {col: [0.0] for col in df.columns}
+    df = df.append(pd.DataFrame(pad)).sort_values(by=['timestamp'])
+
+    max_timestamp = df['timestamp'].values[-1]
+    resampled_max_timestamp = get_resampled_max_timestamp(df.copy(), rule)
+
+    if max_timestamp < resampled_max_timestamp:
+        pad['timestamp'][0] = resampled_max_timestamp
+        df = df.append(pd.DataFrame(pad))
+
+    df['vpt'] = df['volume'] / (df['timestamp'] - df['timestamp'].shift(+1))
+    df.drop(['volume'], axis=1, inplace=True)
+
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='s')
+    df.set_index('timestamp', inplace=True)
+
+    # Actual resampling
+
+    # Upsampling to 1s
+    # - slow but does the job for the moment
+    # - does not support data with higher resolution than 1s
+    df = df.resample('1s', closed='right', label='right').apply(np.average).fillna(method='backfill')
+
+    if rule != '1s':
+        # Downsampling to final resolution
+        def parameter_average(s: pd.Series):
+            weights = df['vpt'][s.index]
+            return np.average(s, weights=weights) if weights.sum() > 0.0 else float('nan')
+
+        funcs = {p: parameter_average for p in material.get_parameter_columns()}
+        funcs.update({'vpt': np.average})
+        df = df.resample(rule, closed='right', label='right').apply(funcs)
+
+    # Cleanup
     df.reset_index(inplace=True)
     df['timestamp'] = (df['timestamp'].astype(int) // 10 ** 9)
-    df['volume'] = df['tph'] * (df['timestamp'] - df['timestamp'].shift(+1))
+    df['volume'] = df['vpt'] * (df['timestamp'] - df['timestamp'].shift(+1))
     df.drop(0, axis=0, inplace=True)
-    df.drop(['tph'], axis=1, inplace=True)
+    df.drop(['vpt'], axis=1, inplace=True)
+
     return Material.from_data(df, identifier=f'{material.meta.identifier} resampled {rule}')
