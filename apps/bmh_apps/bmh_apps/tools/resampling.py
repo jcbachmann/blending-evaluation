@@ -57,4 +57,8 @@ def resample(material: Material, rule: str):
     df.drop(0, axis=0, inplace=True)
     df.drop(['vpt'], axis=1, inplace=True)
 
-    return Material.from_data(df, identifier=f'{material.meta.identifier} resampled {rule}')
+    return Material.from_data(
+        df,
+        identifier=f'{material.meta.identifier} resampled {rule}',
+        category=material.meta.category
+    )

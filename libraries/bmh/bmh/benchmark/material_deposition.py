@@ -71,11 +71,11 @@ class Material:
         return self.data['volume'].sum()
 
     @classmethod
-    def from_data(cls, data: DataFrame, *, identifier=str(uuid.uuid4())):
+    def from_data(cls, data: DataFrame, *, identifier=str(uuid.uuid4()), category='from data'):
         meta = MaterialMeta(identifier, path='', meta_dict={
             'label': f'Material {identifier}',
             'description': f'Created from data with length ({data.shape[0]})',
-            'category': 'reclaimed',
+            'category': category,
             'time': data['timestamp'].max(),
             'volume': data['volume'].sum(),
             'data': None
