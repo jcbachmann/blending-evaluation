@@ -3,7 +3,8 @@ import logging
 import os
 from typing import Dict, List
 
-from .material_deposition import MaterialMeta, DepositionMeta
+from .core import DATA_CSV
+from .material_deposition import MaterialMeta, DepositionMeta, write_data_file
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta, SIMULATOR_TYPE
 
@@ -113,3 +114,17 @@ class BenchmarkData:
             entries[entry] = instance_type(entry, os.path.abspath(entry_path), meta)
 
         return entries
+
+    def write_material(self, material_meta: MaterialMeta, path: str):
+        self.logger.debug(f'Creating directory "{path}"')
+        os.mkdir(path)
+
+        material_meta_file = os.path.join(path, BenchmarkData.META_JSON)
+        self.logger.debug(f'Writing material meta to "{material_meta_file}"')
+        json.dump(
+            material_meta.to_dict(),
+            open(material_meta_file, 'w'),
+            indent=4
+        )
+
+        write_data_file(material_meta.get_material().data, os.path.join(path, DATA_CSV))

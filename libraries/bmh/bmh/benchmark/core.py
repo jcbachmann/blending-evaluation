@@ -3,7 +3,7 @@ import logging
 import os
 
 from .data import BenchmarkData
-from .material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition
+from .material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition, write_data_file
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
 from ..helpers import math
@@ -156,9 +156,10 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
             indent=4
         )
 
-    data_file = os.path.join(reclaimed_material_path, DATA_CSV)
-    logger.debug(f'Writing material data to "{data_file}"')
     if not dry_run:
-        reclaimed_material.data.to_csv(data_file, sep='\t', index=False)
+        write_data_file(
+            data=reclaimed_material.data,
+            data_file=os.path.join(reclaimed_material_path, DATA_CSV)
+        )
 
     compute_sigma_reduction(material_meta, reclaimed_material_meta)

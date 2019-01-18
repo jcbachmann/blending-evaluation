@@ -27,6 +27,18 @@ def read_data_file(data_file: str) -> DataFrame:
     return data
 
 
+def write_data_file(data: DataFrame, data_file: str):
+    """
+    Write data file provided in the arguments to tab separated file
+    :param data: pandas DataFrame containing data which is written to data_file
+    :param data_file: file which is written from pandas DataFrame
+    """
+    logger = logging.getLogger(__name__)
+    logger.debug(f'Writing data file "{data_file}"')
+
+    data.to_csv(data_file, sep='\t', index=False)
+
+
 def check_required_columns(data: DataFrame, required_columns: List[str]) -> None:
     """
     Data is check whether all required columns are provided. A ValueError is raised if the data does not contain all
