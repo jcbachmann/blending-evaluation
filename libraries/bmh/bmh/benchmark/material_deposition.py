@@ -123,7 +123,7 @@ class MaterialMeta:
     def get_material(self) -> Material:
         """
         Load data file on first call and buffer data to avoid unnecessary loading of data files
-        :return: Deposition object containing data for this deposition
+        :return: Material object containing data for this material
         """
         if self.data is None:
             material_data = read_data_file(os.path.join(self.path, self.data_file))
