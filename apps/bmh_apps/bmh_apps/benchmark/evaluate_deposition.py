@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import json
 import logging
 import math
 import os
@@ -118,31 +117,6 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     return deposition_meta
 
 
-def write_deposition(identifier: str, deposition_meta: DepositionMeta, dst: str, dry_run: bool):
-    logger = logging.getLogger(__name__)
-
-    deposition_directory = os.path.join(dst, identifier, BenchmarkData.COMPUTED_DEPOSITION_DIR)
-
-    logger.debug(f'Creating directory "{deposition_directory}"')
-    if not dry_run:
-        os.mkdir(deposition_directory)
-
-    deposition_meta_file = os.path.join(deposition_directory, BenchmarkData.META_JSON)
-    logger.debug(f'Writing reclaimed material meta to "{deposition_meta_file}"')
-    if not dry_run:
-        json.dump(
-            deposition_meta.to_dict(),
-            open(deposition_meta_file, 'w'),
-            indent=4
-        )
-
-    deposition = deposition_meta.get_deposition()
-    data_file = os.path.join(deposition_directory, BenchmarkData.DATA_CSV)
-    logger.debug(f'Writing material data to "{data_file}"')
-    if not dry_run:
-        deposition.data.to_csv(data_file, sep='\t', index=False)
-
-
 def main(args: argparse.Namespace):
     # Setup logging
     configure_logging(args.verbose)
@@ -186,12 +160,11 @@ def main(args: argparse.Namespace):
         computed_deposition=True
     )
 
-    write_deposition(
-        identifier=identifier,
-        deposition_meta=deposition_meta,
-        dst=dst,
-        dry_run=args.dry_run
-    )
+    if not args.dry_run:
+        benchmark.write_deposition(
+            deposition_meta,
+            os.path.join(dst, identifier, BenchmarkData.COMPUTED_DEPOSITION_DIR)
+        )
 
     logger.info('Processing finished')
 

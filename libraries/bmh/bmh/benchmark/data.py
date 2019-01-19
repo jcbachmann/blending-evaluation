@@ -135,3 +135,17 @@ class BenchmarkData:
         prediction = material_meta.get_prediction()
         if prediction is not None:
             write_data_file(prediction.data, os.path.join(path, BenchmarkData.PREDICTION_CSV))
+
+    def write_deposition(self, deposition_meta: DepositionMeta, path: str):
+        self.logger.debug(f'Creating directory "{path}"')
+        os.mkdir(path)
+
+        deposition_meta_file = os.path.join(path, BenchmarkData.META_JSON)
+        self.logger.debug(f'Writing deposition meta to "{deposition_meta_file}"')
+        json.dump(
+            deposition_meta.to_dict(),
+            open(deposition_meta_file, 'w'),
+            indent=4
+        )
+
+        write_data_file(deposition_meta.get_deposition().data, os.path.join(path, BenchmarkData.DATA_CSV))
