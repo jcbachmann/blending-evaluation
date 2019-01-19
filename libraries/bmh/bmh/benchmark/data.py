@@ -132,3 +132,6 @@ class BenchmarkData:
         )
 
         write_data_file(material_meta.get_material().data, os.path.join(path, BenchmarkData.DATA_CSV))
+        prediction = material_meta.get_prediction()
+        if prediction is not None:
+            write_data_file(prediction.data, os.path.join(path, BenchmarkData.PREDICTION_CSV))

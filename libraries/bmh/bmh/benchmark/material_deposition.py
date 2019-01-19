@@ -110,12 +110,14 @@ class MaterialMeta:
         self.time = meta_dict['time']
         self.volume = meta_dict['volume']
         self.data_file = meta_dict['data']
+        self.prediction_file = meta_dict.get('prediction', None)
 
         # original data read from json file and stored in dict
         self.meta_dict = meta_dict
 
         # data buffer
         self.data: Optional['Material'] = None
+        self.prediction: Optional['Material'] = None
 
     def __str__(self) -> str:
         return self.identifier
@@ -131,6 +133,17 @@ class MaterialMeta:
 
         return self.data
 
+    def get_prediction(self) -> Material:
+        """
+        Load data file on first call and buffer data to avoid unnecessary loading of data files
+        :return: Material object containing data for this prediction
+        """
+        if self.prediction is None and self.prediction_file is not None:
+            prediction_data = read_data_file(os.path.join(self.path, self.prediction_file))
+            self.prediction = Material(meta=self, data=prediction_data)
+
+        return self.prediction
+
     def to_dict(self):
         return {
             'label': self.label,
@@ -138,7 +151,8 @@ class MaterialMeta:
             'category': self.category,
             'time': self.time,
             'volume': self.volume,
-            'data': self.data_file
+            'data': self.data_file,
+            'prediction': self.prediction_file
         }
 
     def copy(self, copy_data: bool = False):
