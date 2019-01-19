@@ -13,7 +13,7 @@ from pandas import DataFrame
 from .solution_generator import SolutionGenerator, RandomSolutionGenerator
 
 
-def process_material_deposition(material: Material, deposition: Deposition, ppm3: float = 0.125) -> Material:
+def process_material_deposition(material: Material, deposition: Deposition, ppm3: float) -> Material:
     sim = BslBlendingSimulator(
         bed_size_x=deposition.meta.bed_size_x,
         bed_size_z=deposition.meta.bed_size_z,
@@ -173,7 +173,7 @@ class MaterialEvaluator:
 
 class HomogenizationProblem(FloatProblem):
     def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
-                 number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float,
+                 number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float, ppm3: float,
                  timestamps: Optional[List[float]] = None,
                  solution_generator: SolutionGenerator = RandomSolutionGenerator()):
         super().__init__()
@@ -186,6 +186,7 @@ class HomogenizationProblem(FloatProblem):
         self.number_of_variables = number_of_variables
         self.deposition_prefix: Optional[Deposition] = deposition_prefix
         self.v_max = v_max
+        self.ppm3 = ppm3
         self.timestamps = timestamps
         self.solution_generator = solution_generator
 
@@ -204,7 +205,9 @@ class HomogenizationProblem(FloatProblem):
             x_min=self.x_min, x_max=self.x_max, deposition_meta=self.deposition_meta,
             t_max=self.max_timestamp, v_max=self.v_max
         )
-        self.reference_reclaimed_material = process_material_deposition(self.material, self.reference_deposition)
+        self.reference_reclaimed_material = process_material_deposition(
+            self.material, self.reference_deposition, ppm3=self.ppm3
+        )
         # Biased absolute reference objectives
         self.reference_objectives = calculate_reference_objectives(self.reference_reclaimed_material)
         # Objectives of the reference deposition relative to the reference objectives
@@ -222,7 +225,7 @@ class HomogenizationProblem(FloatProblem):
 
     def evaluate(self, solution: FloatSolution) -> None:
         deposition = self.variables_to_deposition(variables=solution.variables)
-        reclaimed_material = process_material_deposition(material=self.material, deposition=deposition)
+        reclaimed_material = process_material_deposition(material=self.material, deposition=deposition, ppm3=self.ppm3)
         solution.objectives = self.evaluate_reclaimed_material(reclaimed_material)
 
     def evaluate_reclaimed_material(self, reclaimed_material: Material) -> List[float]:

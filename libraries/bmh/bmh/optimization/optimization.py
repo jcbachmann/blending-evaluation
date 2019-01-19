@@ -242,6 +242,7 @@ class DepositionOptimizer(PlotServerInterface):
             auto_start: bool = True,
             v_max: float,
             parameter_labels: List[str],
+            ppm3: float = 1.0,
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -259,6 +260,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.auto_start = auto_start
         self.v_max = v_max
         self.parameter_labels = parameter_labels
+        self.ppm3 = ppm3
         self.kwargs = kwargs
 
         # Cache
@@ -297,6 +299,7 @@ class DepositionOptimizer(PlotServerInterface):
             number_of_variables=variables,
             deposition_prefix=deposition_prefix,
             v_max=self.v_max,
+            ppm3=self.ppm3,
             timestamps=timestamps,
             solution_generator=solution_generator,
         )
@@ -347,7 +350,9 @@ class DepositionOptimizer(PlotServerInterface):
                 variables=solution.variables,
                 objectives=solution.objectives,
                 objective_labels=self.problem.get_objective_labels(),
-                reclaimed_material=process_material_deposition(material=self.problem.material, deposition=deposition)
+                reclaimed_material=process_material_deposition(
+                    material=self.problem.material, deposition=deposition, ppm3=self.ppm3
+                )
             )
 
         raise RuntimeError('DepositionOptimizer not initialized')
@@ -364,8 +369,9 @@ class DepositionOptimizer(PlotServerInterface):
                     variables=solution.variables,
                     objectives=solution.objectives,
                     objective_labels=self.problem.get_objective_labels(),
-                    reclaimed_material=process_material_deposition(material=self.problem.material,
-                                                                   deposition=deposition)
+                    reclaimed_material=process_material_deposition(
+                        material=self.problem.material, deposition=deposition, ppm3=self.ppm3
+                    )
                 )
             else:
                 return None
