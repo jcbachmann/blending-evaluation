@@ -106,7 +106,7 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
         'description': f'Computed deposition for {identifier}',
         'category': 'computed',
         'time': material_meta.time,
-        'data': core.DATA_CSV,
+        'data': BenchmarkData.DATA_CSV,
         'bed_size_x': bed_size_x,
         'bed_size_z': bed_size_z,
         'reclaim_x_per_s': reclaim_x_per_s
@@ -121,7 +121,7 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
 def write_deposition(identifier: str, deposition_meta: DepositionMeta, dst: str, dry_run: bool):
     logger = logging.getLogger(__name__)
 
-    deposition_directory = os.path.join(dst, identifier, core.COMPUTED_DEPOSITION_DIR)
+    deposition_directory = os.path.join(dst, identifier, BenchmarkData.COMPUTED_DEPOSITION_DIR)
 
     logger.debug(f'Creating directory "{deposition_directory}"')
     if not dry_run:
@@ -137,7 +137,7 @@ def write_deposition(identifier: str, deposition_meta: DepositionMeta, dst: str,
         )
 
     deposition = deposition_meta.get_deposition()
-    data_file = os.path.join(deposition_directory, core.DATA_CSV)
+    data_file = os.path.join(deposition_directory, BenchmarkData.DATA_CSV)
     logger.debug(f'Writing material data to "{data_file}"')
     if not dry_run:
         deposition.data.to_csv(data_file, sep='\t', index=False)

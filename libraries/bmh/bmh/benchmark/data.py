@@ -3,7 +3,6 @@ import logging
 import os
 from typing import Dict, List
 
-from .core import DATA_CSV
 from .material_deposition import MaterialMeta, DepositionMeta, write_data_file
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta, SIMULATOR_TYPE
@@ -14,6 +13,11 @@ class BenchmarkData:
     MATERIAL_DIR = 'material'
     DEPOSITION_DIR = 'deposition'
     SIMULATOR_DIR = 'simulator'
+    DATA_CSV = 'data.csv'
+    PREDICTION_CSV = 'prediction.csv'
+    RECLAIMED_MATERIAL_DIR = 'material'
+    COMPUTED_DEPOSITION_DIR = 'deposition'
+    SIMULATOR_JSON = 'simulator.json'
 
     def __init__(self):
         self.materials: Dict[str, MaterialMeta] = {}
@@ -127,4 +131,4 @@ class BenchmarkData:
             indent=4
         )
 
-        write_data_file(material_meta.get_material().data, os.path.join(path, DATA_CSV))
+        write_data_file(material_meta.get_material().data, os.path.join(path, BenchmarkData.DATA_CSV))

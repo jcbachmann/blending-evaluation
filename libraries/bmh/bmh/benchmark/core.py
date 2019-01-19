@@ -8,11 +8,6 @@ from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
 from ..helpers import math
 
-DATA_CSV = 'data.csv'
-RECLAIMED_MATERIAL_DIR = 'material'
-COMPUTED_DEPOSITION_DIR = 'deposition'
-SIMULATOR_JSON = 'simulator.json'
-
 
 def test_simulator(simulator_meta: SimulatorMeta):
     logger = logging.getLogger(__name__)
@@ -110,7 +105,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     if not dry_run:
         os.mkdir(directory)
 
-    simulator_file = os.path.join(directory, SIMULATOR_JSON)
+    simulator_file = os.path.join(directory, BenchmarkData.SIMULATOR_JSON)
     logger.debug(f'Writing simulator type and parameters to "{simulator_file}"')
     if not dry_run:
         json.dump({'simulator': str(simulator_meta)}, open(simulator_file, 'w'), indent=4)
@@ -118,8 +113,8 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     reclaimed_reference = ReferenceMeta(identifier, directory, {
         'material': str(material_meta),
         'deposition': str(deposition_meta),
-        'deposition_path': COMPUTED_DEPOSITION_DIR if computed_deposition else None,
-        'reclaimed_path': RECLAIMED_MATERIAL_DIR
+        'deposition_path': BenchmarkData.COMPUTED_DEPOSITION_DIR if computed_deposition else None,
+        'reclaimed_path': BenchmarkData.RECLAIMED_MATERIAL_DIR
     })
 
     meta_file = os.path.join(directory, BenchmarkData.META_JSON)
@@ -138,7 +133,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
         'category': 'reclaimed',
         'time': reclaimed_material.data.timestamp.max(),
         'volume': reclaimed_material.data.volume.sum(),
-        'data': DATA_CSV
+        'data': BenchmarkData.DATA_CSV
     })
     reclaimed_material.meta = reclaimed_material_meta
     reclaimed_material_meta.data = reclaimed_material
@@ -159,7 +154,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     if not dry_run:
         write_data_file(
             data=reclaimed_material.data,
-            data_file=os.path.join(reclaimed_material_path, DATA_CSV)
+            data_file=os.path.join(reclaimed_material_path, BenchmarkData.DATA_CSV)
         )
 
     compute_sigma_reduction(material_meta, reclaimed_material_meta)
