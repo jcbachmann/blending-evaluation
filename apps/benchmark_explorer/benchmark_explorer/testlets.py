@@ -21,7 +21,7 @@ def get_correlation(standard_reference: ReferenceMeta, evaluation_reference: Ref
     if len(a.index) != len(b.index):
         raise ValueError('Index length does not match')  # TODO
 
-    return pearsonr(a['parameter'].values, b['parameter'].values)[0]
+    return pearsonr(a['parameter'].values, b['parameter'].values)[0]  # TODO make work with more parameters
 
 
 class CorrelationTestlet(Testlet):

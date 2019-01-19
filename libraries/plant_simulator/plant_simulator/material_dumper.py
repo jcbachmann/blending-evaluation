@@ -62,5 +62,5 @@ class MaterialDumper(MaterialHandler):
     def reset_random_limit(self):
         self.time_limit = self.plant.time + random.uniform(10, 48) * 60 * 60
         self.time_reference = self.plant.time
-        self.buffer = [['timestamp', 'volume', 'parameter']]
+        self.buffer = [['timestamp', 'volume', 'parameter']]  # TODO make work with multiple parameters
         self.total_volume = 0
