@@ -38,7 +38,7 @@ def resample(material: Material, rule: str):
     # Upsampling to 1s
     # - slow but does the job for the moment
     # - does not support data with higher resolution than 1s
-    df = df.resample('1s', closed='right', label='right').apply(np.average).fillna(method='backfill')
+    df = df.resample('1s', closed='right', label='right').apply(np.mean).fillna(method='backfill')
 
     if rule != '1s':
         # Downsampling to final resolution
