@@ -39,19 +39,16 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
 
 
 def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-                             chevron_layers: int, starting_side: int = 0) -> None:
+                             chevron_layers: int) -> None:
     """
     Optimize the deposition regarding the material information provided
     :param identifier: identifier of this deposition computation
     :param material_meta: material description to current knowledge which will be stacked
     :param deposition_meta: deposition meta to which the deposition data will be added
     :param chevron_layers: amount of layers for Chevron stacking for speed determination
-    :param starting_side: set 0 for same side as reclaimer or 1 for opposite side
     """
     material = material_meta.get_material()
 
-    # TODO respect starting side
-    # TODO use same simulator?
     x_min = 0.5 * deposition_meta.bed_size_z
     x_max = deposition_meta.bed_size_x - x_min
 
@@ -78,12 +75,6 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
 
 def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
-    # TODO v3 Determine prediction from material curve
-    # TODO v3 Store prediction
-
-    # TODO v3 Optimized deposition based on prediction - only one optimization before stacking
-    # TODO v4 Optimized deposition based on prediction - optimize every 5 simulation minutes
-
     # Assumptions:
     # - maximum stockpile height 20m
     # - angle of repose: 45 degrees
