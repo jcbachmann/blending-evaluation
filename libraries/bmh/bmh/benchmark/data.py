@@ -120,8 +120,9 @@ class BenchmarkData:
         return entries
 
     def write_material(self, material_meta: MaterialMeta, path: str):
-        self.logger.debug(f'Creating directory "{path}"')
-        os.mkdir(path)
+        if not os.path.exists(path):
+            self.logger.debug(f'Creating directory "{path}"')
+            os.makedirs(path)
 
         material_meta_file = os.path.join(path, BenchmarkData.META_JSON)
         self.logger.debug(f'Writing material meta to "{material_meta_file}"')
@@ -137,8 +138,9 @@ class BenchmarkData:
             write_data_file(prediction.data, os.path.join(path, BenchmarkData.PREDICTION_CSV))
 
     def write_deposition(self, deposition_meta: DepositionMeta, path: str):
-        self.logger.debug(f'Creating directory "{path}"')
-        os.mkdir(path)
+        if not os.path.exists(path):
+            self.logger.debug(f'Creating directory "{path}"')
+            os.makedirs(path)
 
         deposition_meta_file = os.path.join(path, BenchmarkData.META_JSON)
         self.logger.debug(f'Writing deposition meta to "{deposition_meta_file}"')
