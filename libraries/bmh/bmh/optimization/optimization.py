@@ -2,7 +2,6 @@ import logging
 import math
 from typing import List, Optional, Dict, Any
 
-from bmh.optimization.jmetal_ext.problem.multiobjective.solution_generator import RandomSolutionGenerator
 from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S, Evaluator
@@ -19,6 +18,7 @@ from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem, process_material_deposition
+from .jmetal_ext.problem.multiobjective.solution_generator import RandomSolutionGenerator
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
