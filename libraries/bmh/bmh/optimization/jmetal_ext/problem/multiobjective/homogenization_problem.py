@@ -112,6 +112,7 @@ def get_full_speed_deposition(
         )
 
     deposition = Deposition(meta=deposition_meta.copy(), data=data)
+    deposition.meta.data = deposition
     deposition.meta.time = deposition.data['timestamp'].values[-1]
     return deposition
 
