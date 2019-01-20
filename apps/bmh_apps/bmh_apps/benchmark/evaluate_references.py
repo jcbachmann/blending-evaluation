@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-import os
+import uuid
 from datetime import datetime
 
 from bmh.benchmark import core
@@ -20,8 +20,8 @@ def main(args: argparse.Namespace):
     logger.info(f'Starting evaluation with timestamp {timestamp_str}')
 
     # Initialization
-    benchmark_data = BenchmarkData()
-    benchmark_data.read_base(args.path)
+    benchmark_data = BenchmarkData(args.path)
+    benchmark_data.read_base()
     references = benchmark_data.read_references(args.src)
 
     # Make sure everything will work out
@@ -39,20 +39,15 @@ def main(args: argparse.Namespace):
     for sim_identifier in sim_identifiers:
         simulator_meta = benchmark_data.simulators[sim_identifier]
 
-        # Prepare output directory
-        dst = os.path.join(args.dst, timestamp_str + ' ' + sim_identifier)
-        core.prepare_dst(dst, args.dry_run)
-
         # Processing
         for _, reference in references.items():
             core.process(
-                identifier=str(reference),
+                identifier=f'{reference.identifier}-{uuid.uuid4()[:4]}',
                 material_meta=benchmark_data.materials[reference.material],
                 deposition_meta=benchmark_data.depositions[reference.deposition],
                 simulator_meta=simulator_meta,
-                dst=dst,
+                path=args.path,
                 dry_run=args.dry_run,
-                computed_deposition=False
             )
 
 
@@ -63,7 +58,6 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
     parser.add_argument('--path', default='.', help='Simulator benchmark path')
     parser.add_argument('--src', default='./benchmark', help='Path with reference configuration files')
-    parser.add_argument('--dst', default='.', help='Path where results will be stored')
     parser.add_argument('--dry_run', action='store_true', help='Do not write files')
     parser.add_argument('--sim', nargs='+', help='Which simulator is used to calculate results')
 

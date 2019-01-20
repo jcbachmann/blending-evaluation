@@ -3,7 +3,6 @@
 import argparse
 import logging
 import math
-import os
 from datetime import datetime
 
 from bmh.benchmark import core
@@ -118,8 +117,8 @@ def main(args: argparse.Namespace):
     logger.info(f'Starting evaluation with timestamp {timestamp_str}')
 
     # Load benchmark base data
-    benchmark = BenchmarkData()
-    benchmark.read_base(args.path)
+    benchmark = BenchmarkData(args.path)
+    benchmark.read_base()
 
     # Acquire material
     material_identifier = get_identifier(args.material)
@@ -130,10 +129,8 @@ def main(args: argparse.Namespace):
     simulator_meta = benchmark.get_simulator_meta(sim_identifier)
     core.test_simulator(simulator_meta)
 
-    # Prepare output directory
+    # Set identifier
     identifier = f'{timestamp_str} {material_identifier} {sim_identifier}'
-    dst = os.path.join(args.dst, identifier)
-    core.prepare_dst(dst, args.dry_run)
 
     # Compute and evaluate deposition
     deposition_meta = compute_deposition(
@@ -146,16 +143,12 @@ def main(args: argparse.Namespace):
         material_meta=material_meta,
         deposition_meta=deposition_meta,
         simulator_meta=simulator_meta,
-        dst=dst,
+        path=args.path,
         dry_run=args.dry_run,
-        computed_deposition=True
     )
 
     if not args.dry_run:
-        benchmark.write_deposition(
-            deposition_meta,
-            os.path.join(dst, identifier, BenchmarkData.COMPUTED_DEPOSITION_DIR)
-        )
+        benchmark.write_deposition(deposition_meta)
 
     logger.info('Processing finished')
 
@@ -165,8 +158,7 @@ if __name__ == '__main__':
         description='Determine deposition and evaluate data for a given material curve'
     )
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
-    parser.add_argument('--path', default='.', help='Simulator benchmark path')
-    parser.add_argument('--dst', default='.', help='Path where results will be stored')
+    parser.add_argument('--path', default='.', help='Benchmark path')
     parser.add_argument('--dry_run', action='store_true', help='Do not write files')
     parser.add_argument('--sim', type=str, default='bsl_low', help='Simulator identifier')
     parser.add_argument('--material', type=str, default='generated_2Y45', help='Material curve identifier')

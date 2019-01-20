@@ -25,18 +25,6 @@ class ReferenceMeta:
         self.material = meta_dict['material']
         self.deposition = meta_dict['deposition']
 
-        self.deposition_path: Optional[str]
-        self.reclaimed_path: Optional[str]
-
-        if 'deposition_path' in meta_dict and meta_dict['deposition_path'] is not None:
-            self.deposition_path = meta_dict['deposition_path']
-        else:
-            self.deposition_path = None
-        if 'reclaimed_path' in meta_dict and meta_dict['reclaimed_path'] is not None:
-            self.reclaimed_path = meta_dict['reclaimed_path']
-        else:
-            self.reclaimed_path = None
-
         # original data read from json file and stored in dict
         self.meta_dict = meta_dict
 
@@ -54,17 +42,14 @@ class ReferenceMeta:
         return {
             'material': self.material,
             'deposition': self.deposition,
-            'deposition_path': self.deposition_path,
-            'reclaimed_path': self.reclaimed_path
         }
 
     def get_reclaimed_material_meta(self) -> MaterialMeta:
         if self.reclaimed_material_meta is None:
-            reclaimed_path = os.path.join(self.path, self.reclaimed_path) if self.reclaimed_path else self.path
-            meta = json.load(open(os.path.join(reclaimed_path, META_JSON)))
+            meta = json.load(open(os.path.join(self.path, META_JSON)))
             self.reclaimed_material_meta = MaterialMeta(
                 'reclaimed material for ' + self.identifier,
-                reclaimed_path,
+                self.path,
                 meta
             )
 

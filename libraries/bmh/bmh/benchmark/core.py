@@ -1,8 +1,9 @@
 import json
 import logging
 import os
+from typing import Dict
 
-from .data import BenchmarkData
+from .data import BenchmarkData, prepare_path
 from .material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition, write_data_file
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
@@ -30,23 +31,6 @@ def test_simulator(simulator_meta: SimulatorMeta):
 
     logger.debug('Testing deletion of simulator')
     del sim
-
-
-def prepare_dst(dst: str, dry_run: bool):
-    logger = logging.getLogger(__name__)
-    logger.debug(f'Preparing destination directory "{dst}"')
-    if os.path.exists(dst):
-        if os.path.isdir(dst):
-            if len(os.listdir(dst)) > 0:
-                raise IOError(f'Destination path "{dst}" is not empty')
-            else:
-                logger.debug(f'Destination path "{dst}" already exists and is empty')
-        else:
-            raise IOError(f'Destination path "{dst}" is not a directory')
-    else:
-        logger.debug(f'Creating destination path "{dst}"')
-        if not dry_run:
-            os.makedirs(dst)
 
 
 def compute_sigma(material_meta: MaterialMeta):
@@ -81,7 +65,7 @@ def compute_sigma_reduction(material_before: MaterialMeta, material_after: Mater
 
 
 def process(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-            simulator_meta: SimulatorMeta, dst: str, dry_run: bool, computed_deposition: bool):
+            simulator_meta: SimulatorMeta, path: str, dry_run: bool) -> Dict[str, float]:
     logger = logging.getLogger(__name__)
     logger.info(f'Processing "{identifier}" with material "{material_meta}" and deposition "{deposition_meta}" using '
                 f'simulator type {simulator_meta.type}')
@@ -100,10 +84,8 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     reclaimed_material = sim.stack_reclaim(material_deposition)
     logger.debug(f'Reclaimed material:\n{reclaimed_material.data.describe()}')
 
-    directory = os.path.join(dst, identifier)
-    logger.debug(f'Creating directory "{directory}"')
-    if not dry_run:
-        os.mkdir(directory)
+    directory = os.path.join(path, BenchmarkData.REFERENCE_DIR, identifier)
+    prepare_path(directory, dry_run=dry_run)
 
     simulator_file = os.path.join(directory, BenchmarkData.SIMULATOR_JSON)
     logger.debug(f'Writing simulator type and parameters to "{simulator_file}"')
@@ -113,8 +95,6 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     reclaimed_reference = ReferenceMeta(identifier, directory, {
         'material': str(material_meta),
         'deposition': str(deposition_meta),
-        'deposition_path': BenchmarkData.COMPUTED_DEPOSITION_DIR if computed_deposition else None,
-        'reclaimed_path': BenchmarkData.RECLAIMED_MATERIAL_DIR
     })
 
     meta_file = os.path.join(directory, BenchmarkData.META_JSON)
@@ -126,8 +106,8 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
             indent=4
         )
 
-    reclaimed_material_path = os.path.join(directory, reclaimed_reference.reclaimed_path)
-    reclaimed_material_meta = MaterialMeta(identifier, reclaimed_material_path, {
+    reclaimed_material_path = os.path.join(directory, BenchmarkData.MATERIAL_DIR)
+    reclaimed_material_meta = MaterialMeta(identifier, path='', meta_dict={
         'label': 'Reclaimed ' + identifier,
         'description': 'Reclaimed material from ' + identifier,
         'category': 'reclaimed',
@@ -139,8 +119,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     reclaimed_material_meta.data = reclaimed_material
 
     logger.debug(f'Creating directory "{reclaimed_material_path}"')
-    if not dry_run:
-        os.mkdir(reclaimed_material_path)
+    prepare_path(reclaimed_material_path, dry_run=dry_run)
 
     reclaimed_material_meta_file = os.path.join(reclaimed_material_path, BenchmarkData.META_JSON)
     logger.debug(f'Writing reclaimed material meta to "{reclaimed_material_meta_file}"')

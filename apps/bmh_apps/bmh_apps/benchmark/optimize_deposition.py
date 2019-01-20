@@ -13,8 +13,8 @@ from ..helpers.configure_logging import configure_logging
 
 def main(path: str, material_identifier: str, verbose: bool):
     configure_logging(verbose=verbose)
-    benchmark = BenchmarkData()
-    benchmark.read_base(path)
+    benchmark = BenchmarkData(path)
+    benchmark.read_base()
     material_meta = benchmark.get_material_meta(material_identifier)
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
