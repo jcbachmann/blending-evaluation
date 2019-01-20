@@ -145,7 +145,7 @@ class MaterialMeta:
         return self.prediction
 
     def to_dict(self):
-        return {
+        self.meta_dict.update({
             'label': self.label,
             'description': self.description,
             'category': self.category,
@@ -153,13 +153,14 @@ class MaterialMeta:
             'volume': self.volume,
             'data': self.data_file,
             'prediction': self.prediction_file
-        }
+        })
+        return self.meta_dict
 
     def copy(self, copy_data: bool = False):
         meta = MaterialMeta(
             identifier=self.identifier,
             path=self.path,
-            meta_dict=self.to_dict()
+            meta_dict=self.to_dict().copy()
         )
         if copy_data and self.data:
             meta.data = self.data.copy()
@@ -265,7 +266,7 @@ class DepositionMeta:
         return self.data
 
     def to_dict(self):
-        return {
+        self.meta_dict.update({
             'label': self.label,
             'description': self.description,
             'category': self.category,
@@ -274,13 +275,14 @@ class DepositionMeta:
             'bed_size_x': self.bed_size_x,
             'bed_size_z': self.bed_size_z,
             'reclaim_x_per_s': self.reclaim_x_per_s
-        }
+        })
+        return self.meta_dict
 
     def copy(self, copy_data: bool = False):
         meta = DepositionMeta(
             identifier=self.identifier,
             path=self.path,
-            meta_dict=self.to_dict()
+            meta_dict=self.to_dict().copy()
         )
         if copy_data and self.data:
             meta.data = self.data.copy()
