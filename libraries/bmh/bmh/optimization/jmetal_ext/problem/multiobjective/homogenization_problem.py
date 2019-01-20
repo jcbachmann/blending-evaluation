@@ -3,8 +3,8 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
-from bmh.helpers.math import weighted_avg_and_std, stdev
-from bmh.helpers.stockpile_math import get_stockpile_height
+from bmh.helpers.math import stdev
+from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
@@ -118,7 +118,7 @@ def get_full_speed_deposition(
 
 
 def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
-    reclaimed_evaluator = MaterialEvaluator(reclaimed_material)
+    reclaimed_evaluator = ReclaimedMaterialEvaluator(reclaimed_material)
     chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
 
     # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
@@ -126,50 +126,6 @@ def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
     worst_acceptable_volume_stdev = stdev(np.array([3.5 / 3.0 * volume_per_slice, 2.5 / 3.0 * volume_per_slice]))
 
     return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
-
-
-class MaterialEvaluator:
-    def __init__(self, reclaimed: Material, x_min: Optional[float] = None, x_max: Optional[float] = None):
-        self.reclaimed = reclaimed
-        self.x_min = x_min
-        self.x_max = x_max
-
-        # Caches
-        self._core_data: DataFrame = None
-        self._parameter_stdev: Optional[List[float]] = None
-        self._volume_stdev: Optional[float] = None
-
-    def get_core_data(self) -> DataFrame:
-        if self._core_data is None:
-            rdf = self.reclaimed.data
-            if self.x_min is None or self.x_max is None:
-                return rdf
-            height = get_stockpile_height(volume=self.reclaimed.get_volume(), core_length=self.x_max - self.x_min)
-            self._core_data = rdf[(rdf['x'] >= self.x_min) & (rdf['x'] <= self.x_max - height)]
-        return self._core_data
-
-    def get_core_volume_stdev(self) -> float:
-        if self._volume_stdev is None:
-            core_data = self.get_core_data()
-            self._volume_stdev = stdev(core_data['volume'].values)
-        return self._volume_stdev
-
-    def get_parameter_stdev(self) -> List[float]:
-        if self._parameter_stdev is None:
-            reclaimed_df = self.reclaimed.data
-            cols = self.reclaimed.get_parameter_columns()
-            self._parameter_stdev = [weighted_avg_and_std(reclaimed_df[col], reclaimed_df['volume'])[1] for col in cols]
-        return self._parameter_stdev
-
-    def get_all_stdev(self) -> List[float]:
-        return self.get_parameter_stdev() + [self.get_core_volume_stdev()]
-
-    @staticmethod
-    def get_relative(objectives: List[float], reference: List[float]) -> List[float]:
-        return [s / r for s, r in zip(objectives, reference)]
-
-    def get_slice_count(self) -> int:
-        return self.reclaimed.data['volume'].shape[0]
 
 
 class HomogenizationProblem(FloatProblem):
@@ -230,8 +186,9 @@ class HomogenizationProblem(FloatProblem):
         solution.objectives = self.evaluate_reclaimed_material(reclaimed_material)
 
     def evaluate_reclaimed_material(self, reclaimed_material: Material) -> List[float]:
-        return MaterialEvaluator.get_relative(
-            MaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max).get_all_stdev(),
+        return ReclaimedMaterialEvaluator.get_relative(
+            ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min,
+                                       x_max=self.x_max).get_all_stdev(),
             self.reference_objectives
         )
 

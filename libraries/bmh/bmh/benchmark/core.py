@@ -8,6 +8,7 @@ from .material_deposition import MaterialMeta, DepositionMeta, MaterialDepositio
 from .reference_meta import ReferenceMeta
 from .simulator_meta import SimulatorMeta
 from ..helpers import math
+from ..helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 
 
 def test_simulator(simulator_meta: SimulatorMeta):
@@ -136,4 +137,16 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
             data_file=os.path.join(reclaimed_material_path, BenchmarkData.DATA_CSV)
         )
 
-    compute_sigma_reduction(material_meta, reclaimed_material_meta)
+    z_center = 0.5 * deposition_meta.bed_size_z
+    evaluator = ReclaimedMaterialEvaluator(
+        reclaimed_material,
+        x_min=z_center,
+        x_max=deposition_meta.bed_size_x - z_center
+    )
+    parameter_stdev = evaluator.get_parameter_stdev()
+    parameter_columns = material_meta.get_material().get_parameter_columns()
+    logger.info(f'Parameter standard deviations:')
+    for i, p in enumerate(parameter_columns):
+        logger.info(f'{p}\t{parameter_stdev[i]}')
+
+    # compute_sigma_reduction(material_meta, reclaimed_material_meta)
