@@ -1,7 +1,7 @@
 import logging
-import math
 from typing import List, Optional, Dict, Any
 
+import numpy as np
 from jmetal.algorithm import NSGAII
 from jmetal.component import RankingAndCrowdingDistanceComparator
 from jmetal.component.evaluator import S, Evaluator
@@ -24,8 +24,13 @@ from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
 
 
+def solutions_to_fitness_values(solutions: List[S], number_of_objectives: int):
+    return dict([(f'f{i+1}', [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
+
+
 class VerboseHoardingAlgorithmObserver(Observer):
-    def __init__(self):
+    def __init__(self, number_of_objectives: int):
+        self.number_of_objectives = number_of_objectives
         self.population = []
         self.last_evaluations: Optional[int] = None
         self.last_computing_time: Optional[float] = None
@@ -38,7 +43,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
         cps = e_diff / t_diff if t_diff > 0 else '-'
-        best = min(self.population, key=lambda s: s.objectives[0] * s.objectives[0] + s.objectives[1] * s.objectives[1])
+        best = min(self.population, key=lambda s: np.sum(np.square(s.objectives)))
         self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
             f'best: {best.objectives}'
@@ -47,10 +52,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         self.last_computing_time = computing_time
 
     def get_population(self) -> Dict[str, List[float]]:
-        return {
-            'f1': [o.objectives[0] for o in self.population],
-            'f2': [o.objectives[1] for o in self.population]
-        }
+        return solutions_to_fitness_values(self.population, self.number_of_objectives)
 
     def reset(self):
         self.population = []
@@ -59,7 +61,8 @@ class VerboseHoardingAlgorithmObserver(Observer):
 
 
 class HoardingEvaluatorObserver(EvaluatorObserver):
-    def __init__(self):
+    def __init__(self, number_of_objectives: int):
+        self.number_of_objectives = number_of_objectives
         self.solutions: List[S] = []
 
     def notify(self, solution_list: List[S]):
@@ -67,12 +70,7 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
             self.solutions.append(solution)
 
     def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
-        new_solutions = self.solutions[start:]
-
-        return {
-            'f1': [o.objectives[0] for o in new_solutions],
-            'f2': [o.objectives[1] for o in new_solutions]
-        }
+        return solutions_to_fitness_values(self.solutions[start:], self.number_of_objectives)
 
     def get_solution(self, solution_id: int) -> S:
         if 0 <= solution_id < len(self.solutions):
@@ -267,8 +265,9 @@ class DepositionOptimizer(PlotServerInterface):
         self.problem: Optional[HomogenizationProblem] = None
         self.algorithm: Optional[Algorithm] = None
 
-        self.algorithm_observer = VerboseHoardingAlgorithmObserver()
-        self.evaluator_observer = HoardingEvaluatorObserver()
+        number_of_objectives = len(parameter_labels) + 1
+        self.algorithm_observer = VerboseHoardingAlgorithmObserver(number_of_objectives)
+        self.evaluator_observer = HoardingEvaluatorObserver(number_of_objectives)
         self.evaluator = get_evaluator(
             self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
         )
@@ -361,7 +360,7 @@ class DepositionOptimizer(PlotServerInterface):
         if self.evaluator_observer and self.problem:
             if len(self.algorithm_observer.population) > 0:
                 solution = min(
-                    self.algorithm_observer.population, key=lambda r: math.hypot(r.objectives[0], r.objectives[1])
+                    self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives))
                 )
                 deposition = self.problem.variables_to_deposition(solution.variables)
                 return OptimizationResult(

@@ -5,6 +5,7 @@ import logging
 import math
 from datetime import datetime
 
+import numpy as np
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, Deposition
@@ -66,7 +67,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     )
 
     results = optimizer.get_final_results()
-    selection = min(results, key=lambda r: r.objectives[0])
+    selection = min(results, key=lambda r: np.sum(np.square(r.objectives)))
 
     selection.deposition.meta = deposition_meta
     deposition_meta.data = selection.deposition
