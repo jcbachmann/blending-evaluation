@@ -90,7 +90,7 @@ class BenchmarkData:
     def read_materials(self, path: Optional[str] = None) -> Dict[str, MaterialMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.MATERIAL_DIR)
         self.logger.debug('Reading materials')
-        self.materials = create_instance_for_each_managed_dir(path, MaterialMeta)
+        self.materials = create_instance_for_each_managed_dir(path, MaterialMeta, recursive=True)
         self.logger.info(f'{len(self.materials)} materials read')
         return self.materials
 
@@ -104,14 +104,14 @@ class BenchmarkData:
     def read_simulators(self, path: Optional[str] = None) -> Dict[str, SimulatorMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.SIMULATOR_DIR)
         self.logger.debug('Reading simulators')
-        self.simulators = create_instance_for_each_managed_dir(path, SimulatorMeta)
+        self.simulators = create_instance_for_each_managed_dir(path, SimulatorMeta, recursive=True)
         self.logger.info(f'{len(self.simulators)} simulators read')
         return self.simulators
 
     def read_references(self, path: Optional[str] = None) -> Dict[str, ReferenceMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.REFERENCE_DIR)
         self.logger.debug('Reading references')
-        references = create_instance_for_each_managed_dir(path, ReferenceMeta)
+        references = create_instance_for_each_managed_dir(path, ReferenceMeta, recursive=True)
         self.logger.info(f'{len(references)} references read')
         return references
 
