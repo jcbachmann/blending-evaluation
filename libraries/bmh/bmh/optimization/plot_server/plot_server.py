@@ -37,6 +37,10 @@ class PlotServerInterface(ABC):
         pass
 
     @abstractmethod
+    def get_ideal_reclaimed_material(self) -> Material:
+        pass
+
+    @abstractmethod
     def get_material(self) -> Material:
         pass
 

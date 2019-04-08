@@ -42,6 +42,7 @@ class BokehPlotServer(PlotServer):
         best_path_material_output_source = ColumnDataSource(material_source_data)
         selected_path_material_output_source = ColumnDataSource(material_source_data)
         reference_path_material_output_source = ColumnDataSource(material_source_data)
+        ideal_path_material_output_source = ColumnDataSource(material_source_data)
 
         progress_source = ColumnDataSource({'t_start': [0.0], 't_end': [0.0]})
 
@@ -143,15 +144,19 @@ class BokehPlotServer(PlotServer):
         for i, p in enumerate(parameter_labels):
             material_output_fig.line(
                 x='timestamp', y=p, legend=f'Best {p}', source=best_path_material_output_source,
-                color=palette[2 + i * 3]
+                color=palette[2 + i * 4]
             )
             material_output_fig.line(
                 x='timestamp', y=p, legend=f'Selected {p}', source=selected_path_material_output_source,
-                color=palette[3 + i * 3]
+                color=palette[3 + i * 4]
             )
             material_output_fig.line(
                 x='timestamp', y=p, legend=f'Reference {p}', source=reference_path_material_output_source,
-                color=palette[4 + i * 3], alpha=0.5
+                color=palette[4 + i * 4], alpha=0.8
+            )
+            material_output_fig.line(
+                x='timestamp', y=p, legend=f'Ideal {p}', source=ideal_path_material_output_source,
+                color=palette[5 + i * 4], alpha=0.8, line_dash='dotted'
             )
         material_output_fig.legend.location = 'top_right'
 
@@ -176,7 +181,11 @@ class BokehPlotServer(PlotServer):
         )
         material_output_fig_volume.line(
             x='timestamp', y='tonnage', legend=f'Reference', source=reference_path_material_output_source,
-            color=palette[4], alpha=0.5
+            color=palette[4], alpha=0.8
+        )
+        material_output_fig_volume.line(
+            x='timestamp', y='tonnage', legend=f'Ideal', source=ideal_path_material_output_source,
+            color=palette[5], alpha=0.8, line_dash='dotted'
         )
         material_output_fig_volume.legend.location = 'top_right'
 
@@ -223,6 +232,7 @@ class BokehPlotServer(PlotServer):
                     best_path_material_output_source.data = material_source_data
                     selected_path_material_output_source.data = material_source_data
                     reference_path_material_output_source.data = material_source_data
+                    ideal_path_material_output_source.data = material_source_data
 
                     progress_source.data = {'t_start': [0.0], 't_end': [0.0]}
 
@@ -266,6 +276,14 @@ class BokehPlotServer(PlotServer):
                     data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
                     reference_path_material_output_source.data = data
                     material_output_fig.x_range.end = reference.reclaimed_material.meta.time * 1000
+
+                ideal = self.plot_server_interface.get_ideal_reclaimed_material()
+                if ideal:
+                    df = ideal.data.copy()
+                    df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
+                    data = {p: df[p] for p in parameter_labels}
+                    data.update({'timestamp': df['timestamp'] * 1000, 'tonnage': df['tonnage']})
+                    ideal_path_material_output_source.data = data
 
                 material = self.plot_server_interface.get_material()
                 if material:

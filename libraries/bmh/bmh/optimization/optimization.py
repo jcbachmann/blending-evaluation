@@ -22,10 +22,11 @@ from .jmetal_ext.problem.multiobjective.solution_generator import RandomSolution
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
+from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 
 
 def solutions_to_fitness_values(solutions: List[S], number_of_objectives: int):
-    return dict([(f'f{i+1}', [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
+    return dict([(f'f{i + 1}', [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
 
 
 class VerboseHoardingAlgorithmObserver(Observer):
@@ -386,6 +387,21 @@ class DepositionOptimizer(PlotServerInterface):
             objective_labels=self.problem.get_objective_labels(),
             reclaimed_material=material
         )
+
+    def get_ideal_reclaimed_material(self) -> Material:
+        _, material, _ = self.problem.get_reference_relative()
+        ideal = material.copy()
+        for p in material.get_parameter_columns():
+            avg = np.average(ideal.data[p], weights=ideal.data['volume'])
+            ideal.data[p] = avg
+        height = get_stockpile_height(ideal.data['volume'].sum(), self.x_max - self.x_min)
+        ideal.data['x_diff'] = (ideal.data['x'] - ideal.data['x'].shift(1)).fillna(0.0)
+        ideal.data['volume'] = ideal.data.apply(
+            lambda row: get_stockpile_slice_volume(
+                row['x'], self.x_max - self.x_min, height, self.x_min, row['x_diff']
+            ), axis=1
+        )
+        return ideal
 
     def get_all_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting all results')

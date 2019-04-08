@@ -1,9 +1,7 @@
 from typing import Optional, List
 
-from pandas import DataFrame
-
 from .math import stdev, weighted_avg_and_std
-from .stockpile_math import get_stockpile_height
+from .stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 from ..benchmark.material_deposition import Material
 
 
@@ -14,23 +12,22 @@ class ReclaimedMaterialEvaluator:
         self.x_max = x_max
 
         # Caches
-        self._core_data: DataFrame = None
         self._parameter_stdev: Optional[List[float]] = None
         self._volume_stdev: Optional[float] = None
 
-    def get_core_data(self) -> DataFrame:
-        if self._core_data is None:
-            rdf = self.reclaimed.data
-            if self.x_min is None or self.x_max is None:
-                return rdf
-            height = get_stockpile_height(volume=self.reclaimed.get_volume(), core_length=self.x_max - self.x_min)
-            self._core_data = rdf[(rdf['x'] >= self.x_min) & (rdf['x'] <= self.x_max - height)]
-        return self._core_data
-
-    def get_core_volume_stdev(self) -> float:
+    def get_volume_stdev(self) -> float:
         if self._volume_stdev is None:
-            core_data = self.get_core_data()
-            self._volume_stdev = stdev(core_data['volume'].values)
+            ideal_df = self.reclaimed.data.copy()
+            ideal_height = get_stockpile_height(ideal_df['volume'].sum(), self.x_max - self.x_min)
+            ideal_df['x_diff'] = (ideal_df['x'] - ideal_df['x'].shift(1)).fillna(0.0)
+            ideal_df['volume'] = ideal_df.apply(
+                lambda row: get_stockpile_slice_volume(
+                    row['x'], self.x_max - self.x_min, ideal_height, self.x_min, row['x_diff']
+                ), axis=1
+            )
+
+            self._volume_stdev = stdev((ideal_df['volume'] - self.reclaimed.data['volume']).values)
+
         return self._volume_stdev
 
     def get_parameter_stdev(self) -> List[float]:
@@ -41,7 +38,7 @@ class ReclaimedMaterialEvaluator:
         return self._parameter_stdev
 
     def get_all_stdev(self) -> List[float]:
-        return self.get_parameter_stdev() + [self.get_core_volume_stdev()]
+        return self.get_parameter_stdev() + [self.get_volume_stdev()]
 
     @staticmethod
     def get_relative(objectives: List[float], reference: List[float]) -> List[float]:
