@@ -46,10 +46,11 @@ class ReferenceMeta:
 
     def get_reclaimed_material_meta(self) -> MaterialMeta:
         if self.reclaimed_material_meta is None:
-            meta = json.load(open(os.path.join(self.path, META_JSON)))
+            path = os.path.join(self.path, 'material')
+            meta = json.load(open(os.path.join(path, META_JSON)))
             self.reclaimed_material_meta = MaterialMeta(
                 'reclaimed material for ' + self.identifier,
-                self.path,
+                path,
                 meta
             )
 
