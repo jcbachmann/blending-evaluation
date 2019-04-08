@@ -80,13 +80,17 @@ class Material:
             'volume': data['volume'].sum(),
             'data': None
         })
-        return cls(meta=meta, data=data)
+        material = cls(meta=meta, data=data)
+        meta.data = material
+        return material
 
     def copy(self):
-        return Material(
+        material = Material(
             meta=self.meta.copy(),
             data=self.data.copy()
         )
+        material.meta.data = material
+        return material
 
 
 class MaterialMeta:
