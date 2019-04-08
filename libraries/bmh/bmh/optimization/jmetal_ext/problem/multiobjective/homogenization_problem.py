@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
-from bmh.helpers.math import stdev
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from jmetal.core.problem import FloatProblem
@@ -123,7 +122,7 @@ def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
 
     # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
     volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
-    worst_acceptable_volume_stdev = stdev(np.array([3.5 / 3.0 * volume_per_slice, 2.5 / 3.0 * volume_per_slice]))
+    worst_acceptable_volume_stdev = 1.0 / 6.0 * volume_per_slice
 
     return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
 
