@@ -7,13 +7,31 @@ from ..benchmark.material_deposition import MaterialDeposition, Material
 
 class BlendingSimulator:
     def __init__(self, bed_size_x: float, bed_size_z: float, **kwargs):
+        """
+        Initialize blending simulator interface
+        :param bed_size_x: bed size of blending bed in x direction (along the bed, stacker travel direction) in meters
+        :param bed_size_z: bed size of blending bed in z direction (across the bed) in meters
+        :param kwargs: optional additional parameters which are ignored in this interface implementation
+        """
         self.bed_size_x = bed_size_x
         self.bed_size_z = bed_size_z
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
+        """
+        Stacks specific volume of material with a list of parameters at position (x, z)
+        :param timestamp: current timestamp
+        :param x: x-position where material is stacked
+        :param z: z-position where material is stacked
+        :param volume: amount of stacked material
+        :param parameter: list of parameters for stacked material
+        """
         raise NotImplementedError()
 
     def reclaim(self) -> List[List[Union[float, List[float]]]]:
+        """
+        Reclaims the complete stockpile
+        :return: list of volumes and material parameters after reclaiming the stockpile
+        """
         raise NotImplementedError()
 
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
