@@ -35,3 +35,41 @@ def get_stockpile_height(volume, core_length):
     height = part / (two_3r * pi) + (two_3r * pow(core_length, 2.0)) / (pi * part) - core_length / pi
 
     return height.real
+
+
+def get_stockpile_slice_core_area(x: float, core_length: float, height: float):
+    def clamp0h(v):
+        return max(0.0, min(v, height))
+
+    return sqrt(2.0) * (clamp0h(x) ** 2.0 - clamp0h(x - core_length) ** 2.0)
+
+
+def get_stockpile_slice_half_cones_area(x: float, core_length: float, height: float):
+    def clamp0h(v):
+        return max(0.0, min(v, height))
+
+    def a(s: float):
+        return sqrt(2.0) * 8.0 / 3.0 * sqrt(clamp0h(0.5 * s) * clamp0h(height - 0.5 * s) ** 3.0)
+
+    def f(s: float):
+        if s < 2.0 * height:
+            div = (height - clamp0h(s)) / (2.0 * height - s)
+        else:
+            div = 0.0
+        return sqrt((1.0 - 2.0 * div) ** 3.0)
+
+    return a(x) * (1.0 - f(x)) + a(x - core_length) * f(x - core_length)
+
+
+def get_stockpile_slice_area(x: float, core_length: float, height: float):
+    core_area = get_stockpile_slice_core_area(x, core_length, height)
+    half_cones_area = get_stockpile_slice_half_cones_area(x, core_length, height)
+    return core_area + half_cones_area
+
+
+def get_stockpile_slice_volume_norm(x: float, core_length: float, height: float, x_diff: float):
+    return get_stockpile_slice_area(x, core_length, height) / sqrt(2.0) * x_diff
+
+
+def get_stockpile_slice_volume(x: float, core_length: float, height: float, x_min: float, x_diff: float):
+    return get_stockpile_slice_volume_norm(x - x_min + height, core_length, height, x_diff)
