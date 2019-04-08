@@ -1,3 +1,4 @@
+import math
 from blending_simulator_lib import BlendingSimulatorLib
 from typing import Optional, List, Union
 
@@ -27,7 +28,7 @@ class BslBlendingSimulator(BlendingSimulator):
         if detailed is None:
             detailed = False
         if reclaimincrement is None:
-            reclaimincrement = 1.0
+            reclaimincrement = 1.0 / math.sqrt(ppm3)
 
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
