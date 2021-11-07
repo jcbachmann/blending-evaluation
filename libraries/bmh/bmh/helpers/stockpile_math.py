@@ -48,15 +48,18 @@ def get_stockpile_slice_half_cones_area(x: float, core_length: float, height: fl
     def clamp0h(v):
         return max(0.0, min(v, height))
 
+    def clamp02h(v):
+        return max(0.0, min(v, 2.0 * height))
+
     def a(s: float):
-        return sqrt(2.0) * 8.0 / 3.0 * sqrt(clamp0h(0.5 * s) * clamp0h(height - 0.5 * s) ** 3.0)
+        return sqrt(2.0) * 2.0 / 3.0 * sqrt(clamp02h(s) * clamp02h(2.0 * height - s) ** 3.0)
 
     def f(s: float):
         if s < 2.0 * height:
             div = (height - clamp0h(s)) / (2.0 * height - s)
         else:
             div = 0.0
-        return sqrt((1.0 - 2.0 * div) ** 3.0)
+        return pow((1.0 - 2.0 * div), 3.0 / 2.0)
 
     return a(x) * (1.0 - f(x)) + a(x - core_length) * f(x - core_length)
 
