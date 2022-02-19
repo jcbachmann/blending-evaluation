@@ -4,7 +4,7 @@ import re
 import subprocess
 import sys
 from distutils.version import LooseVersion
-from typing import Optional
+from typing import Optional, List
 
 from setuptools import find_packages, setup, Extension
 from setuptools.command.build_ext import build_ext
@@ -14,10 +14,11 @@ with open('README.md', 'r') as fh:
 
 
 class CMakeExtension(Extension):
-    def __init__(self, name: str, sourcedir: str = '', target: Optional[str] = None):
+    def __init__(self, name: str, sourcedir: str = '', target: Optional[str] = None, cmake_args: List[str] = None):
         Extension.__init__(self, name, sources=[])
         self.sourcedir = os.path.abspath(sourcedir)
         self.target = target
+        self.cmake_args = cmake_args
 
 
 class CMakeBuild(build_ext):
@@ -41,6 +42,8 @@ class CMakeBuild(build_ext):
     def build_extension(self, ext: CMakeExtension):
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
         cmake_args = ['-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=' + extdir, '-DPYTHON_EXECUTABLE=' + sys.executable]
+        if ext.cmake_args is not None:
+            cmake_args.extend(ext.cmake_args)
 
         cfg = 'Debug' if self.debug else 'Release'
         build_args = ['--config', cfg]
@@ -93,7 +96,8 @@ setup(
         CMakeExtension(
             'blending_simulator_lib',
             sourcedir='../../../BlendingSimulator',  # https://github.com/jcbachmann/blending-simulation
-            target='blending_simulator_lib'
+            target='blending_simulator_lib',
+            cmake_args=['-DBUILD_PYTHON_LIB=ON', '-DBUILD_FAST_SIMULATOR=ON']
         )
     ],
     cmdclass=dict(build_ext=CMakeBuild),
