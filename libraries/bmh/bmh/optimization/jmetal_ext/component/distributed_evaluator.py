@@ -2,8 +2,8 @@ import functools
 from typing import List, Optional
 
 from dask.distributed import Client, LocalCluster
-from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
+from jmetal.util.evaluator import Evaluator, S
 
 from .observable_evaluator import ObservableEvaluator, EvaluatorObserver
 

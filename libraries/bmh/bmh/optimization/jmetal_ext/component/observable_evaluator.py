@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from jmetal.component.evaluator import S, Evaluator
 from jmetal.core.problem import Problem
+from jmetal.util.evaluator import Evaluator, S
 
 
 class EvaluatorObserver:

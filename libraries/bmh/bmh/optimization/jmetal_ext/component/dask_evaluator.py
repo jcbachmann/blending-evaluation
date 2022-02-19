@@ -1,8 +1,8 @@
 from typing import List, Optional
 
 import dask
-from jmetal.component.evaluator import Evaluator, S
 from jmetal.core.problem import Problem
+from jmetal.util.evaluator import Evaluator, S
 
 from .observable_evaluator import ObservableEvaluator, EvaluatorObserver
 
