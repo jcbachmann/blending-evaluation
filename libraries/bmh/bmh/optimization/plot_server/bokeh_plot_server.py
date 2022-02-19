@@ -60,24 +60,24 @@ class BokehPlotServer(PlotServer):
             y_range=Range1d(0.0, 2.0),
         )
         scatter_fig.scatter(
-            x='f1', y='f2', source=all_source, legend='All Evaluations',
+            x='f1', y='f2', source=all_source, legend_label='All Evaluations',
             marker='x', size=5, line_color='color', alpha=0.7,
             nonselection_line_alpha=1.0
         )
         scatter_fig.scatter(
-            x='f1', y='f2', source=pop_source, legend='Population',
+            x='f1', y='f2', source=pop_source, legend_label='Population',
             marker='o', size=8, line_color=palette[1], fill_alpha=0,
         )
         scatter_fig.scatter(
-            x='f1', y='f2', source=best_source, legend='Best',
+            x='f1', y='f2', source=best_source, legend_label='Best',
             marker='o', size=11, line_color=palette[2], fill_alpha=0.5,
         )
         scatter_fig.scatter(
-            x='f1', y='f2', source=selected_source, legend='Selected',
+            x='f1', y='f2', source=selected_source, legend_label='Selected',
             marker='o', size=11, line_color=palette[3], fill_alpha=0.5,
         )
         scatter_fig.scatter(
-            x='f1', y='f2', source=reference_source, legend='Reference',
+            x='f1', y='f2', source=reference_source, legend_label='Reference',
             marker='*', size=11, line_color=palette[4], fill_alpha=0.5,
         )
         scatter_fig.legend.location = 'top_right'
@@ -89,13 +89,13 @@ class BokehPlotServer(PlotServer):
             tools='pan,wheel_zoom,reset,hover',
             x_axis_label='Timestamp',
             y_axis_label='Position',
-            x_range=Range1d(0, None),
-            y_range=Range1d(0, None),
+            x_range=Range1d(start=0),
+            y_range=Range1d(start=0),
             x_axis_type='datetime',
         )
-        path_fig.line(x='timestamp', y='x', legend='Best', source=best_path_source, color=palette[2])
-        path_fig.line(x='timestamp', y='x', legend='Selected', source=selected_path_source, color=palette[3])
-        path_fig.line(x='timestamp', y='x', legend='Reference', source=reference_path_source, color=palette[4],
+        path_fig.line(x='timestamp', y='x', legend_label='Best', source=best_path_source, color=palette[2])
+        path_fig.line(x='timestamp', y='x', legend_label='Selected', source=selected_path_source, color=palette[3])
+        path_fig.line(x='timestamp', y='x', legend_label='Reference', source=reference_path_source, color=palette[4],
                       line_dash='4 4', alpha=0.5)
         path_fig.ray(x='t_start', y=0, color='black', length=0, angle=90, angle_units='deg', alpha=0.5,
                      source=progress_source)
@@ -108,12 +108,12 @@ class BokehPlotServer(PlotServer):
             tools='pan,wheel_zoom,reset,hover',
             x_axis_label='Timestamp',
             y_axis_label='Parameter',
-            x_range=Range1d(0, None),
+            x_range=Range1d(start=0),
             x_axis_type='datetime',
         )
         for i, p in enumerate(parameter_labels):
             material_input_fig.line(
-                x='timestamp', y=p, legend=f'Parameter {p}', source=material_input_source, color=palette[i]
+                x='timestamp', y=p, legend_label=f'Parameter {p}', source=material_input_source, color=palette[i]
             )
         material_input_fig.legend.location = 'top_right'
 
@@ -138,24 +138,24 @@ class BokehPlotServer(PlotServer):
             x_axis_label='Timestamp',
             y_axis_label='Parameter',
             x_axis_type='datetime',
-            x_range=Range1d(0, None),
+            x_range=Range1d(start=0),
             y_range=material_input_fig.y_range,
         )
         for i, p in enumerate(parameter_labels):
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Best {p}', source=best_path_material_output_source,
+                x='timestamp', y=p, legend_label=f'Best {p}', source=best_path_material_output_source,
                 color=palette[2 + i * 4]
             )
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Selected {p}', source=selected_path_material_output_source,
+                x='timestamp', y=p, legend_label=f'Selected {p}', source=selected_path_material_output_source,
                 color=palette[3 + i * 4]
             )
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Reference {p}', source=reference_path_material_output_source,
+                x='timestamp', y=p, legend_label=f'Reference {p}', source=reference_path_material_output_source,
                 color=palette[4 + i * 4], alpha=0.8
             )
             material_output_fig.line(
-                x='timestamp', y=p, legend=f'Ideal {p}', source=ideal_path_material_output_source,
+                x='timestamp', y=p, legend_label=f'Ideal {p}', source=ideal_path_material_output_source,
                 color=palette[5 + i * 4], alpha=0.8, line_dash='dotted'
             )
         material_output_fig.legend.location = 'top_right'
@@ -172,19 +172,19 @@ class BokehPlotServer(PlotServer):
             y_range=material_input_fig_volume.y_range,
         )
         material_output_fig_volume.line(
-            x='timestamp', y='tonnage', legend=f'Best', source=best_path_material_output_source,
+            x='timestamp', y='tonnage', legend_label=f'Best', source=best_path_material_output_source,
             color=palette[2]
         )
         material_output_fig_volume.line(
-            x='timestamp', y='tonnage', legend=f'Selected', source=selected_path_material_output_source,
+            x='timestamp', y='tonnage', legend_label=f'Selected', source=selected_path_material_output_source,
             color=palette[3]
         )
         material_output_fig_volume.line(
-            x='timestamp', y='tonnage', legend=f'Reference', source=reference_path_material_output_source,
+            x='timestamp', y='tonnage', legend_label=f'Reference', source=reference_path_material_output_source,
             color=palette[4], alpha=0.8
         )
         material_output_fig_volume.line(
-            x='timestamp', y='tonnage', legend=f'Ideal', source=ideal_path_material_output_source,
+            x='timestamp', y='tonnage', legend_label=f'Ideal', source=ideal_path_material_output_source,
             color=palette[5], alpha=0.8, line_dash='dotted'
         )
         material_output_fig_volume.legend.location = 'top_right'
@@ -241,7 +241,11 @@ class BokehPlotServer(PlotServer):
                 start = len(all_source.data['f1'])
                 all_data = self.plot_server_interface.get_new_solutions(start)
                 all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
-                all_source.stream(all_data)
+                all_source.stream({
+                    'f1': all_data['f1'],
+                    'f2': all_data['f2'],
+                    'color': all_data['color'],
+                })
 
                 pop_source.data = self.plot_server_interface.get_population()
 
@@ -300,7 +304,7 @@ class BokehPlotServer(PlotServer):
                         't_start': [progress['t_start'] * 1000],
                     }
             except Exception as e:
-                self.logger.error(f'Periodic callback: {e}')
+                self.logger.error(f'Exception during periodic callback: {e}')
 
         doc.add_periodic_callback(update, 500)
 
