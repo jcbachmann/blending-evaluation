@@ -20,3 +20,9 @@ class MultiprocessEvaluator(ObservableEvaluator[S]):
 
     def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
         return self.pool.map(functools.partial(evaluate_solution, problem=problem), solution_list)
+
+    def stop(self):
+        if self.pool:
+            self.pool.close()
+            self.pool.join()
+            self.pool = None
