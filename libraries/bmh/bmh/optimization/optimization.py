@@ -14,7 +14,6 @@ from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
-from .jmetal_ext.algorithm.multiobjective.ssnsgaii import SSNSGAII
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem, process_material_deposition
@@ -165,7 +164,9 @@ def get_algorithm(
         return NSGAII[FloatSolution, List[FloatSolution]]
 
     def get_ssnsgaii():
-        return SSNSGAII[FloatSolution, List[FloatSolution]]
+        nonlocal algorithm_kwargs
+        algorithm_kwargs['offspring_population_size'] = 1
+        return NSGAII[FloatSolution, List[FloatSolution]]
 
     algorithm_dict = {
         'hpsea': get_hpsea,
