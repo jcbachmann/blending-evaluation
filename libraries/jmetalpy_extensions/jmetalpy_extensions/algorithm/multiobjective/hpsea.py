@@ -1,14 +1,15 @@
 from typing import TypeVar, List, Optional
 
-from jmetal.algorithm.singleobjective.evolutionaryalgorithm import GenerationalGeneticAlgorithm
-from jmetal.component.density_estimator import CrowdingDistance
-from jmetal.component.evaluator import SequentialEvaluator, Evaluator
-from jmetal.component.ranking import Ranking
+from jmetal.algorithm.singleobjective.genetic_algorithm import GeneticAlgorithm
 from jmetal.core.operator import Mutation, Crossover, Selection
 from jmetal.core.problem import Problem
+from jmetal.util.density_estimator import CrowdingDistance
+from jmetal.util.evaluator import Evaluator
+from jmetal.util.evaluator import SequentialEvaluator
+from jmetal.util.ranking import Ranking
 
 S = TypeVar('S')
-R = TypeVar(List[S])
+R = TypeVar('R')
 
 
 # TODO upstream temporary code (huge performance improvement)
@@ -115,7 +116,7 @@ class MyRankingAndCrowdingDistanceSelection(Selection[List[S], List[S]]):
         return 'Ranking and crowding distance selection'
 
 
-class HPSEA(GenerationalGeneticAlgorithm[S, R]):
+class HPSEA(GeneticAlgorithm[S, R]):
     def __init__(self,
                  problem: Problem[S],
                  population_size: int,
@@ -143,7 +144,7 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
         return 'HPSEA'
 
     def get_result(self) -> R:
-        return self.population
+        return self.solutions
 
     def selection(self, population: List[S]):
         mating_population = []
@@ -174,9 +175,9 @@ class HPSEA(GenerationalGeneticAlgorithm[S, R]):
     def update_progress(self):
         self.evaluations += self.offspring_size
 
-        observable_data = {'evaluations': self.evaluations,
-                           'computing time': self.get_current_computing_time(),
-                           'population': self.population,
-                           'reference_front': self.problem.reference_front}
+        observable_data = {'EVALUATIONS': self.evaluations,
+                           'COMPUTING_TIME': self.get_current_computing_time(),
+                           'SOLUTIONS': self.solutions,
+                           'REFERENCE_FRONT': self.problem.reference_front}
 
         self.observable.notify_all(**observable_data)

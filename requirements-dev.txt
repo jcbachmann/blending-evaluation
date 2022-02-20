@@ -1,3 +1,4 @@
+-e libraries/jmetalpy_extensions
 -e libraries/bmh
 -e libraries/plant_simulator
 -e libraries/data_explorer

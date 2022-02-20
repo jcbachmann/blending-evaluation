@@ -9,7 +9,6 @@ from pandas import DataFrame
 from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
-from .solution_generator import SolutionGenerator, RandomSolutionGenerator
 
 
 def process_material_deposition(material: Material, deposition: Deposition, ppm3: float) -> Material:
@@ -89,6 +88,93 @@ def variables_to_deposition_generic(
     return deposition
 
 
+def get_chevron_deposition(x_min: float, x_max: float, max_timestamp: float, v: float, deposition_meta: DepositionMeta):
+    x_diff = x_max - x_min
+    time_per_layer = x_diff / v
+    layers = max_timestamp / time_per_layer
+    steps = int(math.ceil(layers)) + 1
+
+    def get_chevron():
+        last_at_min = False
+        positions = []
+        for i in range(steps):
+            if last_at_min:
+                if i == steps - 1:
+                    positions.append(x_min + x_diff * (layers % 1))
+                else:
+                    positions.append(x_max)
+                last_at_min = False
+            else:
+                if i == steps - 1:
+                    positions.append(x_max - x_diff * (layers % 1))
+                else:
+                    positions.append(x_min)
+                last_at_min = True
+
+        return positions
+
+    deposition = Deposition(
+        meta=deposition_meta.copy(),
+        data=DataFrame({
+            'timestamp': np.append(np.arange(0, max_timestamp, time_per_layer), max_timestamp),
+            'x': get_chevron(),
+            'z': [deposition_meta.bed_size_z / 2] * steps,
+        })
+    )
+
+    deposition.meta.time = deposition.data['timestamp'].values[-1]
+
+    return deposition
+
+
+def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max: float, max_timestamp: float,
+                                 v_max: float, deposition_meta: DepositionMeta):
+    layers = len(variables) - 1
+    move_time_v_max_per_layer = (x_max - x_min) / v_max
+    move_time_v_max_total = move_time_v_max_per_layer * layers
+    stand_time_count = len(variables)
+    stand_time_max_total = max_timestamp - move_time_v_max_total
+    stand_time_max = stand_time_max_total / stand_time_count
+    stand_time_total = sum(variables) * stand_time_max
+    move_time_total = max_timestamp - stand_time_total
+    move_time_per_layer = move_time_total / layers
+
+    def get_timestamps():
+        timestamps: list[float] = [0.0, stand_time_max * variables[0]]
+
+        for i in range(1, len(variables)):
+            timestamps.append(timestamps[-1] + move_time_per_layer)
+            timestamps.append(timestamps[-1] + stand_time_max * variables[i])
+
+        return timestamps
+
+    def get_positions():
+        last_at_min = False
+        positions = []
+        for i in range(len(variables)):
+            if last_at_min:
+                positions.extend([x_max, x_max])
+                last_at_min = False
+            else:
+                positions.extend([x_min, x_min])
+                last_at_min = True
+
+        return positions
+
+    deposition = Deposition(
+        meta=deposition_meta.copy(),
+        data=DataFrame({
+            'timestamp': get_timestamps(),
+            'x': get_positions(),
+            'z': [deposition_meta.bed_size_z / 2] * (2 * len(variables)),
+        })
+    )
+
+    deposition.meta.time = deposition.data['timestamp'].values[-1]
+
+    return deposition
+
+
 def get_full_speed_deposition(
         x_min: float, x_max: float, deposition_meta: DepositionMeta, t_max: float, v_max: float
 ) -> Deposition:
@@ -133,8 +219,7 @@ def calculate_reference_objectives(reclaimed_material: Material) -> Dict[str, fl
 class HomogenizationProblem(FloatProblem):
     def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
                  number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float, ppm3: float,
-                 timestamps: Optional[List[float]] = None,
-                 solution_generator: SolutionGenerator = RandomSolutionGenerator(), objectives: list = None):
+                 timestamps: Optional[List[float]] = None, objectives: List[str] = None):
         super(HomogenizationProblem, self).__init__()
 
         # Copy parameters
@@ -147,7 +232,6 @@ class HomogenizationProblem(FloatProblem):
         self.v_max = v_max
         self.ppm3 = ppm3
         self.timestamps = timestamps
-        self.solution_generator = solution_generator
         self.objectives = objectives
 
         # Buffer values
@@ -189,7 +273,7 @@ class HomogenizationProblem(FloatProblem):
     def get_name(self) -> str:
         return "Homogenization Problem"
 
-    def evaluate_objective(self, deposition: Deposition, reclaimed_material: Material, objective) -> float:
+    def evaluate_objective(self, deposition: Deposition, reclaimed_material: Material, objective: str) -> float:
         objective_type = objective.split('/')[0]
         if objective_type == 'F1':
             evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
@@ -228,22 +312,20 @@ class HomogenizationProblem(FloatProblem):
     def get_objective_labels(self) -> List[str]:
         return self.objectives
 
-    def create_solution(self) -> FloatSolution:
-        new_solution = FloatSolution(
-            number_of_objectives=self.number_of_objectives,
-            number_of_constraints=self.number_of_constraints,
-            lower_bound=self.lower_bound,
-            upper_bound=self.upper_bound
-        )
-        new_solution.variables = self.solution_generator.gen(self.number_of_variables)
-        return new_solution
-
     def variables_to_deposition(self, variables: List[float]) -> Deposition:
         return variables_to_deposition_generic(
             variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v_max=self.v_max,
             deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix,
             timestamps=self.timestamps
         )
+        # return get_chevron_deposition(
+        #     x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v=self.v_max * variables[0],
+        #     deposition_meta=self.deposition_meta
+        # )
+        # return get_chevron_ideal_deposition(
+        #     variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v_max=self.v_max,
+        #     deposition_meta=self.deposition_meta
+        # )
 
     def get_reference_relative(self) -> Tuple[Deposition, Material, Dict[str, float]]:
         return self.reference_deposition, self.reference_reclaimed_material, self.reference_deposition_objectives

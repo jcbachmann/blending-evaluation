@@ -11,13 +11,12 @@ from jmetal.operator import SBXCrossover, PolynomialMutation
 from jmetal.operator.selection import BinaryTournamentSelection
 from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 from jmetal.util.evaluator import Evaluator, S
+from jmetal.util.generator import Generator
 from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
-from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
-from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
-from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem, process_material_deposition
-from .jmetal_ext.problem.multiobjective.solution_generator import RandomSolutionGenerator
+from jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
+from .homogenization_problem.homogenization_problem import HomogenizationProblem, process_material_deposition
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
 from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
@@ -146,6 +145,7 @@ def get_algorithm(
         population_size: int,
         max_evaluations: int,
         evaluator: Evaluator[S],
+        population_generator: Generator,
         kwargs: Dict[str, Any]
 ) -> Algorithm:
     logger = logging.getLogger(__name__)
@@ -154,11 +154,17 @@ def get_algorithm(
     if evaluator:
         algorithm_kwargs['population_evaluator'] = evaluator
 
+    if population_generator:
+        algorithm_kwargs['population_generator'] = population_generator
+
     def get_hpsea():
+        # FIXME HPSEA?
         nonlocal algorithm_kwargs
         if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
-            algorithm_kwargs['offspring_size'] = kwargs.get('offspring_size')
-        return HPSEA[FloatSolution, List[FloatSolution]]
+            algorithm_kwargs['offspring_population_size'] = kwargs.get('offspring_size')
+        else:
+            algorithm_kwargs['offspring_population_size'] = 2 * int(0.5 * 0.2 * population_size)
+        return NSGAII[FloatSolution, List[FloatSolution]]
 
     def get_nsgaii():
         return NSGAII[FloatSolution, List[FloatSolution]]
@@ -285,7 +291,7 @@ class DepositionOptimizer(PlotServerInterface):
     def run(
             self, *, material: Material, variables: int, deposition_prefix: Deposition = None,
             timestamps: Optional[List[float]] = None,
-            solution_generator=RandomSolutionGenerator()
+            population_generator: Generator = None
     ) -> None:
         self.algorithm_observer.reset()
         self.evaluator_observer.reset()
@@ -304,13 +310,18 @@ class DepositionOptimizer(PlotServerInterface):
             v_max=self.v_max,
             ppm3=self.ppm3,
             timestamps=timestamps,
-            solution_generator=solution_generator,
             objectives=self.objectives
         )
 
         self.algorithm = get_algorithm(
-            self.algorithm_str, problem=self.problem, variables=variables, population_size=self.population_size,
-            max_evaluations=self.max_evaluations, evaluator=self.evaluator, kwargs=self.kwargs
+            self.algorithm_str,
+            problem=self.problem,
+            variables=variables,
+            population_size=self.population_size,
+            max_evaluations=self.max_evaluations,
+            evaluator=self.evaluator,
+            population_generator=population_generator,
+            kwargs=self.kwargs
         )
         self.algorithm.observable.register(self.algorithm_observer)
 
