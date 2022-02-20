@@ -18,11 +18,15 @@ class ReclaimedMaterialEvaluator:
     def get_volume_stdev(self) -> float:
         if self._volume_stdev is None:
             ideal_df = self.reclaimed.data.copy()
-            ideal_height = get_stockpile_height(ideal_df['volume'].sum(), self.x_max - self.x_min)
+            ideal_height = get_stockpile_height(volume=ideal_df['volume'].sum(), core_length=self.x_max - self.x_min)
             ideal_df['x_diff'] = (ideal_df['x'] - ideal_df['x'].shift(1)).fillna(0.0)
             ideal_df['volume'] = ideal_df.apply(
                 lambda row: get_stockpile_slice_volume(
-                    row['x'], self.x_max - self.x_min, ideal_height, self.x_min, row['x_diff']
+                    x=row['x'],
+                    core_length=self.x_max - self.x_min,
+                    height=ideal_height,
+                    x_min=self.x_min,
+                    x_diff=row['x_diff']
                 ), axis=1
             )
 

@@ -120,7 +120,7 @@ def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
     reclaimed_evaluator = ReclaimedMaterialEvaluator(reclaimed_material)
     chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
 
-    # Set the maximum acceptable volume standard deviation to a a factor of two for all slices
+    # Set the maximum acceptable volume standard deviation to a factor of two for all slices
     volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
     worst_acceptable_volume_stdev = 1.0 / 6.0 * volume_per_slice
 
