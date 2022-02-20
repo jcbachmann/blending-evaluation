@@ -2,19 +2,18 @@ import logging
 from typing import List, Optional, Dict, Any
 
 import numpy as np
-from jmetal.algorithm import NSGAII
-from jmetal.component import RankingAndCrowdingDistanceComparator
-from jmetal.component.evaluator import S, Evaluator
-from jmetal.component.observer import Observer
+from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.core.algorithm import Algorithm
+from jmetal.core.observer import Observer
 from jmetal.core.problem import Problem
 from jmetal.core.solution import FloatSolution
-from jmetal.operator.crossover import SBX
-from jmetal.operator.mutation import Polynomial
+from jmetal.operator import SBXCrossover, PolynomialMutation
 from jmetal.operator.selection import BinaryTournamentSelection
+from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
+from jmetal.util.evaluator import Evaluator, S
 from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file
+from jmetal.util.termination_criterion import StoppingByEvaluations
 
-from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
 from .jmetal_ext.component.observable_evaluator import EvaluatorObserver
 from .jmetal_ext.problem.multiobjective.homogenization_problem import HomogenizationProblem, process_material_deposition
@@ -38,9 +37,9 @@ class VerboseHoardingAlgorithmObserver(Observer):
         self.logger = logging.getLogger(__name__)
 
     def update(self, *args, **kwargs):
-        evaluations = kwargs['evaluations']
-        self.population = kwargs['population']
-        computing_time = kwargs['computing time']
+        evaluations = kwargs['EVALUATIONS']
+        self.population = kwargs['SOLUTIONS']
+        computing_time = kwargs['COMPUTING_TIME']
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
         cps = e_diff / t_diff if t_diff > 0 else '-'
@@ -153,7 +152,7 @@ def get_algorithm(
 
     algorithm_kwargs = {}
     if evaluator:
-        algorithm_kwargs['evaluator'] = evaluator
+        algorithm_kwargs['population_evaluator'] = evaluator
 
     def get_hpsea():
         nonlocal algorithm_kwargs
@@ -181,9 +180,9 @@ def get_algorithm(
         return algorithm_type(
             problem=problem,
             population_size=population_size,
-            max_evaluations=max_evaluations,
-            mutation=Polynomial(min(3.3 / variables, 1.0), distribution_index=20),
-            crossover=SBX(0.9, distribution_index=15),
+            termination_criterion=StoppingByEvaluations(max_evaluations),
+            mutation=PolynomialMutation(min(3.3 / variables, 1.0), distribution_index=20),
+            crossover=SBXCrossover(0.9, distribution_index=15),
             selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
             **algorithm_kwargs
         )
