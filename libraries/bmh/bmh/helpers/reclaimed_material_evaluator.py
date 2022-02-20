@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, Dict
 
 from .math import stdev, weighted_avg_and_std
 from .stockpile_math import get_stockpile_height, get_stockpile_slice_volume
@@ -12,7 +12,7 @@ class ReclaimedMaterialEvaluator:
         self.x_max = x_max
 
         # Caches
-        self._parameter_stdev: Optional[List[float]] = None
+        self._parameter_stdev: Optional[Dict[str, float]] = None
         self._volume_stdev: Optional[float] = None
 
     def get_volume_stdev(self) -> float:
@@ -34,19 +34,24 @@ class ReclaimedMaterialEvaluator:
 
         return self._volume_stdev
 
-    def get_parameter_stdev(self) -> List[float]:
+    def get_parameter_stdev(self) -> Dict[str, float]:
         if self._parameter_stdev is None:
-            reclaimed_df = self.reclaimed.data
             cols = self.reclaimed.get_parameter_columns()
-            self._parameter_stdev = [weighted_avg_and_std(reclaimed_df[col], reclaimed_df['volume'])[1] for col in cols]
+            self._parameter_stdev = {f'F1/{col}': self.get_single_parameter_stdev(col) for col in cols}
         return self._parameter_stdev
 
-    def get_all_stdev(self) -> List[float]:
-        return self.get_parameter_stdev() + [self.get_volume_stdev()]
+    def get_single_parameter_stdev(self, parameter: str) -> float:
+        return weighted_avg_and_std(self.reclaimed.data[parameter], self.reclaimed.data['volume'])[1]
+
+    def get_all_stdev(self) -> Dict[str, float]:
+        return {
+            **self.get_parameter_stdev(),
+            'F2': self.get_volume_stdev()
+        }
 
     @staticmethod
-    def get_relative(objectives: List[float], reference: List[float]) -> List[float]:
-        return [s / r for s, r in zip(objectives, reference)]
+    def get_relative(objectives: Dict[str, float], reference: Dict[str, float]) -> Dict[str, float]:
+        return {k: v / reference[k] for k, v in objectives.items()}
 
     def get_slice_count(self) -> int:
         return self.reclaimed.data['volume'].shape[0]

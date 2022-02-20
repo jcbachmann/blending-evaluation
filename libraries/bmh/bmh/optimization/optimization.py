@@ -43,7 +43,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
         cps = e_diff / t_diff if t_diff > 0 else '-'
-        best = min(self.population, key=lambda s: np.sum(np.square(s.objectives)))
+        best = min(self.population, key=lambda s: np.sum(np.square(s.objectives.values())))
         self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
             f'best: {best.objectives}'
@@ -243,6 +243,7 @@ class DepositionOptimizer(PlotServerInterface):
             v_max: float,
             parameter_labels: List[str],
             ppm3: float = 1.0,
+            objectives: list,
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -261,6 +262,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.v_max = v_max
         self.parameter_labels = parameter_labels
         self.ppm3 = ppm3
+        self.objectives = objectives
         self.kwargs = kwargs
 
         # Cache
@@ -303,6 +305,7 @@ class DepositionOptimizer(PlotServerInterface):
             ppm3=self.ppm3,
             timestamps=timestamps,
             solution_generator=solution_generator,
+            objectives=self.objectives
         )
 
         self.algorithm = get_algorithm(
@@ -368,7 +371,7 @@ class DepositionOptimizer(PlotServerInterface):
         if self.evaluator_observer and self.problem:
             if len(self.algorithm_observer.population) > 0:
                 solution = min(
-                    self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives))
+                    self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives.values()))
                 )
                 deposition = self.problem.variables_to_deposition(solution.variables)
                 return OptimizationResult(

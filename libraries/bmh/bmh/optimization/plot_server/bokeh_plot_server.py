@@ -202,8 +202,8 @@ class BokehPlotServer(PlotServer):
                     'x': solution.deposition.data['x']
                 }
                 selected_source.data = {
-                    'f1': [solution.objectives[0]],
-                    'f2': [solution.objectives[1]]
+                    'f1': [[v for k, v in solution.objectives.items() if k.startswith('F1')][0]],
+                    'f2': [solution.objectives['F2']]
                 }
 
                 df = solution.reclaimed_material.data.copy()
@@ -257,7 +257,10 @@ class BokehPlotServer(PlotServer):
                     }
                     path_fig.x_range.end = best_solution.deposition.meta.time * 1000
                     path_fig.y_range.end = best_solution.deposition.meta.bed_size_x
-                    best_source.data = {'f1': [best_solution.objectives[0]], 'f2': [best_solution.objectives[1]]}
+                    best_source.data = {
+                        'f1': [[v for k, v in best_solution.objectives.items() if k.startswith('F1')][0]],
+                        'f2': [best_solution.objectives['F2']]
+                    }
                     df = best_solution.reclaimed_material.data.copy()
                     df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))
                     df = df[df['tonnage'] > 0.0]
@@ -271,7 +274,10 @@ class BokehPlotServer(PlotServer):
                         'timestamp': reference.deposition.data['timestamp'] * 1000,
                         'x': reference.deposition.data['x']
                     }
-                    reference_source.data = {'f1': [reference.objectives[0]], 'f2': [reference.objectives[1]]}
+                    reference_source.data = {
+                        'f1': [[v for k, v in reference.objectives.items() if k.startswith('F1')][0]],
+                        'f2': [reference.objectives['F2']]
+                    }
 
                     df = reference.reclaimed_material.data.copy()
                     df['tonnage'] = 3600 * df['volume'] / (df['timestamp'] - df['timestamp'].shift(1).fillna(0))

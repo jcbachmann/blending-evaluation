@@ -1,14 +1,14 @@
 import math
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import numpy as np
-from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
-from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
-from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 from pandas import DataFrame
 
+from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
+from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from .solution_generator import SolutionGenerator, RandomSolutionGenerator
 
 
@@ -116,7 +116,7 @@ def get_full_speed_deposition(
     return deposition
 
 
-def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
+def calculate_reference_objectives(reclaimed_material: Material) -> Dict[str, float]:
     reclaimed_evaluator = ReclaimedMaterialEvaluator(reclaimed_material)
     chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
 
@@ -124,15 +124,18 @@ def calculate_reference_objectives(reclaimed_material: Material) -> List[float]:
     volume_per_slice = reclaimed_material.get_volume() / reclaimed_evaluator.get_slice_count()
     worst_acceptable_volume_stdev = 1.0 / 6.0 * volume_per_slice
 
-    return chevron_parameter_stdev + [worst_acceptable_volume_stdev]
+    return {
+        **chevron_parameter_stdev,
+        'F2': worst_acceptable_volume_stdev,
+    }
 
 
 class HomogenizationProblem(FloatProblem):
     def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
                  number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float, ppm3: float,
                  timestamps: Optional[List[float]] = None,
-                 solution_generator: SolutionGenerator = RandomSolutionGenerator()):
-        super().__init__()
+                 solution_generator: SolutionGenerator = RandomSolutionGenerator(), objectives: list = None):
+        super(HomogenizationProblem, self).__init__()
 
         # Copy parameters
         self.deposition_meta = deposition_meta
@@ -145,6 +148,7 @@ class HomogenizationProblem(FloatProblem):
         self.ppm3 = ppm3
         self.timestamps = timestamps
         self.solution_generator = solution_generator
+        self.objectives = objectives
 
         # Buffer values
         self.max_timestamp = material.data['timestamp'].values[-1]
@@ -170,8 +174,11 @@ class HomogenizationProblem(FloatProblem):
         self.reference_deposition_objectives = self.evaluate_reclaimed_material(self.reference_reclaimed_material)
 
         # Setup problem base variables
-        self.number_of_objectives = len(material.get_parameter_columns()) + 1
+        self.number_of_objectives = len(objectives)
         self.number_of_constraints = 0
+
+        self.obj_directions = [self.MINIMIZE] * self.number_of_objectives
+        self.obj_labels = self.get_objective_labels()
 
         self.lower_bound = [0.0 for _ in range(number_of_variables)]
         self.upper_bound = [1.0 for _ in range(number_of_variables)]
@@ -179,33 +186,54 @@ class HomogenizationProblem(FloatProblem):
         FloatSolution.lower_bound = self.lower_bound
         FloatSolution.upper_bound = self.upper_bound
 
+    def get_name(self) -> str:
+        return "Homogenization Problem"
+
+    def evaluate_objective(self, deposition: Deposition, reclaimed_material: Material, objective) -> float:
+        objective_type = objective.split('/')[0]
+        if objective_type == 'F1':
+            evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
+            return evaluator.get_single_parameter_stdev(objective.split('/')[1]) / self.reference_objectives[objective]
+        elif objective_type == 'F2':
+            evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
+            return evaluator.get_volume_stdev() / self.reference_objectives[objective]
+        elif objective_type == 'F3':
+            return self.evaluate_distance_travelled(deposition)
+        elif objective_type == 'F4':
+            return self.evaluate_max_speed(deposition)
+
+        raise ValueError(f"Unknown objective: {objective_type}")
+
     def evaluate(self, solution: FloatSolution) -> None:
         deposition = self.variables_to_deposition(variables=solution.variables)
         reclaimed_material = process_material_deposition(material=self.material, deposition=deposition, ppm3=self.ppm3)
-        solution.objectives = self.evaluate_reclaimed_material(reclaimed_material)
+        solution.objectives = [
+            self.evaluate_objective(deposition, reclaimed_material, objective)
+            for objective in self.objectives
+        ]
 
-    def evaluate_reclaimed_material(self, reclaimed_material: Material) -> List[float]:
+    def evaluate_reclaimed_material(self, reclaimed_material: Material) -> Dict[str, float]:
         return ReclaimedMaterialEvaluator.get_relative(
             ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min,
                                        x_max=self.x_max).get_all_stdev(),
             self.reference_objectives
         )
 
-    def evaluate_constraints(self, solution: FloatSolution) -> None:
-        # if constraint violation should be used set the number of constraints accordingly
-        # don't forget that constraints are disregarded in HPSEA
-        pass
+    def evaluate_distance_travelled(self, deposition: Deposition) -> float:
+        return deposition.data['x'].diff().abs().sum()  # FIXME normalize correctly with self.v_max
+
+    def evaluate_max_speed(self, deposition: Deposition) -> float:
+        return deposition.data['x'].diff().abs().max() / self.v_max  # FIXME normalize correctly with self.v_max
 
     def get_objective_labels(self) -> List[str]:
-        return [col + ' Stdev' for col in self.material.get_parameter_columns()] + ['Volume Stdev']
+        return self.objectives
 
     def create_solution(self) -> FloatSolution:
         new_solution = FloatSolution(
-            self.number_of_variables,
-            self.number_of_objectives,
-            self.number_of_constraints,
-            self.lower_bound,
-            self.upper_bound
+            number_of_objectives=self.number_of_objectives,
+            number_of_constraints=self.number_of_constraints,
+            lower_bound=self.lower_bound,
+            upper_bound=self.upper_bound
         )
         new_solution.variables = self.solution_generator.gen(self.number_of_variables)
         return new_solution
@@ -217,5 +245,5 @@ class HomogenizationProblem(FloatProblem):
             timestamps=self.timestamps
         )
 
-    def get_reference_relative(self) -> Tuple[Deposition, Material, List[float]]:
+    def get_reference_relative(self) -> Tuple[Deposition, Material, Dict[str, float]]:
         return self.reference_deposition, self.reference_reclaimed_material, self.reference_deposition_objectives
