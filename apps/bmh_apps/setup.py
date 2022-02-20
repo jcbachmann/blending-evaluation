@@ -20,11 +20,13 @@ setuptools.setup(
     ],
     install_requires=[
         'bmh',
+        'dash',
         'matplotlib',
         'numpy',
         'pandas',
+        'plotly',
         'scipy',
-        'seaborn',
         'scikit-learn',
+        'seaborn',
     ],
 )
