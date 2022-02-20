@@ -1,0 +1,7 @@
+-e libraries/bmh
+-e libraries/plant_simulator
+-e libraries/data_explorer
+-e apps/bmh_apps
+-e apps/benchmark_explorer
+-e apps/solution_explorer
+-e apps/demo_plant_simulator

@@ -83,7 +83,7 @@ setup(
         'Operating System :: OS Independent',
     ],
     install_requires=[
-        # 'jmetalpy',  # TODO
+        'jmetalpy',
         'numpy',
         'pandas',
     ],
