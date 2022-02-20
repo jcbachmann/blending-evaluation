@@ -12,6 +12,7 @@ from jmetal.core.solution import FloatSolution
 from jmetal.operator.crossover import SBX
 from jmetal.operator.mutation import Polynomial
 from jmetal.operator.selection import BinaryTournamentSelection
+from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file
 
 from .jmetal_ext.algorithm.multiobjective.hpsea import HPSEA
 from .jmetal_ext.component.multiprocess_evaluator import MultiprocessEvaluator
@@ -322,6 +323,12 @@ class DepositionOptimizer(PlotServerInterface):
         if self.auto_start:
             self.logger.debug('Stopping DepositionOptimizer')
             self.stop()
+
+        front = get_non_dominated_solutions(self.algorithm.get_result())
+        print_function_values_to_file(front, 'FUN')
+        print_variables_to_file(front, 'VAR')
+        with open('OBJ', 'w') as f:
+            f.write(f'{self.problem.get_objective_labels()}')
 
     def stop(self):
         if self.plot_server:
