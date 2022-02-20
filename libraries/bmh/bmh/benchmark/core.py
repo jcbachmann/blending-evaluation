@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from typing import Dict
 
 from .data import BenchmarkData, prepare_path
 from .material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition, write_data_file
@@ -66,7 +65,7 @@ def compute_sigma_reduction(material_before: MaterialMeta, material_after: Mater
 
 
 def process(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-            simulator_meta: SimulatorMeta, path: str, dry_run: bool) -> Dict[str, float]:
+            simulator_meta: SimulatorMeta, path: str, dry_run: bool) -> None:
     logger = logging.getLogger(__name__)
     logger.info(f'Processing "{identifier}" with material "{material_meta}" and deposition "{deposition_meta}" using '
                 f'simulator type {simulator_meta.type}')
@@ -144,9 +143,8 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
         x_max=deposition_meta.bed_size_x - z_center
     )
     parameter_stdev = evaluator.get_parameter_stdev()
-    parameter_columns = material_meta.get_material().get_parameter_columns()
     logger.info(f'Parameter standard deviations:')
-    for i, p in enumerate(parameter_columns):
-        logger.info(f'{p}\t{parameter_stdev[i]}')
+    for k, v in parameter_stdev.items():
+        logger.info(f'{k}\t{v}')
 
     # compute_sigma_reduction(material_meta, reclaimed_material_meta)

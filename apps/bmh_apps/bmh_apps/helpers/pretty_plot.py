@@ -100,7 +100,8 @@ def pretty_scatter_plot(data, x_col=None, split_col=None, y_col=None, log_scale=
         x = df_c[x_col].values
         y = df_c[y_col].values
 
-        regression = LinearRegression().fit(x.reshape(-1, 1), y)
+        regression = LinearRegression()
+        regression.fit(x.reshape(-1, 1), y)
         y_prediction = regression.predict(x.reshape(-1, 1))
 
         label = str(cond) if legend_name is not None else ''

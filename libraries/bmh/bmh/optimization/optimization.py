@@ -243,7 +243,7 @@ class DepositionOptimizer(PlotServerInterface):
             v_max: float,
             parameter_labels: List[str],
             ppm3: float = 1.0,
-            objectives: list,
+            objectives: list[str],
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -276,7 +276,7 @@ class DepositionOptimizer(PlotServerInterface):
             self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
         )
         self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self, port=plot_server_port)
-        self.deposition_prefix: Deposition = None
+        self.deposition_prefix: Optional[Deposition] = None
 
     def start(self):
         if self.plot_server:

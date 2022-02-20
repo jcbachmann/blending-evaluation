@@ -6,9 +6,9 @@ import re
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from pandas import DataFrame
 
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from ..helpers.pretty_plot import pretty_scatter_plot
 
 
@@ -47,8 +47,8 @@ def get_height_map_volume_df(height_map_df, size):
 def load_results_from_path(path, size):
     results = []
 
-    r1 = re.compile('heights-(\d+)-(\d+)\.txt')
-    r2 = re.compile('heights-vol(\d+)-res([\d.]+)-run(\d+)\.txt')
+    r1 = re.compile(r'heights-(\d+)-(\d+)\.txt')
+    r2 = re.compile(r'heights-vol(\d+)-res([\d.]+)-run(\d+)\.txt')
     for file in os.listdir(path):
         in_volume = 0.0
         ppm3 = 1.0

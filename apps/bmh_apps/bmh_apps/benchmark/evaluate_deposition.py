@@ -6,13 +6,13 @@ import math
 from datetime import datetime
 
 import numpy as np
+from pandas import DataFrame
+
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, Deposition
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
-from pandas import DataFrame
-
 from ..helpers.configure_logging import configure_logging
 
 
@@ -29,8 +29,8 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
     core_length = deposition_meta.bed_size_x - deposition_meta.bed_size_z
 
     deposition_data = DataFrame({
-        'timestamp': [material_meta.time * l / chevron_layers for l in range(0, chevron_layers + 1)],
-        'x': [0.5 * deposition_meta.bed_size_z + core_length * float((l + starting_side) % 2) for l in
+        'timestamp': [material_meta.time * layer / chevron_layers for layer in range(0, chevron_layers + 1)],
+        'x': [0.5 * deposition_meta.bed_size_z + core_length * float((layer + starting_side) % 2) for layer in
               range(0, chevron_layers + 1)],
         'z': [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
     })
@@ -39,13 +39,14 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
 
 
 def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-                             chevron_layers: int) -> None:
+                             chevron_layers: int, objectives: list[str]) -> None:
     """
     Optimize the deposition regarding the material information provided
     :param identifier: identifier of this deposition computation
     :param material_meta: material description to current knowledge which will be stacked
     :param deposition_meta: deposition meta to which the deposition data will be added
     :param chevron_layers: amount of layers for Chevron stacking for speed determination
+    :param objectives: list of objectives which will be optimized
     """
     material = material_meta.get_material()
 
@@ -60,6 +61,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
         max_evaluations=25000,
         v_max=0.1,
         parameter_labels=material.get_parameter_columns(),
+        objectives=objectives,
     )
     optimizer.run(
         material=material,
@@ -74,7 +76,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     deposition_meta.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
 
 
-def compute_deposition(identifier: str, material_meta: MaterialMeta) -> DepositionMeta:
+def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives: list[str]) -> DepositionMeta:
     # Assumptions:
     # - maximum stockpile height 20m
     # - angle of repose: 45 degrees
@@ -103,7 +105,7 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta) -> Depositi
     })
 
     # Currently fixed amount of layers for Chevron stacking
-    set_optimized_deposition(identifier, material_meta, deposition_meta, chevron_layers=60)
+    set_optimized_deposition(identifier, material_meta, deposition_meta, chevron_layers=60, objectives=objectives)
 
     return deposition_meta
 
@@ -136,7 +138,8 @@ def main(args: argparse.Namespace):
     # Compute and evaluate deposition
     deposition_meta = compute_deposition(
         identifier=identifier,
-        material_meta=material_meta
+        material_meta=material_meta,
+        objectives=args.objectives
     )
 
     core.process(
@@ -163,5 +166,6 @@ if __name__ == '__main__':
     parser.add_argument('--dry_run', action='store_true', help='Do not write files')
     parser.add_argument('--sim', type=str, default='bsl_low', help='Simulator identifier')
     parser.add_argument('--material', type=str, default='generated_2Y45', help='Material curve identifier')
+    parser.add_argument('--objectives', type=str, nargs='+', help='Objectives to optimize')
 
     main(parser.parse_args())

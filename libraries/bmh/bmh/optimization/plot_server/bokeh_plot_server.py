@@ -240,7 +240,7 @@ class BokehPlotServer(PlotServer):
 
                 start = len(all_source.data['f1'])
                 all_data = self.plot_server_interface.get_new_solutions(start)
-                all_data['color'] = [Viridis256[min(int((i + start) / 100), 255)] for i in range(len(all_data['f1']))]
+                all_data['color'] = [Viridis256[min(int((j + start) / 100), 255)] for j in range(len(all_data['f1']))]
                 all_source.stream({
                     'f1': all_data['f1'],
                     'f2': all_data['f2'],

@@ -23,6 +23,7 @@
 # THE SOFTWARE.
 #
 # ###########################################################################*/
+# noinspection PyUnresolvedReferences
 """Pan and zoom interaction to plug on a matplotlib Figure.
 Interaction:
 - Zoom in/out with the mouse wheel
@@ -391,7 +392,7 @@ def figure_pz(*args, **kwargs):
     return fig
 
 
-if __name__ == '__main__':
+def main():
     import matplotlib.pyplot as plt
 
     fig = figure_pz()
@@ -437,16 +438,13 @@ if __name__ == '__main__':
     from mpl_toolkits.axisartist.grid_helper_curvelinear import \
         GridHelperCurveLinear
 
-
     def tr(x, y):  # source (data) to target (rectilinear plot) coordinates
         x, y = numpy.asarray(x), numpy.asarray(y)
         return x + 0.2 * y, y - x
 
-
     def inv_tr(x, y):
         x, y = numpy.asarray(x), numpy.asarray(y)
         return x - 0.2 * y, y + x
-
 
     grid_helper = GridHelperCurveLinear((tr, inv_tr))
 
@@ -466,3 +464,7 @@ if __name__ == '__main__':
     ax6.grid(True)
 
     plt.show()
+
+
+if __name__ == '__main__':
+    main()
