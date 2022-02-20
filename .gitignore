@@ -3,7 +3,6 @@
 
 # Repository directories
 /workdir/
-/libraries_external/
 
 # Cache
 __pycache__/
