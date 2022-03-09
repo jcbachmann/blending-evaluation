@@ -9,7 +9,7 @@ VALID_EXTENSIONS = ['FUN', 'VAR', 'OBJ']
 
 def get_filename_without_extension(file_path: str) -> str:
     if file_path[-3:] not in VALID_EXTENSIONS:
-        raise Exception("Invalid file extension")
+        raise Exception(f"Invalid file extension '{file_path[-3:]}'")
     return file_path[:-3]
 
 
@@ -41,6 +41,7 @@ class FunVarResults:
     misc_columns: list[str] = None
     fun_columns: list[str] = None
     var_columns: list[str] = None
+    runs: list[str] = None
 
     def merge(self, fun_var_results: 'FunVarResults'):
         if self.fun_columns is None:
@@ -58,6 +59,11 @@ class FunVarResults:
         elif self.misc_columns != fun_var_results.misc_columns:
             raise Exception("Cannot merge results with different misc columns")
 
+        if self.runs is None:
+            self.runs = fun_var_results.runs
+        else:
+            self.runs.extend(fun_var_results.runs)
+
         self.df = fun_var_results.df if self.df is None else self.df.append(fun_var_results.df, ignore_index=True)
 
     @staticmethod
@@ -69,16 +75,22 @@ class FunVarResults:
         var_df = read_var_file(file_path_without_extension + 'VAR')
         df = fun_df.join(var_df)
 
-        df['run'] = os.path.basename(file_path_without_extension)
+        if file_path_without_extension.endswith('/'):
+            # Use the name of the directory
+            run = os.path.basename(file_path_without_extension[:-1])
+        else:
+            run = os.path.basename(file_path_without_extension)
+        df['run'] = run
         df['individual'] = df.index
-        df['run_individual'] = df['run'].astype(str) + ' - ' + df['individual'].astype(str)
+        df['run_individual'] = run + ' - ' + df['individual'].astype(str)
         misc_columns = ['run', 'individual', 'run_individual']
 
         return FunVarResults(
             df=df,
             fun_columns=fun_columns,
             var_columns=var_df.columns.tolist(),
-            misc_columns=misc_columns
+            misc_columns=misc_columns,
+            runs=[run]
         )
 
     @staticmethod
