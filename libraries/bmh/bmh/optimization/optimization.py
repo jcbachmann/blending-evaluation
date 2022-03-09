@@ -42,7 +42,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
         cps = e_diff / t_diff if t_diff > 0 else '-'
-        best = min(self.population, key=lambda s: np.sum(np.square(s.objectives.values())))
+        best = min(self.population, key=lambda s: np.sum(np.square(s.objectives)))
         self.logger.info(
             f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
             f'best: {best.objectives}'
@@ -275,9 +275,8 @@ class DepositionOptimizer(PlotServerInterface):
         self.problem: Optional[HomogenizationProblem] = None
         self.algorithm: Optional[Algorithm] = None
 
-        number_of_objectives = len(parameter_labels) + 1
-        self.algorithm_observer = VerboseHoardingAlgorithmObserver(number_of_objectives)
-        self.evaluator_observer = HoardingEvaluatorObserver(number_of_objectives)
+        self.algorithm_observer = VerboseHoardingAlgorithmObserver(len(objectives))
+        self.evaluator_observer = HoardingEvaluatorObserver(len(objectives))
         self.evaluator = get_evaluator(
             self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
         )
@@ -382,7 +381,7 @@ class DepositionOptimizer(PlotServerInterface):
         if self.evaluator_observer and self.problem:
             if len(self.algorithm_observer.population) > 0:
                 solution = min(
-                    self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives.values()))
+                    self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives))
                 )
                 deposition = self.problem.variables_to_deposition(solution.variables)
                 return OptimizationResult(
@@ -404,8 +403,8 @@ class DepositionOptimizer(PlotServerInterface):
         return OptimizationResult(
             deposition=deposition,
             variables=[],
-            objectives=objectives,
-            objective_labels=self.problem.get_objective_labels(),
+            objectives=list(objectives.values()),
+            objective_labels=list(objectives.keys()),
             reclaimed_material=material
         )
 
