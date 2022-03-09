@@ -3,8 +3,16 @@ from abc import ABC, abstractmethod
 from multiprocessing import Pool
 from typing import List, Optional
 
-import dask
-from dask.distributed import Client, LocalCluster
+try:
+    import dask
+except ImportError:
+    pass
+
+try:
+    from dask.distributed import Client, LocalCluster
+except ImportError:
+    pass
+
 from jmetal.core.problem import Problem
 from jmetal.util.evaluator import Evaluator, S
 
