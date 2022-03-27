@@ -21,8 +21,10 @@ setuptools.setup(
     install_requires=[
         'bmh',
         'dash',
+        'hydra-core',
         'matplotlib',
         'numpy',
+        'omegaconf',
         'pandas',
         'plotly',
         'scipy',

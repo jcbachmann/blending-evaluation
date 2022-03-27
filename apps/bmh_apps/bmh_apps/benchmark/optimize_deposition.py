@@ -1,21 +1,43 @@
 #!/usr/bin/env python
 
-import argparse
+import hydra
+from omegaconf import DictConfig
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import DepositionMeta
-from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
-
-from ..helpers.bed_size import get_bed_size
-from ..helpers.configure_logging import configure_logging
+from bmh_apps.helpers.bed_size import get_bed_size
 
 
-def main(path: str, material_identifier: str, verbose: bool):
-    configure_logging(verbose=verbose)
-    benchmark = BenchmarkData(path)
+# FIXME I can't get structured config schema to work with multiprocessing
+# @dataclass
+# class OptimizationConfig:
+#     population_size: int = 100
+#     offspring_size: int = 10
+#     max_evaluations: int = 25000
+#     variable_count: int = 30
+#     objectives: List[str] = MISSING
+
+
+# @dataclass
+# class Config:
+#     benchmark_path: str = MISSING
+#     material_identifier: str = MISSING
+#     optimization: OptimizationConfig = OptimizationConfig()
+
+
+# cs = ConfigStore.instance()
+# cs.store(name="base_config", node=Config)
+# cs.store(group="optimization", name="base_optimization_config", node=OptimizationConfig)
+
+# cs.store(group="optimization/objectives", name="base_objective_config", node=ObjectiveConfig)
+
+
+@hydra.main(config_path='conf', config_name='config')
+def main(cfg: DictConfig):
+    benchmark = BenchmarkData(cfg.benchmark_path)
     benchmark.read_base()
-    material_meta = benchmark.get_material_meta(material_identifier)
+    material_meta = benchmark.get_material_meta(cfg.material_identifier)
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
     x_min = 0.5 * bed_size_z
@@ -29,25 +51,30 @@ def main(path: str, material_identifier: str, verbose: bool):
         deposition_meta=deposition_meta,
         x_min=x_min,
         x_max=x_max,
-        population_size=300,
-        max_evaluations=25000,
-        offspring_size=30,
-        v_max=0.1,
+        population_size=cfg.optimization.population_size,
+        max_evaluations=cfg.optimization.max_evaluations,
+        offspring_size=cfg.optimization.offspring_size,
+        v_max=cfg.system.v_max,
         parameter_labels=material.get_parameter_columns(),
+        plot_server_str=cfg.plot_server,
+        ppm3=cfg.simulation.ppm3,
+        objectives=cfg.optimization.objectives,
+        reference_front_file=cfg.reference_front_file,
     )
     optimizer.run(
         material=material,
-        variables=100 + 1
+        variables=cfg.optimization.variable_count,
+        # population_generator=MultiGenerator([
+        # mixed starting population with standard strategies (Chevron), random solutions and memory
+        # good start but no extraordinary solutions
+        # (RandomGenerator(), 5),
+        # (FullSpeedGenerator(), 1),
+        # (RandomEndGenerator(), 5),
+        # (FixedRandomSpeedGenerator(), 5),
+        # (RandomSpeedGenerator(), 1)
+        # ]),
     )
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Optimize material deposition for a given material curve'
-    )
-    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
-    parser.add_argument('--path', default='.', help='Simulator benchmark path')
-    parser.add_argument('--material', type=str, default='generated_2Y45', help='Material curve identifier')
-    args = parser.parse_args()
-
-    main(path=args.path, material_identifier=get_identifier(args.material), verbose=args.verbose)
+    main()

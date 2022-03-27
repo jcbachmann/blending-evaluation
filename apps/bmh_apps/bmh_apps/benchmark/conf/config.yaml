@@ -1,0 +1,26 @@
+defaults:
+  #  - base_config
+  - _self_
+#  - override hydra/launcher: joblib
+
+benchmark_path: ???
+material_identifier: ???
+optimization:
+  objectives: ???
+  population_size: 300
+  offspring_size: 30
+  max_evaluations: 25000
+  variable_count: 30
+system:
+  v_max: 0.1
+plot_server: bokeh
+simulation:
+  ppm3: 1
+reference_front_file: ???
+
+hydra:
+  #  launcher:
+  #    n_jobs: 8
+  sweep:
+    dir: multirun/${now:%Y-%m-%d}_${now:%H-%M-%S}
+    subdir: ${hydra.job.override_dirname}
