@@ -326,7 +326,7 @@ class DepositionOptimizer(PlotServerInterface):
 
         if self.auto_start:
             self.logger.debug('Starting DepositionOptimizer')
-            self.start()
+        self.start()
 
         self.logger.debug('Running algorithm')
         self.algorithm.run()
@@ -334,7 +334,7 @@ class DepositionOptimizer(PlotServerInterface):
 
         if self.auto_start:
             self.logger.debug('Stopping DepositionOptimizer')
-            self.stop()
+        self.stop()
 
         front = get_non_dominated_solutions(self.algorithm.get_result())
         print_function_values_to_file(front, 'FUN')

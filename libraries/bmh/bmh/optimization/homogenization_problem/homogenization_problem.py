@@ -2,6 +2,7 @@ import math
 from typing import List, Optional, Tuple, Dict
 
 import numpy as np
+import pandas as pd
 from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 from pandas import DataFrame
@@ -191,9 +192,10 @@ def get_full_speed_deposition(
         t = min(t + time_per_section, t_max)
         x_diff = (t - t_last) * v_max
         x = x_min + x_diff if x < x_center else x_max - x_diff
-        data = data.append(
-            DataFrame({'timestamp': [t], 'x': [x], 'z': [z_center]}),
-            ignore_index=True, sort=False
+        data = pd.concat(
+            [data, DataFrame({'timestamp': [t], 'x': [x], 'z': [z_center]})],
+            ignore_index=True,
+            sort=False
         )
 
     deposition = Deposition(meta=deposition_meta.copy(), data=data)
