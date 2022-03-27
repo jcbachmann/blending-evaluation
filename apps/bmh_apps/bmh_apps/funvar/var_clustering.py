@@ -1,6 +1,7 @@
 import argparse
 import logging
 import math
+import time
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-from .fun_var_math import filter_efficient_front, filter_relevant_region
+from .fun_var_math import filter_efficient_front
 from .fun_var_results import FunVarResults
 
 
@@ -69,11 +70,28 @@ def pca_2_components(df: pd.DataFrame):
     return pca, pca_result
 
 
-def do_kmeans(df: pd.DataFrame, cluster_count: int):
+def do_kmeans(df: pd.DataFrame, cluster_count: int, title: str):
     kmeans = KMeans(n_clusters=cluster_count)
-    print(cluster_count)
     kmeans.fit(df)
     centroids = kmeans.cluster_centers_
+
+    df = df.copy()
+    df['solution'] = df.index
+    df['cluster'] = kmeans.labels_
+    df = df.melt(
+        id_vars=['solution', 'cluster'],
+        var_name='var',
+        value_name='value'
+    )
+
+    fig = px.line(df, x='var', y='value', line_group='solution', color='cluster')
+    fig.update_layout(
+        title=title if title else 'Clustered Solutions',
+        xaxis_title='Variable',
+        yaxis_title='Position',
+    )
+    fig.write_html(f"{title or 'clustered-solutions'}-{int(time.time())}.html")
+    fig.show()
 
     df = pd.DataFrame(centroids)
     df['cluster'] = df.index
@@ -82,10 +100,9 @@ def do_kmeans(df: pd.DataFrame, cluster_count: int):
         var_name='var',
         value_name='value'
     )
-
     fig = px.line(df, x='var', y='value', color='cluster')
     fig.update_layout(
-        title=f'Centroids for clustered variables',
+        title=f'Centroids for Clustered Solutions',
         xaxis_title='Variable',
         yaxis_title='Position',
     )
@@ -94,7 +111,7 @@ def do_kmeans(df: pd.DataFrame, cluster_count: int):
     return centroids, kmeans.labels_
 
 
-def plot_clusters(cluster_data, centroids, labels):
+def plot_clusters(cluster_data, centroids, labels, title: str):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=cluster_data[:, 0],
@@ -113,19 +130,88 @@ def plot_clusters(cluster_data, centroids, labels):
         textposition='top center',
     ))
     fig.update_layout(
-        title='Clusters',
+        title=title if title else 'Clusters',
     )
+    fig.write_html(f"{title or 'clusters'}-{int(time.time())}.html")
     fig.show()
 
 
 def filter_data(df: pd.DataFrame, fun_columns: list[str]):
-    df = filter_relevant_region(df, fun_columns)
-    logging.info(f'Region filtered dataframe has {df.shape[0]} rows')
-
     df = filter_efficient_front(df, fun_columns)
     logging.info(f'Efficient front has {df.shape[0]} entries')
 
     return df
+
+
+def cluster_in_variable_space(df: pd.DataFrame, results: FunVarResults):
+    # Prepare data for clustering
+    df = df[results.var_columns].reset_index(drop=True)
+
+    test_pca(df)
+    optimal_cluster_count = test_cluster_counts(df)
+    centroids, kmeans_labels = do_kmeans(
+        df,
+        cluster_count=optimal_cluster_count,
+        title='clustered-solutions-in-variable-space'
+    )
+
+    # Visualize clustering
+    pca, pca_result = pca_2_components(df)
+    centroids_pca = pca.transform(centroids)
+    plot_clusters(
+        cluster_data=pca_result,
+        centroids=centroids_pca,
+        labels=kmeans_labels,
+        title='clusters-in-variable-space'
+    )
+
+
+def cluster_in_objective_space(df: pd.DataFrame, results: FunVarResults):
+    # Prepare data for clustering
+    df_fun = df[results.fun_columns[:3]].reset_index(drop=True)
+
+    centroids, kmeans_labels = do_kmeans(df_fun, cluster_count=5, title='clustered-solutions-in-objective-space')
+
+    fig = px.scatter_3d(
+        df_fun,
+        x=results.fun_columns[0],
+        y=results.fun_columns[1],
+        z=results.fun_columns[2],
+        color=kmeans_labels,
+    )
+    fig.add_trace(go.Scatter3d(
+        x=centroids[:, 0],
+        y=centroids[:, 1],
+        z=centroids[:, 2],
+        mode='markers+text',
+        name='Centroids',
+        marker=dict(color='red'),
+        text=list(range(centroids.shape[0])),
+        textposition='top center',
+    ))
+    fig.update_layout(
+        title='Clusters in Objective Space',
+    )
+    fig.write_html(f"clusters-in-objective-space-{int(time.time())}.html")
+    fig.show()
+
+    df = df[results.var_columns].reset_index(drop=True)
+    df['solution'] = df.index
+    df['cluster'] = kmeans_labels
+    df = df.melt(
+        id_vars=['solution', 'cluster'],
+        var_name='var',
+        value_name='value'
+    )
+
+    fig = px.line(df, x='var', y='value', line_group='solution', color='cluster')
+    fig.update_layout(
+        title=f'Solutions Clustered in Objective Space',
+        xaxis_title='Variable',
+        yaxis_title='Position',
+    )
+    fig.write_html(f"solutions-clustered-in-objective-space-{int(time.time())}.html")
+    fig.show()
 
 
 def main(args: argparse.Namespace):
@@ -134,17 +220,8 @@ def main(args: argparse.Namespace):
     results = FunVarResults.from_files(args.filename)
     df = filter_data(results.df, results.fun_columns)
 
-    # Prepare data for clustering
-    df = df[results.var_columns].reset_index(drop=True)
-
-    test_pca(df)
-    optimal_cluster_count = test_cluster_counts(df)
-    centroids, kmeans_labels = do_kmeans(df, cluster_count=optimal_cluster_count)
-
-    # Visualize clustering
-    pca, pca_result = pca_2_components(df)
-    centroids_pca = pca.transform(centroids)
-    plot_clusters(cluster_data=pca_result, centroids=centroids_pca, labels=kmeans_labels)
+    cluster_in_variable_space(df, results)
+    cluster_in_objective_space(df, results)
 
 
 def get_args():
