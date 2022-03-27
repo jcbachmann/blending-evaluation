@@ -253,7 +253,7 @@ class DepositionOptimizer(PlotServerInterface):
             v_max: float,
             parameter_labels: List[str],
             ppm3: float = 1.0,
-            objectives: list[str],
+            objectives: List[str],
             reference_front_file: str = None,
             **kwargs
     ):

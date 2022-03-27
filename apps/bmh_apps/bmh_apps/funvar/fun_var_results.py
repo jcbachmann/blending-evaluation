@@ -1,6 +1,7 @@
 import logging
 import os
 from dataclasses import dataclass
+from typing import List
 
 import pandas as pd
 
@@ -20,7 +21,7 @@ def read_fun_columns_file(file_path: str) -> list[str]:
         return eval(f.readline())
 
 
-def read_fun_file(file_path: str, columns: list[str]) -> pd.DataFrame:
+def read_fun_file(file_path: str, columns: List[str]) -> pd.DataFrame:
     if not file_path.endswith('FUN'):
         raise Exception("Invalid file extension")
     return pd.read_csv(file_path, sep=' ', header=None, index_col=False, names=columns)
@@ -38,10 +39,10 @@ def read_var_file(file_path: str) -> pd.DataFrame:
 @dataclass
 class FunVarResults:
     df: pd.DataFrame = None
-    misc_columns: list[str] = None
-    fun_columns: list[str] = None
-    var_columns: list[str] = None
-    runs: list[str] = None
+    misc_columns: List[str] = None
+    fun_columns: List[str] = None
+    var_columns: List[str] = None
+    runs: List[str] = None
 
     def merge(self, fun_var_results: 'FunVarResults'):
         if self.fun_columns is None:
@@ -96,7 +97,7 @@ class FunVarResults:
         )
 
     @staticmethod
-    def from_files(file_paths: list[str]) -> 'FunVarResults':
+    def from_files(file_paths: List[str]) -> 'FunVarResults':
         logging.debug(f"Reading {len(file_paths)} files from")
 
         all_results = FunVarResults()

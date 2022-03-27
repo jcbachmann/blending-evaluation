@@ -4,6 +4,7 @@ import argparse
 import logging
 import math
 from datetime import datetime
+from typing import List
 
 import numpy as np
 from pandas import DataFrame
@@ -39,7 +40,7 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
 
 
 def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-                             chevron_layers: int, objectives: list[str]) -> None:
+                             chevron_layers: int, objectives: List[str]) -> None:
     """
     Optimize the deposition regarding the material information provided
     :param identifier: identifier of this deposition computation
@@ -76,7 +77,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     deposition_meta.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
 
 
-def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives: list[str]) -> DepositionMeta:
+def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives: List[str]) -> DepositionMeta:
     # Assumptions:
     # - maximum stockpile height 20m
     # - angle of repose: 45 degrees

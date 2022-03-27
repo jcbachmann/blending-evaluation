@@ -2,6 +2,7 @@ import argparse
 import logging
 import math
 import time
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -136,7 +137,7 @@ def plot_clusters(cluster_data, centroids, labels, title: str):
     fig.show()
 
 
-def filter_data(df: pd.DataFrame, fun_columns: list[str]):
+def filter_data(df: pd.DataFrame, fun_columns: List[str]):
     df = filter_efficient_front(df, fun_columns)
     logging.info(f'Efficient front has {df.shape[0]} entries')
 

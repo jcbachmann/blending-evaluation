@@ -141,7 +141,7 @@ def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max:
     move_time_per_layer = move_time_total / layers
 
     def get_timestamps():
-        timestamps: list[float] = [0.0, stand_time_max * variables[0]]
+        timestamps: List[float] = [0.0, stand_time_max * variables[0]]
 
         for i in range(1, len(variables)):
             timestamps.append(timestamps[-1] + move_time_per_layer)
