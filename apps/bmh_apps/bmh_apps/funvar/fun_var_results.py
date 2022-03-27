@@ -64,7 +64,9 @@ class FunVarResults:
         else:
             self.runs.extend(fun_var_results.runs)
 
-        self.df = fun_var_results.df if self.df is None else self.df.append(fun_var_results.df, ignore_index=True)
+        self.df = fun_var_results.df if self.df is None else pd.concat(
+            [self.df, fun_var_results.df], ignore_index=True
+        )
 
     @staticmethod
     def from_file(file_path: str) -> 'FunVarResults':
