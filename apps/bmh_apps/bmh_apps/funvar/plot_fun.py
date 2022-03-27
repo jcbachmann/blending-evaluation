@@ -9,32 +9,38 @@ from .fun_var_results import FunVarResults
 
 
 def plot_fun_2d(results: FunVarResults):
-    px.scatter(
+    fig = px.scatter(
         results.df,
         x=results.fun_columns[0],
         y=results.fun_columns[1],
         color='run'
-    ).show()
+    )
+    fig.write_html(f"plot-fun-2d-{int(time.time())}.html")
+    fig.show()
 
 
 def plot_fun_3d(results: FunVarResults):
-    px.scatter_3d(
+    fig = px.scatter_3d(
         results.df,
         x=results.fun_columns[0],
         y=results.fun_columns[1],
         z=results.fun_columns[2],
         color='run'
-    ).show()
+    )
+    fig.write_html(f"plot-fun-3d-{int(time.time())}.html")
+    fig.show()
 
 
 def plot_fun_4d(results: FunVarResults):
-    px.scatter_3d(
+    fig = px.scatter_3d(
         results.df,
         x=results.fun_columns[0],
         y=results.fun_columns[1],
         z=results.fun_columns[2],
         color=results.fun_columns[3],
-    ).show()
+    )
+    fig.write_html(f"plot-fun-4d-{int(time.time())}.html")
+    fig.show()
 
 
 def plot_fun_5d(results: FunVarResults):
