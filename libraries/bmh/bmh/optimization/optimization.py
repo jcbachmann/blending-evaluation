@@ -6,16 +6,20 @@ from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.core.algorithm import Algorithm
 from jmetal.core.observer import Observer
 from jmetal.core.problem import Problem
+from jmetal.core.quality_indicator import GenerationalDistance, InvertedGenerationalDistance, HyperVolume
 from jmetal.core.solution import FloatSolution
 from jmetal.operator import SBXCrossover, PolynomialMutation
 from jmetal.operator.selection import BinaryTournamentSelection
 from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 from jmetal.util.evaluator import Evaluator, S
 from jmetal.util.generator import Generator
-from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file
+from jmetal.util.observer import WriteFrontToFileObserver
+from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file, \
+    read_solutions
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
 from jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
+from jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
 from .homogenization_problem.homogenization_problem import HomogenizationProblem, process_material_deposition
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
@@ -250,6 +254,7 @@ class DepositionOptimizer(PlotServerInterface):
             parameter_labels: List[str],
             ppm3: float = 1.0,
             objectives: list[str],
+            reference_front_file: str = None,
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -269,6 +274,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.parameter_labels = parameter_labels
         self.ppm3 = ppm3
         self.objectives = objectives
+        self.reference_front_file = reference_front_file
         self.kwargs = kwargs
 
         # Cache
@@ -323,6 +329,20 @@ class DepositionOptimizer(PlotServerInterface):
             kwargs=self.kwargs
         )
         self.algorithm.observable.register(self.algorithm_observer)
+        self.algorithm.observable.register(WriteFrontToFileObserver(output_directory='./fronts'))
+
+        quality_indicators = [
+            HyperVolume(reference_point=[1.0] * len(self.objectives)),
+        ]
+        if self.reference_front_file:
+            reference_front = read_solutions(self.reference_front_file)
+            reference_front_objectives = [solution.objectives for solution in reference_front]
+            quality_indicators.append(GenerationalDistance(reference_front=reference_front_objectives))
+            quality_indicators.append(InvertedGenerationalDistance(reference_front=reference_front_objectives))
+        self.algorithm.observable.register(WriteQualityIndicatorsToFileObserver(
+            output_file='./quality_indicators.csv',
+            quality_indicators=quality_indicators
+        ))
 
         if self.auto_start:
             self.logger.debug('Starting DepositionOptimizer')
