@@ -1,12 +1,16 @@
 #!/usr/bin/env python
 
 import hydra
+from jmetal.util.generator import RandomGenerator
 from omegaconf import DictConfig
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import DepositionMeta
+from bmh.optimization.homogenization_problem.generator import FullSpeedGenerator, RandomEndGenerator, \
+    FixedRandomSpeedGenerator, RandomSpeedGenerator
 from bmh.optimization.optimization import DepositionOptimizer
 from bmh_apps.helpers.bed_size import get_bed_size
+from jmetalpy_extensions.util.generator import MultiGenerator
 
 
 # FIXME I can't get structured config schema to work with multiprocessing
@@ -60,19 +64,20 @@ def main(cfg: DictConfig):
         ppm3=cfg.simulation.ppm3,
         objectives=cfg.optimization.objectives,
         reference_front_file=cfg.reference_front_file,
+        write_fronts=cfg.optimization.write_fronts,
     )
     optimizer.run(
         material=material,
         variables=cfg.optimization.variable_count,
-        # population_generator=MultiGenerator([
-        # mixed starting population with standard strategies (Chevron), random solutions and memory
-        # good start but no extraordinary solutions
-        # (RandomGenerator(), 5),
-        # (FullSpeedGenerator(), 1),
-        # (RandomEndGenerator(), 5),
-        # (FixedRandomSpeedGenerator(), 5),
-        # (RandomSpeedGenerator(), 1)
-        # ]),
+        population_generator=MultiGenerator([
+            # mixed starting population with standard strategies (Chevron), random solutions and memory
+            # good start but no extraordinary solutions
+            (RandomGenerator(), 5),
+            (FullSpeedGenerator(), 1),
+            (RandomEndGenerator(), 5),
+            (FixedRandomSpeedGenerator(), 5),
+            (RandomSpeedGenerator(), 1)
+        ]) if cfg.optimization.precondition_population else None,
     )
 
 

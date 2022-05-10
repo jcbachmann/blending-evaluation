@@ -255,6 +255,7 @@ class DepositionOptimizer(PlotServerInterface):
             ppm3: float = 1.0,
             objectives: List[str],
             reference_front_file: str = None,
+            write_fronts: bool = False,
             **kwargs
     ):
         self.logger = logging.getLogger(__name__)
@@ -275,6 +276,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.ppm3 = ppm3
         self.objectives = objectives
         self.reference_front_file = reference_front_file
+        self.write_fronts = write_fronts
         self.kwargs = kwargs
 
         # Cache
@@ -329,7 +331,9 @@ class DepositionOptimizer(PlotServerInterface):
             kwargs=self.kwargs
         )
         self.algorithm.observable.register(self.algorithm_observer)
-        self.algorithm.observable.register(WriteFrontToFileObserver(output_directory='./fronts'))
+
+        if self.write_fronts:
+            self.algorithm.observable.register(WriteFrontToFileObserver(output_directory='./fronts'))
 
         quality_indicators = [
             HyperVolume(reference_point=[1.0] * len(self.objectives)),
