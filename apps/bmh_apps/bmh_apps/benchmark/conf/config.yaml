@@ -15,7 +15,7 @@ optimization:
   write_fronts: false
 system:
   v_max: 0.1
-plot_server: bokeh
+plot_server: none
 simulation:
   ppm3: 1
 reference_front_file:
