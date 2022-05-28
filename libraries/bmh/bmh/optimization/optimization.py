@@ -161,27 +161,14 @@ def get_algorithm(
     if population_generator:
         algorithm_kwargs['population_generator'] = population_generator
 
-    def get_hpsea():
-        # FIXME HPSEA?
-        nonlocal algorithm_kwargs
-        if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
-            algorithm_kwargs['offspring_population_size'] = kwargs.get('offspring_size')
-        else:
-            algorithm_kwargs['offspring_population_size'] = 2 * int(0.5 * 0.2 * population_size)
-        return NSGAII[FloatSolution, List[FloatSolution]]
+    if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
+        algorithm_kwargs['offspring_population_size'] = kwargs.get('offspring_size')
 
     def get_nsgaii():
         return NSGAII[FloatSolution, List[FloatSolution]]
 
-    def get_ssnsgaii():
-        nonlocal algorithm_kwargs
-        algorithm_kwargs['offspring_population_size'] = 1
-        return NSGAII[FloatSolution, List[FloatSolution]]
-
     algorithm_dict = {
-        'hpsea': get_hpsea,
         'nsgaii': get_nsgaii,
-        'ssnsgaii': get_ssnsgaii,
     }
 
     if algorithm_str in algorithm_dict:
@@ -246,7 +233,7 @@ class DepositionOptimizer(PlotServerInterface):
             population_size: int = 250,
             max_evaluations: int = 25000,
             evaluator_str: Optional[str] = 'multiprocess',
-            algorithm_str: str = 'hpsea',
+            algorithm_str: str = 'nsgaii',
             plot_server_str: Optional[str] = 'none',
             plot_server_port: int = PlotServer.DEFAULT_PORT,
             auto_start: bool = True,
