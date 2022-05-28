@@ -1,5 +1,4 @@
 import itertools
-import math
 from functools import lru_cache
 from typing import TypeVar, List
 
@@ -52,8 +51,11 @@ class FastestNonDominatedRanking(Ranking[List[S]]):
         # Convert objectives to tuples to enable use of lru_cache
         tupelized_objectives = [tuple(solution.objectives) for solution in solutions]
 
+        number_of_comparisons = 0
+
         for p, q in itertools.combinations(range(len(tupelized_objectives)), 2):
             dominance_test_result = compare(tupelized_objectives[p], tupelized_objectives[q])
+            number_of_comparisons += 1
             if dominance_test_result == -1:
                 ith_dominated[p].append(q)
                 dominating_ith[q] += 1
@@ -61,7 +63,9 @@ class FastestNonDominatedRanking(Ranking[List[S]]):
                 ith_dominated[q].append(p)
                 dominating_ith[p] += 1
 
-        self.number_of_comparisons += math.comb(len(solutions), 2)
+        self.number_of_comparisons += number_of_comparisons
+        # Only supported from Python 3.8 onwards
+        # self.number_of_comparisons += math.comb(len(solutions), 2)
 
         for i in range(len(solutions)):
             if dominating_ith[i] == 0:
