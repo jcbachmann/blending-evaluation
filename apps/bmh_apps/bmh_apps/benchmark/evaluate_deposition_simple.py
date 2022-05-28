@@ -6,6 +6,7 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from pandas import DataFrame
 
 from bmh.benchmark import core
@@ -93,13 +94,13 @@ def compute_deposition2(identifier: str, material_meta: MaterialMeta, bed_size_x
         t_start = layer * time_per_layer
         f = 1.0
         x = x_min - offset if layer % 2 == 0 else x_max + offset
-        data = data.append(
-            DataFrame({'timestamp': [t_start + time_before_start * f], 'x': [x], 'z': [z_center]}),
+        data = pd.concat(
+            [data, DataFrame({'timestamp': [t_start + time_before_start * f], 'x': [x], 'z': [z_center]})],
             ignore_index=True, sort=False
         )
         x = x_min - offset if layer % 2 == 1 else x_max + offset
-        data = data.append(
-            DataFrame({'timestamp': [t_start + time_per_layer], 'x': [x], 'z': [z_center]}),
+        data = pd.concat(
+            [data, DataFrame({'timestamp': [t_start + time_per_layer], 'x': [x], 'z': [z_center]})],
             ignore_index=True, sort=False
         )
 
