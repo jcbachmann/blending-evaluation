@@ -1,7 +1,7 @@
 import math
-from blending_simulator_lib import BlendingSimulatorLib
 from typing import Optional, List, Union
 
+from blending_simulator_lib import BlendingSimulatorLib
 from pandas import DataFrame
 
 from .blending_simulator import BlendingSimulator, MaterialDeposition, Material
@@ -57,14 +57,9 @@ class BslBlendingSimulator(BlendingSimulator):
         """
 
         # stack all data
-        # TODO use ctypes array / bytes or ndarray to avoid conversion from list on c++ side
-        stack_data = material_deposition.data.values.tolist()
-
         self.bsl.stack_list(
-            stack_data,
-            material_deposition.data.columns.values.tolist(),
-            material_deposition.data.values.shape[0],
-            material_deposition.data.values.shape[1]
+            material_deposition.data.to_numpy(),
+            material_deposition.data.columns.values.tolist()
         )
 
         # reclaim stacked material
