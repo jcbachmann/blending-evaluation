@@ -37,7 +37,7 @@ from jmetalpy_extensions.util.generator import MultiGenerator
 # cs.store(group="optimization/objectives", name="base_objective_config", node=ObjectiveConfig)
 
 
-@hydra.main(config_path='conf', config_name='config')
+@hydra.main(version_base='1.1', config_path='conf', config_name='config')
 def main(cfg: DictConfig):
     benchmark = BenchmarkData(cfg.benchmark_path)
     benchmark.read_base()

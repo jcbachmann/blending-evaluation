@@ -21,6 +21,8 @@ simulation:
 reference_front_file:
 
 hydra:
+  job:
+    chdir: true
   #  launcher:
   #    n_jobs: 8
   sweep:
