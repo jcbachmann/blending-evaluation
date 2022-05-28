@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import List, Optional, Dict, Any
 
 import numpy as np
@@ -117,6 +118,8 @@ def get_evaluator(
             raise
 
     def get_multiprocess_evaluator():
+        if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
+            evaluator_kwargs['processes'] = min(os.cpu_count(), kwargs.get('offspring_size'))
         return MultiprocessEvaluator
 
     def get_none():
