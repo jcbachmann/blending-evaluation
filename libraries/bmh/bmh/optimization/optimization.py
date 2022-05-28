@@ -18,6 +18,7 @@ from jmetal.util.solution import get_non_dominated_solutions, print_function_val
     read_solutions
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
+from jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
 from jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
 from jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
 from .homogenization_problem.homogenization_problem import HomogenizationProblem, process_material_deposition
@@ -167,8 +168,12 @@ def get_algorithm(
     def get_nsgaii():
         return NSGAII[FloatSolution, List[FloatSolution]]
 
+    def get_fast_nsgaii():
+        return FastNSGAII[FloatSolution, List[FloatSolution]]
+
     algorithm_dict = {
         'nsgaii': get_nsgaii,
+        'fast_nsgaii': get_fast_nsgaii,
     }
 
     if algorithm_str in algorithm_dict:
@@ -233,7 +238,7 @@ class DepositionOptimizer(PlotServerInterface):
             population_size: int = 250,
             max_evaluations: int = 25000,
             evaluator_str: Optional[str] = 'multiprocess',
-            algorithm_str: str = 'nsgaii',
+            algorithm_str: str = 'fast_nsgaii',
             plot_server_str: Optional[str] = 'none',
             plot_server_port: int = PlotServer.DEFAULT_PORT,
             auto_start: bool = True,
