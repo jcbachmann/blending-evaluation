@@ -279,11 +279,11 @@ class DepositionOptimizer(PlotServerInterface):
         self.algorithm: Optional[Algorithm] = None
 
         self.algorithm_observer = VerboseHoardingAlgorithmObserver(len(objectives))
-        self.evaluator_observer = HoardingEvaluatorObserver(len(objectives))
+        self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self, port=plot_server_port)
+        self.evaluator_observer = HoardingEvaluatorObserver(len(objectives)) if self.plot_server else None
         self.evaluator = get_evaluator(
             self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
         )
-        self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self, port=plot_server_port)
         self.deposition_prefix: Optional[Deposition] = None
 
     def start(self):
@@ -295,8 +295,10 @@ class DepositionOptimizer(PlotServerInterface):
             timestamps: Optional[List[float]] = None,
             population_generator: Generator = None
     ) -> None:
-        self.algorithm_observer.reset()
-        self.evaluator_observer.reset()
+        if self.algorithm_observer:
+            self.algorithm_observer.reset()
+        if self.evaluator_observer:
+            self.evaluator_observer.reset()
         if self.plot_server:
             self.plot_server.reset()
 
@@ -397,7 +399,7 @@ class DepositionOptimizer(PlotServerInterface):
         raise RuntimeError('DepositionOptimizer not initialized')
 
     def get_best_solution(self) -> Optional[OptimizationResult]:
-        if self.evaluator_observer and self.problem:
+        if self.algorithm_observer and self.problem:
             if len(self.algorithm_observer.population) > 0:
                 solution = min(
                     self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives))
@@ -441,10 +443,6 @@ class DepositionOptimizer(PlotServerInterface):
             ), axis=1
         )
         return ideal
-
-    def get_all_results(self) -> List[OptimizationResult]:
-        self.logger.debug('Collecting all results')
-        return self.solutions_to_optimization_results(self.evaluator_observer.solutions)
 
     def get_final_results(self) -> List[OptimizationResult]:
         self.logger.debug('Collecting final results')
