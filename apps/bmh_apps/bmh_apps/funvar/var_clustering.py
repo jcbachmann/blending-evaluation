@@ -2,7 +2,6 @@ import argparse
 import logging
 import math
 import time
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -137,13 +136,6 @@ def plot_clusters(cluster_data, centroids, labels, title: str):
     fig.show()
 
 
-def filter_data(df: pd.DataFrame, fun_columns: List[str]):
-    df = filter_efficient_front(df, fun_columns)
-    logging.info(f'Efficient front has {df.shape[0]} entries')
-
-    return df
-
-
 def cluster_in_variable_space(df: pd.DataFrame, results: FunVarResults):
     # Prepare data for clustering
     df = df[results.var_columns].reset_index(drop=True)
@@ -219,7 +211,11 @@ def main(args: argparse.Namespace):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
     results = FunVarResults.from_files(args.filename)
-    df = filter_data(results.df, results.fun_columns)
+    df = results.df
+
+    if args.non_dominated:
+        df = filter_efficient_front(results.df, results.fun_columns)
+        logging.info(f'Efficient front has {df.shape[0]} entries')
 
     cluster_in_variable_space(df, results)
     cluster_in_objective_space(df, results)
@@ -229,6 +225,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('filename', type=str, nargs='+')
     parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
+    parser.add_argument('--non-dominated', action='store_true', default=False, help='Show only non-dominated solutions')
     return parser.parse_args()
 
 
