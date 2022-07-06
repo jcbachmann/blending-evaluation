@@ -8,6 +8,15 @@ from bmh_apps.funvar import fun_var_math
 from .fun_var_results import FunVarResults
 
 
+def plot_fun_1d(results: FunVarResults):
+    fig = px.box(
+        results.df,
+        y=results.fun_columns[0],
+    )
+    fig.write_html(f"plot-fun-1d-{int(time.time())}.html")
+    fig.show()
+
+
 def plot_fun_2d(results: FunVarResults):
     fig = px.scatter(
         results.df,
@@ -87,7 +96,9 @@ def main(args: argparse.Namespace):
     if args.non_dominated:
         results.df = fun_var_math.filter_efficient_front(results.df, results.fun_columns)
 
-    if len(results.fun_columns) == 2:
+    if len(results.fun_columns) == 1:
+        plot_fun_1d(results)
+    elif len(results.fun_columns) == 2:
         plot_fun_2d(results)
     elif len(results.fun_columns) == 3:
         plot_fun_3d(results)
