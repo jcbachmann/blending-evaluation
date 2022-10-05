@@ -1,0 +1,7 @@
+# @package _global_
+material_identifier: scenario-train-60f5
+optimization:
+  objectives:
+    - F1/Ash (%)
+    - F2
+    - F3

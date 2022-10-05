@@ -1,0 +1,6 @@
+# @package _global_
+material_identifier: scenario-train-60f5
+optimization:
+  objectives:
+    - F2
+    - F4

@@ -1,0 +1,6 @@
+# @package _global_
+material_identifier: scenario-mining-aae0
+optimization:
+  objectives:
+    - F2
+    - F3
