@@ -1,5 +1,7 @@
+import glob
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import List
 
@@ -43,6 +45,7 @@ class FunVarResults:
     fun_columns: List[str] = None
     var_columns: List[str] = None
     runs: List[str] = None
+    label: str = ''
 
     def merge(self, fun_var_results: 'FunVarResults'):
         if self.fun_columns is None:
@@ -60,49 +63,74 @@ class FunVarResults:
         elif self.misc_columns != fun_var_results.misc_columns:
             raise Exception("Cannot merge results with different misc columns")
 
-        if self.runs is None:
-            self.runs = fun_var_results.runs
-        else:
-            self.runs.extend(fun_var_results.runs)
-
         self.df = fun_var_results.df if self.df is None else pd.concat(
             [self.df, fun_var_results.df], ignore_index=True
         )
 
     @staticmethod
-    def from_file(file_path: str) -> 'FunVarResults':
+    def from_file(file_path: str, fun_only: bool = False) -> 'FunVarResults':
         file_path_without_extension = get_filename_without_extension(file_path)
 
         fun_columns = read_fun_columns_file(file_path_without_extension + 'OBJ')
         fun_df = read_fun_file(file_path_without_extension + 'FUN', fun_columns)
-        var_df = read_var_file(file_path_without_extension + 'VAR')
-        df = fun_df.join(var_df)
-
-        if file_path_without_extension.endswith('/'):
-            # Use the name of the directory
-            run = os.path.basename(file_path_without_extension[:-1])
+        if fun_only:
+            df = fun_df
+            var_columns = None
         else:
-            run = os.path.basename(file_path_without_extension)
-        df['run'] = run
-        df['individual'] = df.index
-        df['run_individual'] = run + ' - ' + df['individual'].astype(str)
-        misc_columns = ['run', 'individual', 'run_individual']
+            var_df = read_var_file(file_path_without_extension + 'VAR')
+            df = fun_df.join(var_df)
+            var_columns = var_df.columns.tolist()
+
+        df['file_path'] = file_path_without_extension
+        misc_columns = ['file_path']
 
         return FunVarResults(
             df=df,
             fun_columns=fun_columns,
-            var_columns=var_df.columns.tolist(),
+            var_columns=var_columns,
             misc_columns=misc_columns,
-            runs=[run]
         )
 
     @staticmethod
-    def from_files(file_paths: List[str]) -> 'FunVarResults':
+    def from_files(file_paths: List[str], fun_only: bool = False) -> 'FunVarResults':
         logging.debug(f"Reading {len(file_paths)} files from")
 
         all_results = FunVarResults()
+        file_count = 0
         for file_path in file_paths:
-            fun_var_results = FunVarResults.from_file(file_path)
-            all_results.merge(fun_var_results)
-        logging.info(f"Read {len(all_results.df)} rows from {len(file_paths)} files")
+            for file in glob.glob(file_path):
+                file_count += 1
+                fun_var_results = FunVarResults.from_file(file, fun_only)
+                all_results.merge(fun_var_results)
+        logging.info(f"Read {len(all_results.df)} rows from {file_count} files")
+
+        if len(all_results.df['file_path']) > 0:
+            file_paths = all_results.df['file_path'].to_list()
+            common_path = os.path.commonpath(file_paths)
+            file_paths = [file_path.replace(common_path, '') for file_path in file_paths]
+            run_parts = [re.split(r'[/,]', file_path) for file_path in file_paths]
+            run_parts = [[part for part in run if part != ''] for run in run_parts]
+            run_parts = [[part[1:] if part.startswith('+') else part for part in run] for run in run_parts]
+            sample, remaining = run_parts[0], run_parts[1:]
+            redundant = []
+            for part in sample:
+                if all(part in run for run in remaining):
+                    redundant.append(part)
+            run_parts = [[part for part in run if part not in redundant] for run in run_parts]
+            all_results.df['run'] = [' '.join(run) for run in run_parts]
+            all_results.label = ' '.join(redundant)
+        else:
+            all_results.df['run'] = ''
+
+        all_results.df['individual'] = all_results.df.index
+        all_results.df['run_individual'] = all_results.df['run'] + ' - ' + all_results.df['individual'].astype(str)
+        all_results.misc_columns.extend(['run', 'individual', 'run_individual'])
+
         return all_results
+
+    def len(self):
+        return 0 if self.df is None else self.df.shape[0]
+
+    def drop_columns(self, drop_columns: List[str]):
+        self.df = self.df.drop(drop_columns, axis=1)
+        self.fun_columns = [column for column in self.fun_columns if column not in drop_columns]
