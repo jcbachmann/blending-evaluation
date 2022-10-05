@@ -5,16 +5,25 @@ from glob import glob
 from pathlib import Path
 
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 
-
-def read_quality_indicators(file: str) -> pd.DataFrame:
-    df = pd.read_csv(file)
-    return df
+from .plot_quality_indicators import read_quality_indicators
 
 
 def main(args: argparse.Namespace):
     logging.basicConfig(level=logging.INFO)
+
+    final_hv_df = pd.DataFrame({'Run': [], 'HV': [], 'Generations': []})
+    total_generations = 33318
+    generation_samples = [
+        1000,
+        2500,
+        5000,
+        10000,
+        20000,
+        total_generations
+    ]
 
     fig = go.Figure()
     for directory_arg in args.directories:
@@ -40,11 +49,22 @@ def main(args: argparse.Namespace):
                 name=f"Run {variables['+run']}",
             ))
 
+            if quality_indicators_df.shape[0] == total_generations:
+                final_hv_df = pd.concat([final_hv_df, pd.DataFrame({
+                    'Run': [int(variables['+run']) for _ in generation_samples],
+                    'HV': [quality_indicators_df['HV'].values[g - 1] for g in generation_samples],
+                    'Generations': generation_samples
+                })])
+
     fig.update_layout(dict(
         showlegend=False,
         xaxis_range=[0, 333333],
         yaxis_range=[0, 0.6],
     ))
+    fig.show()
+
+    final_hv_df = final_hv_df.sort_values(by=['Generations'])
+    fig = px.box(final_hv_df, x='Generations', y='HV')
     fig.show()
 
 
