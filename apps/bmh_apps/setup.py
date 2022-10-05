@@ -31,4 +31,9 @@ setuptools.setup(
         'scikit-learn',
         'seaborn',
     ],
+    entry_points={
+        'console_scripts': [
+            'plot_fun=bmh_apps.funvar.plot_fun:main',
+        ],
+    },
 )

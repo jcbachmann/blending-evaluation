@@ -139,7 +139,17 @@ def plot_fun_5d(results: FunVarResults):
     fig.show()
 
 
-def main(args: argparse.Namespace):
+def get_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filename', type=str, nargs='+')
+    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
+    parser.add_argument('--non-dominated', action='store_true', default=False, help='Show only non-dominated solutions')
+    parser.add_argument('--drop-columns', type=str, nargs='*', default=False, help='Columns/objectives to be dropped')
+    return parser.parse_args()
+
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
     results = FunVarResults.from_files(args.filename, fun_only=True)
@@ -172,14 +182,5 @@ def main(args: argparse.Namespace):
         raise Exception("Invalid number of columns")
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str, nargs='+')
-    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
-    parser.add_argument('--non-dominated', action='store_true', default=False, help='Show only non-dominated solutions')
-    parser.add_argument('--drop-columns', type=str, nargs='*', default=False, help='Columns/objectives to be dropped')
-    return parser.parse_args()
-
-
 if __name__ == '__main__':
-    main(get_args())
+    main()
