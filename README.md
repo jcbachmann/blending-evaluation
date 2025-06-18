@@ -8,7 +8,7 @@ Create a virtual environment and install the packages in editable mode by using 
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate.fish
+source .venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -r requirements-dev.txt
 ```
