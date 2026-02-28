@@ -10,3 +10,6 @@ __pycache__/
 /.idea/
 /dask-worker-space/
 /.mypy_cache/
+
+# Dist
+/dist/
