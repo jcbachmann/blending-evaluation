@@ -4,13 +4,10 @@ A collection of Python libraries and apps for simulation, optimization and evalu
 
 ## How to set up development
 
-Create a virtual environment and install the packages in editable mode by using the requirements-dev.txt
+Use uv to create a virtual environment and install the packages in editable mode:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip setuptools wheel
-pip install -r requirements-dev.txt
+uv sync
 ```
 
 ## Example script for executing the blending simulator
