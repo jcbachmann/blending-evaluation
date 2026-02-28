@@ -1,0 +1,24 @@
+[project]
+name = "bmh"
+version = "0.0.1"
+description = "Bulk Material Homogenization"
+readme = "README.md"
+authors = [
+    { name = "Michael Cipold", email = "michael@cipold.de" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "jmetalpy",
+    "numpy",
+    "pandas",
+]
+license = { text = "MIT License" }
+
+[project.optional-dependencies]
+BokehPlotServer = ["bokeh"]
+DaskEvaluator = ["dask"]
+DistributedEvaluator = ["dask", "distributed"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

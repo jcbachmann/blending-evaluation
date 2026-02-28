@@ -1,0 +1,38 @@
+[project]
+name = "blending-evaluation"
+version = "0.1.0"
+description = "Bulk Material Homogenization Evaluation Workspace"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "jmetalpy_extensions",
+    "bmh",
+    "plant_simulator",
+    "data_explorer",
+    "bmh_apps",
+    "benchmark_explorer",
+    "solution_explorer",
+    "demo_plant_simulator"
+]
+
+[tool.uv]
+workspace = { members = [
+    "libraries/jmetalpy_extensions",
+    "libraries/bmh",
+    "libraries/plant_simulator",
+    "libraries/data_explorer",
+    "apps/bmh_apps",
+    "apps/benchmark_explorer",
+    "apps/solution_explorer",
+    "apps/demo_plant_simulator"
+] }
+
+[tool.uv.sources]
+jmetalpy_extensions = { workspace = true }
+bmh = { workspace = true }
+plant_simulator = { workspace = true }
+data_explorer = { workspace = true }
+bmh_apps = { workspace = true }
+benchmark_explorer = { workspace = true }
+solution_explorer = { workspace = true }
+demo_plant_simulator = { workspace = true }

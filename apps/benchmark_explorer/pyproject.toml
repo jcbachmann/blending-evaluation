@@ -1,0 +1,19 @@
+[project]
+name = "benchmark_explorer"
+version = "0.0.1"
+description = "Benchmark Explorer"
+readme = "README.md"
+authors = [
+    { name = "Michael Cipold", email = "michael@cipold.de" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "bmh",
+    "data_explorer",
+    "scipy",
+]
+license = { text = "MIT License" }
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

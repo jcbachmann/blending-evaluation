@@ -1,0 +1,20 @@
+[project]
+name = "solution_explorer"
+version = "0.0.1"
+description = "Solution Explorer"
+readme = "README.md"
+authors = [
+    { name = "Michael Cipold", email = "michael@cipold.de" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "data_explorer",
+    "matplotlib",
+    "numpy",
+    "pandas",
+]
+license = { text = "MIT License" }
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

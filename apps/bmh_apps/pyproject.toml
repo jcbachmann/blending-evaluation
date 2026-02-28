@@ -1,0 +1,31 @@
+[project]
+name = "bmh_apps"
+version = "0.0.1"
+description = "BMH Apps"
+readme = "README.md"
+authors = [
+    { name = "Michael Cipold", email = "michael@cipold.de" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "bmh",
+    "dash",
+    "hydra-core",
+    "matplotlib",
+    "numpy",
+    "omegaconf",
+    "pandas",
+    "plotly",
+    "scipy",
+    "scikit-learn",
+    "seaborn",
+]
+license = { text = "MIT License" }
+
+[project.scripts]
+plot_fun = "bmh_apps.funvar.plot_fun:main"
+export_fun = "bmh_apps.funvar.export_fun:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
