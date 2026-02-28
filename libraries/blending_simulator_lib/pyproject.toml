@@ -1,0 +1,28 @@
+[build-system]
+requires = ["scikit-build-core", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "blending_simulator_lib"
+version = "0.0.1"
+description = "Blending Simulator Lib"
+readme = "README.md"
+authors = [
+    { name = "Michael Cipold", email = "michael@cipold.de" }
+]
+license = { text = "MIT License" }
+
+[project.optional-dependencies]
+dev = ["pybind11-stubgen"]
+
+[tool.setuptools.package-data]
+"blending_simulator_lib" = ["_blending_simulator_lib.pyi", "py.typed"]
+
+[tool.scikit-build]
+cmake.args = [
+    "-DBUILD_VISUALIZER=OFF",
+    "-DBUILD_TESTS=OFF",
+    "-DBUILD_CLI=OFF",
+    "-DBUILD_FAST_SIMULATOR=ON",
+    "-DBUILD_DETAILED_SIMULATOR=ON"
+]

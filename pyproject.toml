@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "jmetalpy_extensions",
     "bmh",
+    "blending_simulator_lib",
     "plant_simulator",
     "data_explorer",
     "bmh_apps",
@@ -15,10 +16,15 @@ dependencies = [
     "demo_plant_simulator"
 ]
 
+
+[dependency-groups]
+dev = ["pybind11-stubgen"]
+
 [tool.uv]
 workspace = { members = [
     "libraries/jmetalpy_extensions",
     "libraries/bmh",
+    "libraries/blending_simulator_lib",
     "libraries/plant_simulator",
     "libraries/data_explorer",
     "apps/bmh_apps",
@@ -30,6 +36,7 @@ workspace = { members = [
 [tool.uv.sources]
 jmetalpy_extensions = { workspace = true }
 bmh = { workspace = true }
+blending_simulator_lib = { workspace = true }
 plant_simulator = { workspace = true }
 data_explorer = { workspace = true }
 bmh_apps = { workspace = true }
