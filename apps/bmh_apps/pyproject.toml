@@ -10,7 +10,10 @@ requires-python = ">=3.10"
 dependencies = [
     "bmh",
     "dash",
+    "dash_bootstrap_components",
     "hydra-core",
+    "jmetalpy",
+    "jmetalpy_extensions",
     "matplotlib",
     "numpy",
     "omegaconf",
@@ -19,6 +22,7 @@ dependencies = [
     "scipy",
     "scikit-learn",
     "seaborn",
+    "tqdm",
 ]
 license = { text = "MIT License" }
 

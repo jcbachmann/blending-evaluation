@@ -8,9 +8,11 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "bokeh",
     "jmetalpy",
     "numpy",
     "pandas",
+    "jmetalpy_extensions",
     "blending_simulator_lib",
 ]
 license = { text = "MIT License" }
