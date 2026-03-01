@@ -1,8 +1,9 @@
-from typing import TypeVar, List, Generator
+from collections.abc import Generator
+from typing import TypeVar
 
 from jmetal.algorithm.singleobjective.genetic_algorithm import GeneticAlgorithm
 from jmetal.config import store
-from jmetal.core.operator import Mutation, Crossover, Selection
+from jmetal.core.operator import Crossover, Mutation, Selection
 from jmetal.core.problem import Problem
 from jmetal.operator import BinaryTournamentSelection
 from jmetal.util.comparator import MultiComparator
@@ -59,7 +60,7 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
         :param crossover: Crossover operator (see :py:mod:`jmetal.operator.crossover`).
         :param selection: Selection operator (see :py:mod:`jmetal.operator.selection`).
         """
-        super(FastNSGAII, self).__init__(
+        super().__init__(
             problem=problem,
             population_size=population_size,
             offspring_population_size=offspring_population_size,
@@ -71,7 +72,7 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
             population_generator=population_generator,
         )
 
-    def replacement(self, population: List[S], offspring_population: List[S]) -> List[List[S]]:
+    def replacement(self, population: list[S], offspring_population: list[S]) -> list[list[S]]:
         """This method joins the current and offspring populations to produce the population of the next generation
         by applying the ranking and crowding distance selection.
 

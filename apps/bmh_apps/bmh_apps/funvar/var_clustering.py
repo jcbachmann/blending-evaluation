@@ -101,7 +101,7 @@ def do_kmeans(df: pd.DataFrame, cluster_count: int, title: str):
     )
     fig = px.line(df, x="var", y="value", color="cluster")
     fig.update_layout(
-        title=f"Centroids for Clustered Solutions",
+        title="Centroids for Clustered Solutions",
         xaxis_title="Variable",
         yaxis_title="Position",
     )
@@ -204,7 +204,7 @@ def cluster_in_objective_space(df: pd.DataFrame, results: FunVarResults):
 
     fig = px.line(df, x="var", y="value", line_group="solution", color="cluster")
     fig.update_layout(
-        title=f"Solutions Clustered in Objective Space",
+        title="Solutions Clustered in Objective Space",
         xaxis_title="Variable",
         yaxis_title="Position",
     )

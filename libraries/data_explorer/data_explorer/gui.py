@@ -1,14 +1,13 @@
 import logging
 import sys
 from multiprocessing.pool import ThreadPool
-from typing import List, Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QIcon
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QMainWindow, QAction, QSplitter, QHBoxLayout, QWidget, QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pandas import DataFrame
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QIcon
+from PyQt5.QtWidgets import QAction, QHBoxLayout, QMainWindow, QSizePolicy, QSplitter, QTableWidget, QTableWidgetItem, QWidget
 
 from .testlet import TestletResult
 
@@ -25,11 +24,11 @@ class ExpandingFigureCanvas(FigureCanvas):
 
 class MainWindow(QMainWindow):
     testlet_evaluated = pyqtSignal(int, list, name="testlet evaluated")
-    table_widget: Optional[QTableWidget] = None
+    table_widget: QTableWidget | None = None
 
     def __init__(self, path, entry_list, testlet_list, label, main_figures=None, icon=None):
         # noinspection PyArgumentList
-        super(MainWindow, self).__init__()
+        super().__init__()
 
         self.logger = logging.getLogger(__name__)
 
@@ -123,7 +122,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def set_cell(table_widget: QTableWidget, row: int, col: int, testlet_result: TestletResult):
-        s: Optional[str] = None
+        s: str | None = None
 
         if isinstance(testlet_result.view, str):
             s = testlet_result.view
@@ -163,7 +162,7 @@ class MainWindow(QMainWindow):
         testlet_results = [testlet.wrapped_evaluate(self.entry_list[row]) for testlet in self.testlet_list]
         self.testlet_evaluated.emit(row, testlet_results)
 
-    def update_row(self, row: int, testlet_results: List[TestletResult]):
+    def update_row(self, row: int, testlet_results: list[TestletResult]):
         if self.table_widget:
             for col, testlet_result in enumerate(testlet_results):
                 MainWindow.set_cell(self.table_widget, row, col, testlet_result)

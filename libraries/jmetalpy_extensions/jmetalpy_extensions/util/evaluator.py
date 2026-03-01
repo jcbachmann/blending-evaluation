@@ -1,7 +1,6 @@
 import functools
 from abc import ABC, abstractmethod
 from multiprocessing import Pool
-from typing import List, Optional
 
 try:
     import dask
@@ -18,19 +17,19 @@ from jmetal.util.evaluator import Evaluator, S
 
 
 class EvaluatorObserver:
-    def notify(self, solution_list: List[S]):
+    def notify(self, solution_list: list[S]):
         pass
 
 
 class ObservableEvaluator(Evaluator[S], ABC):
-    def __init__(self, observer: Optional[EvaluatorObserver] = None):
+    def __init__(self, observer: EvaluatorObserver | None = None):
         self.observer = observer
 
     @abstractmethod
-    def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
+    def observed_evaluate(self, solution_list: list[S], problem: Problem) -> list[S]:
         pass
 
-    def evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
+    def evaluate(self, solution_list: list[S], problem: Problem) -> list[S]:
         solution_list = self.observed_evaluate(solution_list, problem)
 
         if self.observer is not None:
@@ -38,7 +37,7 @@ class ObservableEvaluator(Evaluator[S], ABC):
 
         return solution_list
 
-    def set_observer(self, observer: Optional[EvaluatorObserver] = None):
+    def set_observer(self, observer: EvaluatorObserver | None = None):
         self.observer = observer
 
 
@@ -48,11 +47,11 @@ def evaluate_solution(solution, problem):
 
 
 class MultiprocessEvaluator(ObservableEvaluator[S]):
-    def __init__(self, processes=None, observer: Optional[EvaluatorObserver] = None):
+    def __init__(self, processes=None, observer: EvaluatorObserver | None = None):
         super().__init__(observer)
         self.pool = Pool(processes)
 
-    def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
+    def observed_evaluate(self, solution_list: list[S], problem: Problem) -> list[S]:
         return self.pool.map(functools.partial(evaluate_solution, problem=problem), solution_list)
 
     def stop(self):
@@ -63,17 +62,17 @@ class MultiprocessEvaluator(ObservableEvaluator[S]):
 
 
 class DaskEvaluator(ObservableEvaluator[S]):
-    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler="processes"):
+    def __init__(self, observer: EvaluatorObserver | None = None, scheduler="processes"):
         super().__init__(observer)
         self.scheduler = scheduler
 
-    def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
+    def observed_evaluate(self, solution_list: list[S], problem: Problem) -> list[S]:
         with dask.config.set(scheduler=self.scheduler):
             return list(dask.compute(*[dask.delayed(evaluate_solution)(solution=solution, problem=problem) for solution in solution_list]))
 
 
 class DistributedEvaluator(ObservableEvaluator[S]):
-    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler: Optional[str] = None):
+    def __init__(self, observer: EvaluatorObserver | None = None, scheduler: str | None = None):
         super().__init__(observer)
 
         if scheduler is None:
@@ -83,7 +82,7 @@ class DistributedEvaluator(ObservableEvaluator[S]):
             self.local_cluster = None
             self.client = Client(address=scheduler)
 
-    def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
+    def observed_evaluate(self, solution_list: list[S], problem: Problem) -> list[S]:
         calculations = self.client.map(functools.partial(evaluate_solution, problem=problem), solution_list)
         return list(self.client.gather(calculations))
 

@@ -1,5 +1,3 @@
-from typing import List, Union
-
 import numpy as np
 
 from .blending_simulator import BlendingSimulator
@@ -16,7 +14,7 @@ class SmoothBlendingSimulator(BlendingSimulator):
         self.sigma_x = sigma_x
         self.buffer = [[(i + 1) / self.buffer_size * bed_size_x, 0, 0] for i in range(self.buffer_size)]
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:
         first = max(0, min(int((x - 2 * self.sigma_x) / self.bed_size_x * self.buffer_size), self.buffer_size - 1))
         last = max(0, min(int((x + 2 * self.sigma_x) / self.bed_size_x * self.buffer_size), self.buffer_size - 1))
 
@@ -31,5 +29,5 @@ class SmoothBlendingSimulator(BlendingSimulator):
             elem[1] += v
             elem[2] += v * parameter[0]
 
-    def reclaim(self) -> List[List[Union[float, List[float]]]]:
+    def reclaim(self) -> list[list[float | list[float]]]:
         return [[b[0], b[1], [b[2] / b[1] if b[1] > 0 else 0]] for b in self.buffer]

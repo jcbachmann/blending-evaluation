@@ -1,12 +1,11 @@
 import sys
-from typing import Optional, List
 
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
 
-def read_material(filepath: str, col_timestamp: str = "timestamp", col_volume: str = "volume", cols_p: List[str] = None) -> DataFrame:
+def read_material(filepath: str, col_timestamp: str = "timestamp", col_volume: str = "volume", cols_p: list[str] = None) -> DataFrame:
     df = pd.read_csv(filepath, delimiter="\t", index_col=None)
     if cols_p is None:
         # Use all columns except for timestamp and volume
@@ -22,7 +21,7 @@ def read_material(filepath: str, col_timestamp: str = "timestamp", col_volume: s
     return material
 
 
-def read_path(filepath: str, col_path: str = "path", col_part: Optional[str] = None, col_timestamp: Optional[str] = None) -> DataFrame:
+def read_path(filepath: str, col_path: str = "path", col_part: str | None = None, col_timestamp: str | None = None) -> DataFrame:
     required_cols = [col_path]
     if col_part is not None:
         required_cols += [col_part]

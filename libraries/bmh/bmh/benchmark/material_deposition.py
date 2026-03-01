@@ -1,7 +1,6 @@
 import logging
 import os
 import uuid
-from typing import List, Optional
 
 import numpy as np
 import pandas as pd
@@ -19,7 +18,7 @@ def read_data_file(data_file: str) -> DataFrame:
     logger = logging.getLogger(__name__)
     logger.debug(f'Reading data file "{data_file}"')
     if not os.path.isfile(data_file):
-        raise IOError(f'Data file "{data_file}" does not exist')
+        raise OSError(f'Data file "{data_file}" does not exist')
 
     data = pd.read_csv(data_file, sep="\t")
     logger.debug(f'"{data_file}" data:\n{data.describe()}')
@@ -39,7 +38,7 @@ def write_data_file(data: DataFrame, data_file: str):
     data.to_csv(data_file, sep="\t", index=False)
 
 
-def check_required_columns(data: DataFrame, required_columns: List[str]) -> None:
+def check_required_columns(data: DataFrame, required_columns: list[str]) -> None:
     """
     Data is check whether all required columns are provided. A ValueError is raised if the data does not contain all
     required columns.
@@ -64,7 +63,7 @@ class Material:
         self.data = data
         check_required_columns(self.data, Material.REQUIRED_COLUMNS)
 
-    def get_parameter_columns(self) -> List[str]:
+    def get_parameter_columns(self) -> list[str]:
         return list(set(self.data.columns).difference(Material.REQUIRED_COLUMNS + Material.OPTIONAL_COLUMNS))
 
     def get_volume(self):
@@ -118,14 +117,14 @@ class MaterialMeta:
         self.time = meta_dict["time"]
         self.volume = meta_dict["volume"]
         self.data_file = meta_dict["data"]
-        self.prediction_file = meta_dict.get("prediction", None)
+        self.prediction_file = meta_dict.get("prediction")
 
         # original data read from json file and stored in dict
         self.meta_dict = meta_dict
 
         # data buffer
-        self.data: Optional["Material"] = None
-        self.prediction: Optional["Material"] = None
+        self.data: Material | None = None
+        self.prediction: Material | None = None
 
     def __str__(self) -> str:
         return self.identifier
@@ -261,7 +260,7 @@ class DepositionMeta:
         self.meta_dict = meta_dict
 
         # data buffer
-        self.data: Optional[Deposition] = None
+        self.data: Deposition | None = None
 
     def __str__(self) -> str:
         return self.identifier
@@ -309,7 +308,7 @@ class DepositionMeta:
             path="",
             meta_dict={
                 "label": f"Deposition {identifier}",
-                "description": f"Created empty",
+                "description": "Created empty",
                 "category": "empty",
                 "time": 0.0,
                 "data": None,

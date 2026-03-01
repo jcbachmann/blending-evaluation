@@ -1,7 +1,6 @@
 import logging
 import random
 from abc import abstractmethod
-from typing import List, Tuple
 
 import numpy as np
 
@@ -30,17 +29,16 @@ class MaterialHandler:
             if MaterialHandler.dot is not None:
                 MaterialHandler.dot.edge(src.label, self.label)
             return src.gen()
-        elif isinstance(src, tuple):
+        if isinstance(src, tuple):
             if MaterialHandler.dot is not None:
                 MaterialHandler.dot.edge(src[0].label, self.label)
             return src[0].gen(src[1])
-        elif isinstance(src, list):
+        if isinstance(src, list):
             if MaterialHandler.dot is not None:
                 for s in src:
                     MaterialHandler.dot.edge((s if isinstance(s, MaterialHandler) else s[0]).label, self.label)
             return [(s.gen() if isinstance(s, MaterialHandler) else s[0]) for s in src]
-        else:
-            raise Exception("Invalid source type passed to MaterialHandler.unpack")
+        raise Exception("Invalid source type passed to MaterialHandler.unpack")
 
 
 class MaterialSource(MaterialHandler):
@@ -58,7 +56,7 @@ class MaterialBuffer(MaterialHandler):
     def __init__(self, label, plant, src, steps: int):
         super().__init__(label + " [" + str(steps) + "]", plant, "cds")
         self.src_gen = self.unpack_src_gen(src)
-        self.buffer: List[Tuple[float, float]] = []
+        self.buffer: list[tuple[float, float]] = []
         for _ in range(steps):
             self.buffer.append((0.0, 0.0))
         self._sample = (0.0, 0.0)
@@ -100,7 +98,7 @@ class MaterialSplitter(MaterialHandler):
         super().__init__(label, plant, "invtrapezium")
         self.src_gen = self.unpack_src_gen(src)
         self.weights = weights
-        self.buffer: List[List[Tuple[float, float]]] = [[] for _ in range(len(weights))]
+        self.buffer: list[list[tuple[float, float]]] = [[] for _ in range(len(weights))]
         self._sample = [(0.0, 0.0)] * len(weights)
 
     def gen(self, i: int = 0):
@@ -128,7 +126,7 @@ class MaterialMux(MaterialHandler):
         self.weight_matrix = weight_matrix
         self.flip_probability = flip_probability
         self.flip = False
-        self.buffer: List[List[Tuple[float, float]]] = [[] for _ in range(len(weight_matrix))]
+        self.buffer: list[list[tuple[float, float]]] = [[] for _ in range(len(weight_matrix))]
         self._sample = [(0.0, 0.0)] * len(weight_matrix)
 
     def sample(self):
@@ -164,7 +162,7 @@ class MaterialDuplicator(MaterialHandler):
     def __init__(self, label, plant, src, count):
         super().__init__(label, plant, "Mdiamond")
         self.src_gen = self.unpack_src_gen(src)
-        self.buffer: List[List[Tuple[float, float]]] = [[] for _ in range(count)]
+        self.buffer: list[list[tuple[float, float]]] = [[] for _ in range(count)]
         self._sample = [(0.0, 0.0)] * count
         self.count = count
 

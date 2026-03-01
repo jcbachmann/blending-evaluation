@@ -1,12 +1,11 @@
 import math
-from typing import Dict
 
-from .deposition_strategies import DEPOSITION_STRATEGIES
 from ..plant import Plant
+from .deposition_strategies import DEPOSITION_STRATEGIES
 
 
 class Stacker:
-    def __init__(self, max_speed: float, strategy: str, strategy_params: Dict):
+    def __init__(self, max_speed: float, strategy: str, strategy_params: dict):
         self.stockpile = None
         self.max_speed = max_speed
         if strategy_params is None:

@@ -1,11 +1,9 @@
-from typing import List
-
 from jmetal.core.observer import Observer
 from jmetal.core.quality_indicator import QualityIndicator
 
 
 class WriteQualityIndicatorsToFileObserver(Observer):
-    def __init__(self, output_file: str, quality_indicators: List[QualityIndicator]) -> None:
+    def __init__(self, output_file: str, quality_indicators: list[QualityIndicator]) -> None:
         self.output_file = output_file
         self.quality_indicators = quality_indicators
 

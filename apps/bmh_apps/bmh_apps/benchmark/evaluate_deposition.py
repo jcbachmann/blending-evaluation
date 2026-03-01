@@ -4,16 +4,15 @@ import argparse
 import logging
 import math
 from datetime import datetime
-from typing import List
 
 import numpy as np
-from pandas import DataFrame
-
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
-from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, Deposition
+from bmh.benchmark.material_deposition import Deposition, DepositionMeta, MaterialMeta
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
+from pandas import DataFrame
+
 from ..helpers.configure_logging import configure_logging
 
 
@@ -30,8 +29,8 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
 
     deposition_data = DataFrame(
         {
-            "timestamp": [material_meta.time * layer / chevron_layers for layer in range(0, chevron_layers + 1)],
-            "x": [0.5 * deposition_meta.bed_size_z + core_length * float((layer + starting_side) % 2) for layer in range(0, chevron_layers + 1)],
+            "timestamp": [material_meta.time * layer / chevron_layers for layer in range(chevron_layers + 1)],
+            "x": [0.5 * deposition_meta.bed_size_z + core_length * float((layer + starting_side) % 2) for layer in range(chevron_layers + 1)],
             "z": [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
         }
     )
@@ -39,7 +38,7 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
     deposition_meta.label = f"{identifier} - Chevron {chevron_layers} layers"
 
 
-def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta, chevron_layers: int, objectives: List[str]) -> None:
+def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta, chevron_layers: int, objectives: list[str]) -> None:
     """
     Optimize the deposition regarding the material information provided
     :param identifier: identifier of this deposition computation
@@ -76,7 +75,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     deposition_meta.label = f"{identifier} - Optimized {chevron_layers + 1} variables"
 
 
-def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives: List[str]) -> DepositionMeta:
+def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives: list[str]) -> DepositionMeta:
     # Assumptions:
     # - maximum stockpile height 20m
     # - angle of repose: 45 degrees

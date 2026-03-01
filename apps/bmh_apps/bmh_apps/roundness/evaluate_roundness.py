@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 import argparse
-from typing import List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 from pandas import DataFrame
 
-from .roundness_evaluator import RoundnessEvaluator
 from ..helpers.pretty_plot import pretty_line_plot
+from .roundness_evaluator import RoundnessEvaluator
 
 
 def evaluate_likelihoods(*, dist_seg_size: float, angle_seg_count: int, pos: int, start: float, stop: float, steps: int, runs: int, volume: float):
     likelihoods = np.linspace(start, stop, steps)
 
-    results: List[List[Union[float, int]]] = []
+    results: list[list[float | int]] = []
 
     for run in range(runs):
         for likelihood in likelihoods:
@@ -26,9 +25,9 @@ def evaluate_likelihoods(*, dist_seg_size: float, angle_seg_count: int, pos: int
 
 
 def evaluate_volumes(
-    *, dist_seg_size: float, angle_seg_count: int, pos: int, start: float, stop: float, steps: int, runs: int, volumes: List[float]
+    *, dist_seg_size: float, angle_seg_count: int, pos: int, start: float, stop: float, steps: int, runs: int, volumes: list[float]
 ) -> DataFrame:
-    results: List[List[Union[float, int]]] = []
+    results: list[list[float | int]] = []
 
     for volume in volumes:
         v_results = evaluate_likelihoods(

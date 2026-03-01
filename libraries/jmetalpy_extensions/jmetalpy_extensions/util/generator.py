@@ -1,6 +1,6 @@
 import copy
 import random
-from typing import Tuple, TypeVar, List
+from typing import TypeVar
 
 from jmetal.core.problem import Problem
 from jmetal.core.solution import Solution
@@ -10,7 +10,7 @@ R = TypeVar("R")
 
 
 class RandomChoiceInjectorGenerator(Generator):
-    def __init__(self, solutions: List[Solution]):
+    def __init__(self, solutions: list[Solution]):
         self.solutions = solutions
 
     def new(self, problem: Problem) -> R:
@@ -18,7 +18,7 @@ class RandomChoiceInjectorGenerator(Generator):
 
 
 class MultiGenerator(Generator):
-    def __init__(self, weighted_generators: List[Tuple[Generator, float]]):
+    def __init__(self, weighted_generators: list[tuple[Generator, float]]):
         self.generators, self.weights = zip(*weighted_generators)
 
     def new(self, problem: Problem) -> R:

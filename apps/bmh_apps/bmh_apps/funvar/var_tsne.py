@@ -1,16 +1,15 @@
 import argparse
 import logging
-from typing import List
 
 import pandas as pd
 import plotly.express as px
 from sklearn.manifold import TSNE
 
-from .fun_var_math import filter_relevant_region, filter_efficient_front
+from .fun_var_math import filter_efficient_front, filter_relevant_region
 from .fun_var_results import FunVarResults
 
 
-def filter_data(df: pd.DataFrame, fun_columns: List[str]):
+def filter_data(df: pd.DataFrame, fun_columns: list[str]):
     df = filter_relevant_region(df, fun_columns)
     logging.info(f"Region filtered dataframe has {df.shape[0]} rows")
 

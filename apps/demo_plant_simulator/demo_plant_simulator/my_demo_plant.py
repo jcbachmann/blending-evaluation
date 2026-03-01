@@ -1,6 +1,6 @@
 from plant_simulator.blending_system.blending_system import BlendingSystem
 from plant_simulator.material_dumper import MaterialDumper
-from plant_simulator.material_handler import MaterialMux, MaterialBuffer, MaterialDuplicator, MaterialOut
+from plant_simulator.material_handler import MaterialBuffer, MaterialDuplicator, MaterialMux, MaterialOut
 from plant_simulator.plant import Plant
 from plant_simulator.simulated_mine import SimulatedMine
 

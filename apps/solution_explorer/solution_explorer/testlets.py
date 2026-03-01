@@ -1,8 +1,6 @@
-from typing import Optional
-
 import matplotlib.pyplot as plt
 import numpy as np
-from data_explorer.rating import RaterColorScale, Rater
+from data_explorer.rating import Rater, RaterColorScale
 from data_explorer.testlet import Testlet
 
 from .solution import Solution
@@ -14,7 +12,7 @@ def white_to_red(p):
 
 
 class ObjectiveTestlet(Testlet):
-    def __init__(self, index: float, maximum: float, label: Optional[str] = None):
+    def __init__(self, index: float, maximum: float, label: str | None = None):
         super().__init__()
         self.index = index
         self.maximum = maximum

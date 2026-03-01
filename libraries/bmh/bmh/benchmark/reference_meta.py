@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Optional
 
 from .material_deposition import MaterialMeta
 
@@ -29,7 +28,7 @@ class ReferenceMeta:
         self.meta_dict = meta_dict
 
         # data buffer
-        self.reclaimed_material_meta: Optional[MaterialMeta] = None
+        self.reclaimed_material_meta: MaterialMeta | None = None
 
     def __str__(self) -> str:
         return self.identifier

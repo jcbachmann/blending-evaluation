@@ -1,8 +1,6 @@
-from typing import List, Union
-
 from pandas import DataFrame
 
-from ..benchmark.material_deposition import MaterialDeposition, Material
+from ..benchmark.material_deposition import Material, MaterialDeposition
 
 
 class BlendingSimulator:
@@ -16,7 +14,7 @@ class BlendingSimulator:
         self.bed_size_x = bed_size_x
         self.bed_size_z = bed_size_z
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:
         """
         Stacks specific volume of material with a list of parameters at position (x, z)
         :param timestamp: current timestamp
@@ -27,7 +25,7 @@ class BlendingSimulator:
         """
         raise NotImplementedError()
 
-    def reclaim(self) -> List[List[Union[float, List[float]]]]:
+    def reclaim(self) -> list[list[float | list[float]]]:
         """
         Reclaims the complete stockpile
         :return: list of volumes and material parameters after reclaiming the stockpile

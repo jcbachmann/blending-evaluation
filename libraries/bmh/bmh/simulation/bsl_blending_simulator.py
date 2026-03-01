@@ -1,10 +1,9 @@
 import math
-from typing import Optional, List, Union
 
 from blending_simulator_lib import BlendingSimulatorLib
 from pandas import DataFrame
 
-from .blending_simulator import BlendingSimulator, MaterialDeposition, Material
+from .blending_simulator import BlendingSimulator, Material, MaterialDeposition
 
 
 class BslBlendingSimulator(BlendingSimulator):
@@ -12,14 +11,14 @@ class BslBlendingSimulator(BlendingSimulator):
         self,
         bed_size_x: float,
         bed_size_z: float,
-        reclaimangle: Optional[float] = None,
-        ppm3: Optional[float] = None,
-        circular: Optional[bool] = None,
-        eight: Optional[float] = None,
-        bulkdensity: Optional[float] = None,
-        dropheight: Optional[float] = None,
-        detailed: Optional[bool] = None,
-        reclaimincrement: Optional[float] = None,
+        reclaimangle: float | None = None,
+        ppm3: float | None = None,
+        circular: bool | None = None,
+        eight: float | None = None,
+        bulkdensity: float | None = None,
+        dropheight: float | None = None,
+        detailed: bool | None = None,
+        reclaimincrement: float | None = None,
     ):
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
@@ -52,10 +51,10 @@ class BslBlendingSimulator(BlendingSimulator):
             reclaimincrement,
         )
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
+    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:
         self.bsl.stack(timestamp, x, z, volume, parameter)
 
-    def reclaim(self) -> List[List[Union[float, List[float]]]]:
+    def reclaim(self) -> list[list[float | list[float]]]:
         raise NotImplementedError()
 
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:

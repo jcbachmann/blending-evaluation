@@ -1,5 +1,3 @@
-from typing import Optional
-
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from bmh.simulation.mathematical_blending_simulator import MathematicalBlendingSimulator
 from bmh.simulation.smooth_blending_simulator import SmoothBlendingSimulator
@@ -13,8 +11,8 @@ class Stockpile:
         self.depth = depth
         self.max_tons = (length - depth) * 0.25 * depth * depth
         self.stacked_tons = 0.0
-        self.stack_time_start: Optional[float] = None
-        self.stack_time_end: Optional[float] = None
+        self.stack_time_start: float | None = None
+        self.stack_time_end: float | None = None
         self._stacking_finished = False
         self.reclaimed_buffer = None
         self.reclaimer_position = 0.0
@@ -78,8 +76,7 @@ class Stockpile:
 
             self.reclaimer_position = new_pos
             return volume, q
-        else:
-            return 0, 0
+        return 0, 0
 
     def reclaiming_finished(self):
         return self.reclaimed_buffer is not None and self.reclaimer_position >= self.length

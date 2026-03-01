@@ -2,14 +2,14 @@ import random
 import sys
 
 import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout
 
 
 class Window(QDialog):
     def __init__(self, parent=None):
-        super(Window, self).__init__(parent)
+        super().__init__(parent)
 
         figure = plt.figure()
         canvas = FigureCanvas(figure)

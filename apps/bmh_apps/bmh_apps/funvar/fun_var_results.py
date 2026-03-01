@@ -3,7 +3,6 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import List
 
 import pandas as pd
 
@@ -19,11 +18,11 @@ def get_filename_without_extension(file_path: str) -> str:
 def read_fun_columns_file(file_path: str) -> list[str]:
     if not file_path.endswith("OBJ"):
         raise Exception("Invalid file extension")
-    with open(file_path, "r") as f:
+    with open(file_path) as f:
         return eval(f.readline())
 
 
-def read_fun_file(file_path: str, columns: List[str]) -> pd.DataFrame:
+def read_fun_file(file_path: str, columns: list[str]) -> pd.DataFrame:
     if not file_path.endswith("FUN"):
         raise Exception("Invalid file extension")
     return pd.read_csv(file_path, sep=" ", header=None, index_col=False, names=columns)
@@ -41,10 +40,10 @@ def read_var_file(file_path: str) -> pd.DataFrame:
 @dataclass
 class FunVarResults:
     df: pd.DataFrame = None
-    misc_columns: List[str] = None
-    fun_columns: List[str] = None
-    var_columns: List[str] = None
-    runs: List[str] = None
+    misc_columns: list[str] = None
+    fun_columns: list[str] = None
+    var_columns: list[str] = None
+    runs: list[str] = None
     label: str = ""
 
     def merge(self, fun_var_results: "FunVarResults"):
@@ -90,7 +89,7 @@ class FunVarResults:
         )
 
     @staticmethod
-    def from_files(file_paths: List[str], fun_only: bool = False) -> "FunVarResults":
+    def from_files(file_paths: list[str], fun_only: bool = False) -> "FunVarResults":
         logging.debug(f"Reading {len(file_paths)} files from")
 
         all_results = FunVarResults()
@@ -129,6 +128,6 @@ class FunVarResults:
     def len(self):
         return 0 if self.df is None else self.df.shape[0]
 
-    def drop_columns(self, drop_columns: List[str]):
+    def drop_columns(self, drop_columns: list[str]):
         self.df = self.df.drop(drop_columns, axis=1)
         self.fun_columns = [column for column in self.fun_columns if column not in drop_columns]

@@ -136,7 +136,7 @@ class Generator:
                 self.run_circular()
             else:
                 self.run_linear()
-        except IOError:
+        except OSError:
             self.logger.error("Stopping generator due to IOError")
             self.finish = True
         self.logger.info("Generator stopped")

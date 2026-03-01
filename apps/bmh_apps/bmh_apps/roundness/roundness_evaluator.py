@@ -1,7 +1,6 @@
 import csv
 import logging
 import math
-from typing import List
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -80,7 +79,7 @@ class RoundnessEvaluator:
         self.shapes_main = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(3)]
         self.shapes_range = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(self.angle_seg_count)]
 
-        with open(input_file, "r") as csv_file:
+        with open(input_file) as csv_file:
             reader = csv.reader(csv_file, delimiter="\t")
             z_abs = 0
             for row in reader:
@@ -93,7 +92,7 @@ class RoundnessEvaluator:
                     x_abs += 1
                 z_abs += 1
 
-    def add_from_heights(self, heights: List[List[float]]):
+    def add_from_heights(self, heights: list[list[float]]):
         # Calculate weighted center
         self.cx = np.average(range(len(heights)), weights=[sum(col) for col in heights])
         self.cz = np.average(range(len(heights[0])), weights=[sum(row) for row in list(map(list, zip(*heights)))])

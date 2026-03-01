@@ -6,9 +6,9 @@ import re
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from pandas import DataFrame
 
-from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from ..helpers.pretty_plot import pretty_scatter_plot
 
 
@@ -102,8 +102,7 @@ def load_for_bulk_density(file: str, path: str = "/tmp"):
     path += f"/{file}"
     if os.path.isfile(path):
         return pd.read_csv(path, header=None, delimiter="\t", index_col=None)
-    else:
-        return None
+    return None
 
 
 def calculate_results(args):
@@ -129,11 +128,10 @@ def calculate_results(args):
 def acquire_results(args):
     if args.reuse:
         return load_results_from_path(args.path, args.size)
-    else:
-        if not os.path.exists(args.path):
-            os.makedirs(args.path)
+    if not os.path.exists(args.path):
+        os.makedirs(args.path)
 
-        return calculate_results(args)
+    return calculate_results(args)
 
 
 def main(args):

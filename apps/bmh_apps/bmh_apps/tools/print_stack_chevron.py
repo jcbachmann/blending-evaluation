@@ -2,7 +2,7 @@
 import argparse
 
 from ..chevron.chevron_path import chevron_path
-from ..helpers.material_path_io import print_merged_material_path, read_material, merge_material_path
+from ..helpers.material_path_io import merge_material_path, print_merged_material_path, read_material
 
 
 def main(args):

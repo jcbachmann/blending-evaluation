@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Dict, Optional
 
 from ..simulation.bsl_blending_simulator import BslBlendingSimulator
 from ..simulation.mathematical_blending_simulator import MathematicalBlendingSimulator
@@ -38,7 +37,7 @@ class SimulatorMeta:
         self.meta_dict = meta_dict
 
         # params from params file stored in dict
-        self.params_dict: Optional[Dict] = None
+        self.params_dict: dict | None = None
 
     def __str__(self) -> str:
         return self.identifier
@@ -56,7 +55,7 @@ class SimulatorMeta:
             "params": self.params,
         }
 
-    def get_params(self) -> Dict:
+    def get_params(self) -> dict:
         if self.params_dict is None:
             self.params_dict = json.load(open(os.path.join(self.path, self.params)))
 

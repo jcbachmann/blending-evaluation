@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from ..stockpile_math import get_stockpile_height, get_stockpile_volume, get_stockpile_slice_volume
+from ..stockpile_math import get_stockpile_height, get_stockpile_slice_volume, get_stockpile_volume
 
 
 def get_stockpile_volume_from_slices(core_length: float, height: float):

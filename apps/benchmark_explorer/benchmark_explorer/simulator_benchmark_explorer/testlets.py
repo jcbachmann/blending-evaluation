@@ -1,7 +1,7 @@
 import math
 
 from bmh.benchmark.reference_meta import ReferenceMeta
-from data_explorer.rating import RaterColorScale, Rater
+from data_explorer.rating import Rater, RaterColorScale
 from data_explorer.testlet import Testlet
 from scipy.stats import pearsonr
 
@@ -34,7 +34,7 @@ class CorrelationTestlet(Testlet):
 
     def evaluate(self, standard_reference: ReferenceMeta):
         if standard_reference.identifier not in self.evaluation.references:
-            return None, f"-"
+            return None, "-"
         value = get_correlation(standard_reference, self.evaluation.references[standard_reference.identifier])
         return value, f"{value:.2f}"
 
@@ -52,7 +52,7 @@ class SimulatorIdentifier(Testlet):
 
     def evaluate(self, standard_reference: ReferenceMeta):
         if standard_reference.identifier not in self.evaluation.references:
-            return None, f"-"
+            return None, "-"
         value = get_correlation(standard_reference, self.evaluation.references[standard_reference.identifier])
         return value, f"{value:.2f}"
 

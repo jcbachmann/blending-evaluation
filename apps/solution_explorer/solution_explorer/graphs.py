@@ -1,5 +1,4 @@
 import logging
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -130,7 +129,7 @@ class PathDetailCanvas(ExpandingFigureCanvas):
         # Setup interactive figure
         fig, self.ax = plt.subplots()
         super().__init__(fig)
-        self.index: Optional[int] = None
+        self.index: int | None = None
 
     def __str__(self):
         return f"Path Detail {self.index}"

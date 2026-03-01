@@ -1,15 +1,15 @@
 import logging
 import os
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 import numpy as np
 from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.core.algorithm import Algorithm
 from jmetal.core.observer import Observer
 from jmetal.core.problem import Problem
-from jmetal.core.quality_indicator import GenerationalDistance, InvertedGenerationalDistance, HyperVolume
+from jmetal.core.quality_indicator import GenerationalDistance, HyperVolume, InvertedGenerationalDistance
 from jmetal.core.solution import FloatSolution
-from jmetal.operator import SBXCrossover, PolynomialMutation
+from jmetal.operator import PolynomialMutation, SBXCrossover
 from jmetal.operator.selection import BinaryTournamentSelection
 from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 from jmetal.util.evaluator import Evaluator, S
@@ -17,18 +17,18 @@ from jmetal.util.generator import Generator
 from jmetal.util.observer import WriteFrontToFileObserver
 from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file, read_solutions
 from jmetal.util.termination_criterion import StoppingByEvaluations
-
 from jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
 from jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
 from jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
+
+from ..benchmark.material_deposition import Deposition, DepositionMeta, Material
+from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 from .homogenization_problem.homogenization_problem import HomogenizationProblem, process_material_deposition
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
-from ..benchmark.material_deposition import Material, Deposition, DepositionMeta
-from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 
 
-def solutions_to_fitness_values(solutions: List[S], number_of_objectives: int):
+def solutions_to_fitness_values(solutions: list[S], number_of_objectives: int):
     return dict([(f"f{i + 1}", [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
 
 
@@ -36,8 +36,8 @@ class VerboseHoardingAlgorithmObserver(Observer):
     def __init__(self, number_of_objectives: int):
         self.number_of_objectives = number_of_objectives
         self.population = []
-        self.last_evaluations: Optional[int] = None
-        self.last_computing_time: Optional[float] = None
+        self.last_evaluations: int | None = None
+        self.last_computing_time: float | None = None
         self.logger = logging.getLogger(__name__)
 
     def update(self, *args, **kwargs):
@@ -54,7 +54,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         self.last_evaluations = evaluations
         self.last_computing_time = computing_time
 
-    def get_population(self) -> Dict[str, List[float]]:
+    def get_population(self) -> dict[str, list[float]]:
         return solutions_to_fitness_values(self.population, self.number_of_objectives)
 
     def reset(self):
@@ -66,13 +66,13 @@ class VerboseHoardingAlgorithmObserver(Observer):
 class HoardingEvaluatorObserver(EvaluatorObserver):
     def __init__(self, number_of_objectives: int):
         self.number_of_objectives = number_of_objectives
-        self.solutions: List[S] = []
+        self.solutions: list[S] = []
 
-    def notify(self, solution_list: List[S]):
+    def notify(self, solution_list: list[S]):
         for solution in solution_list:
             self.solutions.append(solution)
 
-    def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
+    def get_new_solutions(self, start: int) -> dict[str, list[float]]:
         return solutions_to_fitness_values(self.solutions[start:], self.number_of_objectives)
 
     def get_solution(self, solution_id: int) -> S:
@@ -85,7 +85,7 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         self.solutions = []
 
 
-def get_evaluator(evaluator_str: Optional[str], *, kwargs: Dict[str, Any], evaluator_observer: EvaluatorObserver) -> Optional[Evaluator[S]]:
+def get_evaluator(evaluator_str: str | None, *, kwargs: dict[str, Any], evaluator_observer: EvaluatorObserver) -> Evaluator[S] | None:
     logger = logging.getLogger(__name__)
 
     evaluator_kwargs = {"observer": evaluator_observer}
@@ -99,7 +99,7 @@ def get_evaluator(evaluator_str: Optional[str], *, kwargs: Dict[str, Any], evalu
                 evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
             return DaskEvaluator
         except ImportError:
-            logger.error(f"Please install DaskEvaluator requirements")
+            logger.error("Please install DaskEvaluator requirements")
             raise
 
     def get_distributed_evaluator():
@@ -112,7 +112,7 @@ def get_evaluator(evaluator_str: Optional[str], *, kwargs: Dict[str, Any], evalu
                     evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
             return DistributedEvaluator
         except ImportError:
-            logger.error(f"Please install DistributedEvaluator requirements")
+            logger.error("Please install DistributedEvaluator requirements")
             raise
 
     def get_multiprocess_evaluator():
@@ -153,7 +153,7 @@ def get_algorithm(
     max_evaluations: int,
     evaluator: Evaluator[S],
     population_generator: Generator,
-    kwargs: Dict[str, Any],
+    kwargs: dict[str, Any],
 ) -> Algorithm:
     logger = logging.getLogger(__name__)
 
@@ -168,10 +168,10 @@ def get_algorithm(
         algorithm_kwargs["offspring_population_size"] = kwargs.get("offspring_size")
 
     def get_nsgaii():
-        return NSGAII[FloatSolution, List[FloatSolution]]
+        return NSGAII[FloatSolution, list[FloatSolution]]
 
     def get_fast_nsgaii():
-        return FastNSGAII[FloatSolution, List[FloatSolution]]
+        return FastNSGAII[FloatSolution, list[FloatSolution]]
 
     algorithm_dict = {
         "nsgaii": get_nsgaii,
@@ -190,11 +190,10 @@ def get_algorithm(
             selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
             **algorithm_kwargs,
         )
-    else:
-        raise ValueError(f"Invalid algorithm {algorithm_str} (please choose one of these: {algorithm_dict.keys()})")
+    raise ValueError(f"Invalid algorithm {algorithm_str} (please choose one of these: {algorithm_dict.keys()})")
 
 
-def get_plot_server(plot_server_str: Optional[str], *, plot_server_interface: PlotServerInterface, port: int) -> Optional[PlotServer]:
+def get_plot_server(plot_server_str: str | None, *, plot_server_interface: PlotServerInterface, port: int) -> PlotServer | None:
     logger = logging.getLogger(__name__)
 
     def get_bokeh_plot_server():
@@ -203,7 +202,7 @@ def get_plot_server(plot_server_str: Optional[str], *, plot_server_interface: Pl
 
             return BokehPlotServer
         except ImportError:
-            logger.error(f"Please install BokehPlotServer requirements")
+            logger.error("Please install BokehPlotServer requirements")
             raise
 
     def get_none():
@@ -237,15 +236,15 @@ class DepositionOptimizer(PlotServerInterface):
         x_max: float,
         population_size: int = 250,
         max_evaluations: int = 25000,
-        evaluator_str: Optional[str] = "multiprocess",
+        evaluator_str: str | None = "multiprocess",
         algorithm_str: str = "fast_nsgaii",
-        plot_server_str: Optional[str] = "none",
+        plot_server_str: str | None = "none",
         plot_server_port: int = PlotServer.DEFAULT_PORT,
         auto_start: bool = True,
         v_max: float,
-        parameter_labels: List[str],
+        parameter_labels: list[str],
         ppm3: float = 1.0,
-        objectives: List[str],
+        objectives: list[str],
         reference_front_file: str = None,
         write_fronts: bool = False,
         **kwargs,
@@ -272,14 +271,14 @@ class DepositionOptimizer(PlotServerInterface):
         self.kwargs = kwargs
 
         # Cache
-        self.problem: Optional[HomogenizationProblem] = None
-        self.algorithm: Optional[Algorithm] = None
+        self.problem: HomogenizationProblem | None = None
+        self.algorithm: Algorithm | None = None
 
         self.algorithm_observer = VerboseHoardingAlgorithmObserver(len(objectives))
         self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self, port=plot_server_port)
         self.evaluator_observer = HoardingEvaluatorObserver(len(objectives)) if self.plot_server else None
         self.evaluator = get_evaluator(self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer)
-        self.deposition_prefix: Optional[Deposition] = None
+        self.deposition_prefix: Deposition | None = None
 
     def start(self):
         if self.plot_server:
@@ -291,7 +290,7 @@ class DepositionOptimizer(PlotServerInterface):
         material: Material,
         variables: int,
         deposition_prefix: Deposition = None,
-        timestamps: Optional[List[float]] = None,
+        timestamps: list[float] | None = None,
         population_generator: Generator = None,
     ) -> None:
         if self.algorithm_observer:
@@ -373,12 +372,12 @@ class DepositionOptimizer(PlotServerInterface):
             if callable(evaluator_stop):
                 evaluator_stop()
 
-    def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
+    def get_new_solutions(self, start: int) -> dict[str, list[float]]:
         if self.evaluator_observer:
             return self.evaluator_observer.get_new_solutions(start)
         return {}
 
-    def get_population(self) -> Dict[str, List[float]]:
+    def get_population(self) -> dict[str, list[float]]:
         if self.algorithm_observer:
             return self.algorithm_observer.get_population()
         return {}
@@ -401,7 +400,7 @@ class DepositionOptimizer(PlotServerInterface):
 
         raise RuntimeError("DepositionOptimizer not initialized")
 
-    def get_best_solution(self) -> Optional[OptimizationResult]:
+    def get_best_solution(self) -> OptimizationResult | None:
         if self.algorithm_observer and self.problem:
             if len(self.algorithm_observer.population) > 0:
                 solution = min(self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives)))
@@ -417,12 +416,11 @@ class DepositionOptimizer(PlotServerInterface):
                         ppm3=self.ppm3,
                     ),
                 )
-            else:
-                return None
+            return None
 
         raise RuntimeError("DepositionOptimizer not initialized")
 
-    def get_reference(self) -> Optional[OptimizationResult]:
+    def get_reference(self) -> OptimizationResult | None:
         deposition, material, objectives = self.problem.get_reference_relative()
         return OptimizationResult(
             deposition=deposition,
@@ -446,11 +444,11 @@ class DepositionOptimizer(PlotServerInterface):
         )
         return ideal
 
-    def get_final_results(self) -> List[OptimizationResult]:
+    def get_final_results(self) -> list[OptimizationResult]:
         self.logger.debug("Collecting final results")
         return self.solutions_to_optimization_results(self.algorithm.get_result())
 
-    def solutions_to_optimization_results(self, solutions: List[S]) -> List[OptimizationResult]:
+    def solutions_to_optimization_results(self, solutions: list[S]) -> list[OptimizationResult]:
         objective_labels = self.problem.get_objective_labels()
         return [
             OptimizationResult(
@@ -468,11 +466,11 @@ class DepositionOptimizer(PlotServerInterface):
 
         raise RuntimeError("DepositionOptimizer not initialized")
 
-    def get_progress(self) -> Dict[str, float]:
+    def get_progress(self) -> dict[str, float]:
         if self.deposition_prefix:
             return {
                 "t_start": self.deposition_prefix.meta.time,
             }
 
-    def get_parameter_labels(self) -> List[str]:
+    def get_parameter_labels(self) -> list[str]:
         return self.parameter_labels

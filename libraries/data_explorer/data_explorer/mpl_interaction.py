@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 # /*##########################################################################
 #
 # Copyright (c) 2016 European Synchrotron Radiation Facility
@@ -61,7 +60,7 @@ import matplotlib.pyplot as _plt
 import numpy
 
 
-class MplInteraction(object):
+class MplInteraction:
     """Base class for class providing interaction to a matplotlib Figure."""
 
     def __init__(self, figure):
@@ -136,7 +135,7 @@ class ZoomOnWheel(MplInteraction):
         :param Figure figure: The matplotlib figure to attach the behavior to.
         :param float scale_factor: The scale factor to apply on wheel event.
         """
-        super(ZoomOnWheel, self).__init__(figure)
+        super().__init__(figure)
         self._add_connection("scroll_event", self._on_mouse_wheel)
 
         self.scale_factor = scale_factor
@@ -182,8 +181,7 @@ class ZoomOnWheel(MplInteraction):
 
         if begin < end:
             return new_min, new_max
-        else:
-            return new_max, new_min
+        return new_max, new_min
 
     def _on_mouse_wheel(self, event):
         if event.step > 0:
@@ -225,7 +223,7 @@ class PanAndZoom(ZoomOnWheel):
         :param Figure figure: The matplotlib figure to attach the behavior to.
         :param float scale_factor: The scale factor to apply on wheel event.
         """
-        super(PanAndZoom, self).__init__(figure, scale_factor)
+        super().__init__(figure, scale_factor)
         self._add_connection("button_press_event", self._on_mouse_press)
         self._add_connection("button_release_event", self._on_mouse_release)
         self._add_connection("motion_notify_event", self._on_mouse_motion)

@@ -1,5 +1,4 @@
 import os
-from typing import List
 
 
 def get_identifier(path: str) -> str:
@@ -11,7 +10,7 @@ def get_identifier(path: str) -> str:
     return [entry for entry in path.split(os.path.sep) if entry][-1]
 
 
-def get_identifiers(paths: List[str]) -> List[str]:
+def get_identifiers(paths: list[str]) -> list[str]:
     """
     Call get_identifier() for each path in the list
     :param paths: list of paths containing identifiers

@@ -1,6 +1,6 @@
 import itertools
 from functools import lru_cache
-from typing import TypeVar, List
+from typing import TypeVar
 
 from jmetal.util.comparator import Comparator, SolutionAttributeComparator
 from jmetal.util.ranking import Ranking
@@ -27,13 +27,13 @@ def compare(objectives1: tuple, objectives2: tuple) -> int:
 
 # Warning: this class completely ignores the dominance comparator and does not evaluate constraints
 # It is simply meant to be the fastest version of
-class FastestNonDominatedRanking(Ranking[List[S]]):
+class FastestNonDominatedRanking(Ranking[list[S]]):
     """Class implementing the non-dominated ranking of NSGA-II proposed by Deb et al., see [Deb2002]_"""
 
     def __init__(self):
-        super(FastestNonDominatedRanking, self).__init__()
+        super().__init__()
 
-    def compute_ranking(self, solutions: List[S], k: int = None):
+    def compute_ranking(self, solutions: list[S], k: int = None):
         """Compute ranking of solutions.
 
         :param solutions: Solution list.

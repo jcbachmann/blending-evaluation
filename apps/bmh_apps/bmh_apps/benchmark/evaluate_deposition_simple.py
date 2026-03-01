@@ -7,14 +7,14 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
-
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
-from bmh.benchmark.material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition, Deposition
+from bmh.benchmark.material_deposition import Deposition, DepositionMeta, MaterialDeposition, MaterialMeta
 from bmh.benchmark.simulator_meta import SimulatorMeta
 from bmh.helpers.identifiers import get_identifier
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
+from pandas import DataFrame
+
 from ..helpers.configure_logging import configure_logging
 
 

@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from jmetal.core.quality_indicator import HyperVolume, GenerationalDistance, InvertedGenerationalDistance
+from jmetal.core.quality_indicator import GenerationalDistance, HyperVolume, InvertedGenerationalDistance
 from jmetal.util.solution import read_solutions
 from tqdm import tqdm
 

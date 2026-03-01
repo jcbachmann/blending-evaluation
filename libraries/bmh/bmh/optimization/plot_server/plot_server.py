@@ -2,10 +2,9 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from threading import Thread
-from typing import Optional, Dict, List
 
-from ..optimization_result import OptimizationResult
 from ...benchmark.material_deposition import Material
+from ..optimization_result import OptimizationResult
 
 
 def ensure_event_loop_exists():
@@ -17,11 +16,11 @@ def ensure_event_loop_exists():
 
 class PlotServerInterface(ABC):
     @abstractmethod
-    def get_new_solutions(self, start: int) -> Dict[str, List[float]]:
+    def get_new_solutions(self, start: int) -> dict[str, list[float]]:
         pass
 
     @abstractmethod
-    def get_population(self) -> Dict[str, List[float]]:
+    def get_population(self) -> dict[str, list[float]]:
         pass
 
     @abstractmethod
@@ -29,11 +28,11 @@ class PlotServerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_best_solution(self) -> Optional[OptimizationResult]:
+    def get_best_solution(self) -> OptimizationResult | None:
         pass
 
     @abstractmethod
-    def get_reference(self) -> Optional[OptimizationResult]:
+    def get_reference(self) -> OptimizationResult | None:
         pass
 
     @abstractmethod
@@ -45,11 +44,11 @@ class PlotServerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_progress(self) -> Dict[str, float]:
+    def get_progress(self) -> dict[str, float]:
         pass
 
     @abstractmethod
-    def get_parameter_labels(self) -> List[str]:
+    def get_parameter_labels(self) -> list[str]:
         pass
 
 
@@ -60,7 +59,7 @@ class PlotServer(ABC):
         self.plot_server_interface = plot_server_interface
         self.port = port
         self.logger = logging.getLogger(__name__)
-        self.thread: Optional[Thread] = None
+        self.thread: Thread | None = None
 
     @abstractmethod
     def serve(self) -> None:

@@ -1,8 +1,8 @@
+from ..material_handler import MaterialHandler
+from ..plant import Plant
 from .reclaimer import Reclaimer
 from .stacker import Stacker
 from .stockpile import Stockpile
-from ..material_handler import MaterialHandler
-from ..plant import Plant
 
 
 class BlendingSystem(MaterialHandler):

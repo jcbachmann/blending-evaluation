@@ -4,7 +4,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-from bmh.helpers.stockpile_math import get_stockpile_volume, get_stockpile_height, get_stockpile_slice_volume
+from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume, get_stockpile_volume
 
 
 def plot_ideal_stockpile(x_min: float, core_length: float, height: float):

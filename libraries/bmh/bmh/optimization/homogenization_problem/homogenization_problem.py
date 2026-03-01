@@ -1,5 +1,4 @@
 import math
-from typing import List, Optional, Tuple, Dict
 
 import numpy as np
 import pandas as pd
@@ -7,7 +6,7 @@ from jmetal.core.problem import FloatProblem
 from jmetal.core.solution import FloatSolution
 from pandas import DataFrame
 
-from bmh.benchmark.material_deposition import MaterialDeposition, Material, Deposition, DepositionMeta
+from bmh.benchmark.material_deposition import Deposition, DepositionMeta, Material, MaterialDeposition
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
@@ -25,7 +24,7 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
     return sim.stack_reclaim(material_deposition)
 
 
-def verify_timestamps(timestamps: List[float], *, number_of_variables: int, max_timestamp: float, deposition_prefix: Deposition = None):
+def verify_timestamps(timestamps: list[float], *, number_of_variables: int, max_timestamp: float, deposition_prefix: Deposition = None):
     if len(timestamps) != number_of_variables:
         raise ValueError(f"Length of timestamps {len(timestamps)} does not match length of variables {number_of_variables}")
 
@@ -43,15 +42,15 @@ def verify_timestamps(timestamps: List[float], *, number_of_variables: int, max_
 
 
 def variables_to_deposition_generic(
-    variables: List[float],
+    variables: list[float],
     *,
     x_min: float,
     x_max: float,
     max_timestamp: float,
     v_max: float,
     deposition_meta: DepositionMeta,
-    deposition_prefix: Optional[Deposition] = None,
-    timestamps: Optional[List[float]] = None,
+    deposition_prefix: Deposition | None = None,
+    timestamps: list[float] | None = None,
 ) -> Deposition:
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
         start_timestamp = deposition_prefix.data["timestamp"].values[-1]
@@ -137,7 +136,7 @@ def get_chevron_deposition(x_min: float, x_max: float, max_timestamp: float, v: 
     return deposition
 
 
-def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max: float, max_timestamp: float, v_max: float, deposition_meta: DepositionMeta):
+def get_chevron_ideal_deposition(variables: list[float], *, x_min: float, x_max: float, max_timestamp: float, v_max: float, deposition_meta: DepositionMeta):
     layers = len(variables) - 1
     move_time_v_max_per_layer = (x_max - x_min) / v_max
     move_time_v_max_total = move_time_v_max_per_layer * layers
@@ -149,7 +148,7 @@ def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max:
     move_time_per_layer = move_time_total / layers
 
     def get_timestamps():
-        timestamps: List[float] = [0.0, stand_time_max * variables[0]]
+        timestamps: list[float] = [0.0, stand_time_max * variables[0]]
 
         for i in range(1, len(variables)):
             timestamps.append(timestamps[-1] + move_time_per_layer)
@@ -218,7 +217,7 @@ def get_full_speed_deposition(x_min: float, x_max: float, deposition_meta: Depos
     return deposition
 
 
-def calculate_reference_objectives(reclaimed_material: Material) -> Dict[str, float]:
+def calculate_reference_objectives(reclaimed_material: Material) -> dict[str, float]:
     reclaimed_evaluator = ReclaimedMaterialEvaluator(reclaimed_material)
     chevron_parameter_stdev = reclaimed_evaluator.get_parameter_stdev()
 
@@ -244,10 +243,10 @@ class HomogenizationProblem(FloatProblem):
         deposition_prefix: Deposition = None,
         v_max: float,
         ppm3: float,
-        timestamps: Optional[List[float]] = None,
-        objectives: List[str] = None,
+        timestamps: list[float] | None = None,
+        objectives: list[str] = None,
     ):
-        super(HomogenizationProblem, self).__init__()
+        super().__init__()
 
         # Copy parameters
         self.deposition_meta = deposition_meta
@@ -255,7 +254,7 @@ class HomogenizationProblem(FloatProblem):
         self.x_max = x_max
         self.material = material
         self.number_of_variables = number_of_variables
-        self.deposition_prefix: Optional[Deposition] = deposition_prefix
+        self.deposition_prefix: Deposition | None = deposition_prefix
         self.v_max = v_max
         self.ppm3 = ppm3
         self.timestamps = timestamps
@@ -301,12 +300,12 @@ class HomogenizationProblem(FloatProblem):
         if objective_type == "F1":
             evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
             return evaluator.get_single_parameter_stdev(objective.split("/")[1]) / self.reference_objectives[objective]
-        elif objective_type == "F2":
+        if objective_type == "F2":
             evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
             return evaluator.get_volume_stdev() / self.reference_objectives[objective]
-        elif objective_type == "F3":
+        if objective_type == "F3":
             return self.evaluate_distance_travelled(deposition)
-        elif objective_type == "F4":
+        if objective_type == "F4":
             return self.evaluate_max_speed(deposition)
 
         raise ValueError(f"Unknown objective: {objective_type}")
@@ -316,7 +315,7 @@ class HomogenizationProblem(FloatProblem):
         reclaimed_material = process_material_deposition(material=self.material, deposition=deposition, ppm3=self.ppm3)
         solution.objectives = [self.evaluate_objective(deposition, reclaimed_material, objective) for objective in self.objectives]
 
-    def evaluate_reclaimed_material(self, reclaimed_material: Material) -> Dict[str, float]:
+    def evaluate_reclaimed_material(self, reclaimed_material: Material) -> dict[str, float]:
         return ReclaimedMaterialEvaluator.get_relative(
             ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max).get_all_stdev(), self.reference_objectives
         )
@@ -327,10 +326,10 @@ class HomogenizationProblem(FloatProblem):
     def evaluate_max_speed(self, deposition: Deposition) -> float:
         return deposition.data["x"].diff().abs().max() / self.v_max  # FIXME normalize correctly with self.v_max
 
-    def get_objective_labels(self) -> List[str]:
+    def get_objective_labels(self) -> list[str]:
         return self.objectives
 
-    def variables_to_deposition(self, variables: List[float]) -> Deposition:
+    def variables_to_deposition(self, variables: list[float]) -> Deposition:
         return variables_to_deposition_generic(
             variables,
             x_min=self.x_min,
@@ -350,5 +349,5 @@ class HomogenizationProblem(FloatProblem):
         #     deposition_meta=self.deposition_meta
         # )
 
-    def get_reference_relative(self) -> Tuple[Deposition, Material, Dict[str, float]]:
+    def get_reference_relative(self) -> tuple[Deposition, Material, dict[str, float]]:
         return self.reference_deposition, self.reference_reclaimed_material, self.reference_deposition_objectives

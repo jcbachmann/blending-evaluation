@@ -1,5 +1,4 @@
 import logging
-from typing import Tuple, List, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,8 +8,8 @@ from pandas import DataFrame
 from .material_handler import MaterialHandler
 
 
-def average_sample_group(sample_group: List[List[float]]) -> List[float]:
-    regroup: List[List[float]] = list(map(list, zip(*sample_group)))
+def average_sample_group(sample_group: list[list[float]]) -> list[float]:
+    regroup: list[list[float]] = list(map(list, zip(*sample_group)))
 
     average = [np.average(regroup[0])]
     for i in range(1, len(regroup), 2):
@@ -19,10 +18,10 @@ def average_sample_group(sample_group: List[List[float]]) -> List[float]:
     return average
 
 
-def calculate_stats(start, samples, columns) -> Dict[str, float]:
+def calculate_stats(start, samples, columns) -> dict[str, float]:
     logger = logging.getLogger(__name__)
     logger.debug("Calculating stats")
-    regroup: List[List[float]] = list(map(list, zip(*samples)))
+    regroup: list[list[float]] = list(map(list, zip(*samples)))
 
     data = [
         ("start", start),
@@ -79,10 +78,10 @@ class MaterialSampler:
         self.group_size = group_size
         self.stats_size = stats_size
         self.stats_period = stats_period
-        self.material_handlers: List[Tuple[str, MaterialHandler]] = []
-        self.samples: List[List[float]] = []
-        self.sample_group: List[List[float]] = []
-        self.stats: List[Dict[str, float]] = []
+        self.material_handlers: list[tuple[str, MaterialHandler]] = []
+        self.samples: list[list[float]] = []
+        self.sample_group: list[list[float]] = []
+        self.stats: list[dict[str, float]] = []
         self.last_stats = 0.0
 
     def put(self, label: str, material_handler: MaterialHandler):
@@ -171,15 +170,15 @@ class MaterialSampler:
 
         plt.show()
 
-    def get_diff_live(self, start) -> Dict[str, List[float]]:
+    def get_diff_live(self, start) -> dict[str, list[float]]:
         df = DataFrame(data=self.samples[start:], columns=self.get_columns())
         return df.to_dict(orient="list")
 
-    def get_diff_stats(self, start) -> Dict[str, List[float]]:
+    def get_diff_stats(self, start) -> dict[str, list[float]]:
         df = DataFrame(data=self.stats[start:])
         return df.to_dict(orient="list")
 
-    def get_columns(self) -> List[str]:
+    def get_columns(self) -> list[str]:
         columns = ["time"]
         for label, material_handler in self.material_handlers:
             n = len(material_handler.sample())

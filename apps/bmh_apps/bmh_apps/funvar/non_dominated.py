@@ -4,7 +4,7 @@ import logging
 import operator
 import os.path
 
-from jmetal.util.solution import get_non_dominated_solutions, read_solutions, print_function_values_to_file
+from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, read_solutions
 
 
 def main(args: argparse.Namespace):

@@ -5,7 +5,7 @@ import os
 
 from data_explorer import app
 
-from . import solution, graphs, testlets
+from . import graphs, solution, testlets
 
 
 def main(args):

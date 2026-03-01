@@ -1,19 +1,17 @@
-from typing import Optional, Dict
-
+from ..benchmark.material_deposition import Material
 from .math import stdev, weighted_avg_and_std
 from .stockpile_math import get_stockpile_height, get_stockpile_slice_volume
-from ..benchmark.material_deposition import Material
 
 
 class ReclaimedMaterialEvaluator:
-    def __init__(self, reclaimed: Material, x_min: Optional[float] = None, x_max: Optional[float] = None):
+    def __init__(self, reclaimed: Material, x_min: float | None = None, x_max: float | None = None):
         self.reclaimed = reclaimed
         self.x_min = x_min
         self.x_max = x_max
 
         # Caches
-        self._parameter_stdev: Optional[Dict[str, float]] = None
-        self._volume_stdev: Optional[float] = None
+        self._parameter_stdev: dict[str, float] | None = None
+        self._volume_stdev: float | None = None
 
     def get_volume_stdev(self) -> float:
         if self._volume_stdev is None:
@@ -35,7 +33,7 @@ class ReclaimedMaterialEvaluator:
 
         return self._volume_stdev
 
-    def get_parameter_stdev(self) -> Dict[str, float]:
+    def get_parameter_stdev(self) -> dict[str, float]:
         if self._parameter_stdev is None:
             cols = self.reclaimed.get_parameter_columns()
             self._parameter_stdev = {f"F1/{col}": self.get_single_parameter_stdev(col) for col in cols}
@@ -44,14 +42,14 @@ class ReclaimedMaterialEvaluator:
     def get_single_parameter_stdev(self, parameter: str) -> float:
         return weighted_avg_and_std(self.reclaimed.data[parameter], self.reclaimed.data["volume"])[1]
 
-    def get_all_stdev(self) -> Dict[str, float]:
+    def get_all_stdev(self) -> dict[str, float]:
         return {
             **self.get_parameter_stdev(),
             "F2": self.get_volume_stdev(),
         }
 
     @staticmethod
-    def get_relative(objectives: Dict[str, float], reference: Dict[str, float]) -> Dict[str, float]:
+    def get_relative(objectives: dict[str, float], reference: dict[str, float]) -> dict[str, float]:
         return {k: v / reference[k] for k, v in objectives.items()}
 
     def get_slice_count(self) -> int:

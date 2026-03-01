@@ -31,7 +31,7 @@ def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=No
     data = data.sort_values(x_col)
 
     for c, (cond, df_c) in enumerate(data.groupby(split_col, sort=False)):
-        x = np.array([df_r[x_col].values.astype(np.float)[0] for i, (g, df_r) in enumerate(df_c.groupby(unique_col, sort=False))])
+        x = np.array([df_r[x_col].values.astype(float)[0] for i, (g, df_r) in enumerate(df_c.groupby(unique_col, sort=False))])
 
         color = colors[c]
 

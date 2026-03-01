@@ -7,8 +7,8 @@ import numpy as np
 from pandas import DataFrame
 from scipy.optimize import fminbound
 
-from .roundness_evaluator import RoundnessEvaluator
 from ..helpers.pretty_plot import pretty_line_plot
+from .roundness_evaluator import RoundnessEvaluator
 
 
 class OptEvaluator:
@@ -77,7 +77,7 @@ def minimize_brute_force(func, x_start, x_stop, args, x_tol, f_tol):
     f_last = None
     last_run = False
 
-    while f_last is None or x_stop - x_start > x_tol and not last_run:
+    while f_last is None or (x_stop - x_start > x_tol and not last_run):
         last_run = f_last is not None and f_last - f_opt < f_tol
         f_last = f_opt
 

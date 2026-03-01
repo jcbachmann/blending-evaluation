@@ -2,12 +2,12 @@ import json
 import logging
 import os
 
-from .data import BenchmarkData, prepare_path
-from .material_deposition import MaterialMeta, DepositionMeta, MaterialDeposition, write_data_file
-from .reference_meta import ReferenceMeta
-from .simulator_meta import SimulatorMeta
 from ..helpers import math
 from ..helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
+from .data import BenchmarkData, prepare_path
+from .material_deposition import DepositionMeta, MaterialDeposition, MaterialMeta, write_data_file
+from .reference_meta import ReferenceMeta
+from .simulator_meta import SimulatorMeta
 
 
 def test_simulator(simulator_meta: SimulatorMeta):
@@ -149,7 +149,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
         x_max=deposition_meta.bed_size_x - z_center,
     )
     parameter_stdev = evaluator.get_parameter_stdev()
-    logger.info(f"Parameter standard deviations:")
+    logger.info("Parameter standard deviations:")
     for k, v in parameter_stdev.items():
         logger.info(f"{k}\t{v}")
 

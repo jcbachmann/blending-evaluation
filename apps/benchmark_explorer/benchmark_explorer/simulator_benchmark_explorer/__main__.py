@@ -3,7 +3,6 @@
 import argparse
 import logging
 import os
-from typing import List
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
@@ -29,12 +28,12 @@ def main(args):
     standard = read_evaluation(args.standard)
     evaluations = [read_evaluation(s) for s in args.evaluations]
 
-    static_testlets: List[Testlet] = [
+    static_testlets: list[Testlet] = [
         testlets.MaterialIdentifierTestlet(),
         testlets.DepositionIdentifierTestlet(),
     ]
 
-    dynamic_testlets: List[Testlet] = [testlets.CorrelationTestlet(e) for e in evaluations]
+    dynamic_testlets: list[Testlet] = [testlets.CorrelationTestlet(e) for e in evaluations]
 
     app.execute(
         path=os.path.abspath(args.path),

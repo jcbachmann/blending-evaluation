@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 
 import hydra
-from jmetal.util.generator import RandomGenerator
-from omegaconf import DictConfig
-
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import DepositionMeta
-from bmh.optimization.homogenization_problem.generator import FullSpeedGenerator, RandomEndGenerator, FixedRandomSpeedGenerator, RandomSpeedGenerator
+from bmh.optimization.homogenization_problem.generator import FixedRandomSpeedGenerator, FullSpeedGenerator, RandomEndGenerator, RandomSpeedGenerator
 from bmh.optimization.optimization import DepositionOptimizer
-from bmh_apps.helpers.bed_size import get_bed_size
+from jmetal.util.generator import RandomGenerator
 from jmetalpy_extensions.util.generator import MultiGenerator
+from omegaconf import DictConfig
 
+from bmh_apps.helpers.bed_size import get_bed_size
 
 # FIXME I can't get structured config schema to work with multiprocessing
 # @dataclass

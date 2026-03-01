@@ -4,8 +4,7 @@ import logging
 import dash
 import plotly.express as px
 import plotly.graph_objects as go
-from dash import dcc
-from dash import html
+from dash import dcc, html
 from dash.dependencies import Input, Output, State
 
 from .fun_var_math import filter_efficient_front

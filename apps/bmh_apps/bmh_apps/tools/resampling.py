@@ -46,7 +46,7 @@ def resample(material: Material, rule: str):
             weights = df["vpt"][s.index]
             return np.average(s, weights=weights) if weights.sum() > 0.0 else float("nan")
 
-        funcs = {p: parameter_average for p in material.get_parameter_columns()}
+        funcs = dict.fromkeys(material.get_parameter_columns(), parameter_average)
         funcs.update({"vpt": np.average})
         df = df.resample(rule, closed="right", label="right").apply(funcs)
 

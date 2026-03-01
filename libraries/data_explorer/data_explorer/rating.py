@@ -61,11 +61,9 @@ class RaterValueEquals(Rater):
     def rate(self, value):
         if self.target == value:
             return Rating.GOOD
-        else:
-            if self.warning_only:
-                return Rating.WARNING
-            else:
-                return Rating.BAD
+        if self.warning_only:
+            return Rating.WARNING
+        return Rating.BAD
 
 
 class RaterColorScale(Rater):

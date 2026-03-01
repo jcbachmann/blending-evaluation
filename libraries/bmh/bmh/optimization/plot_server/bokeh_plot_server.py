@@ -1,11 +1,10 @@
 import logging
-from typing import Optional
 
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.document import Document
 from bokeh.layouts import gridplot
-from bokeh.models import ColumnDataSource, Range1d, DataRange1d
+from bokeh.models import ColumnDataSource, DataRange1d, Range1d
 
 # noinspection PyUnresolvedReferences
 from bokeh.palettes import Category10, Viridis256
@@ -19,7 +18,7 @@ class BokehPlotServer(PlotServer):
     def __init__(self, plot_server_interface: PlotServerInterface, port: int = PlotServer.DEFAULT_PORT):
         super().__init__(plot_server_interface, port)
 
-        self.server: Optional[Server] = None
+        self.server: Server | None = None
         self.do_reset = False
         self.logger = logging.getLogger(__name__)
 
@@ -211,21 +210,21 @@ class BokehPlotServer(PlotServer):
         material_output_fig_volume.line(
             x="timestamp",
             y="tonnage",
-            legend_label=f"Best",
+            legend_label="Best",
             source=best_path_material_output_source,
             color=palette[2],
         )
         material_output_fig_volume.line(
             x="timestamp",
             y="tonnage",
-            legend_label=f"Selected",
+            legend_label="Selected",
             source=selected_path_material_output_source,
             color=palette[3],
         )
         material_output_fig_volume.line(
             x="timestamp",
             y="tonnage",
-            legend_label=f"Reference",
+            legend_label="Reference",
             source=reference_path_material_output_source,
             color=palette[4],
             alpha=0.8,
@@ -233,7 +232,7 @@ class BokehPlotServer(PlotServer):
         material_output_fig_volume.line(
             x="timestamp",
             y="tonnage",
-            legend_label=f"Ideal",
+            legend_label="Ideal",
             source=ideal_path_material_output_source,
             color=palette[5],
             alpha=0.8,

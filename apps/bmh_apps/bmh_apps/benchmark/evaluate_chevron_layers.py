@@ -4,17 +4,17 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
+from bmh.benchmark.data import BenchmarkData
+from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
+from bmh.helpers.identifiers import get_identifier
+from bmh.helpers.math import weighted_avg_and_std
+from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from matplotlib import gridspec
 from matplotlib.axes import Axes
 from matplotlib.ticker import ScalarFormatter
 from pandas import DataFrame
 from seaborn.palettes import color_palette
 
-from bmh.benchmark.data import BenchmarkData
-from bmh.benchmark.material_deposition import MaterialDeposition, Deposition, Material
-from bmh.helpers.identifiers import get_identifier
-from bmh.helpers.math import weighted_avg_and_std
-from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from bmh_apps.chevron.chevron_path import chevron_path
 from bmh_apps.helpers.bed_size import get_bed_size
 from bmh_apps.helpers.configure_logging import configure_logging

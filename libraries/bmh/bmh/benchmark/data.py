@@ -1,11 +1,10 @@
 import json
 import logging
 import os
-from typing import Dict, List, Optional
 
-from .material_deposition import MaterialMeta, DepositionMeta, write_data_file
+from .material_deposition import DepositionMeta, MaterialMeta, write_data_file
 from .reference_meta import ReferenceMeta
-from .simulator_meta import SimulatorMeta, SIMULATOR_TYPE
+from .simulator_meta import SIMULATOR_TYPE, SimulatorMeta
 
 
 def create_instance_for_each_managed_dir(path: str, instance_type: type, *, recursive: bool = False) -> dict:
@@ -45,13 +44,12 @@ def prepare_path(path: str, *, dry_run: bool = False, empty_required: bool = Tru
         if os.path.isdir(path):
             if empty_required:
                 if len(os.listdir(path)) > 0:
-                    raise IOError(f'Path "{path}" is not empty')
-                else:
-                    logger.debug(f'Path "{path}" already exists and is empty')
+                    raise OSError(f'Path "{path}" is not empty')
+                logger.debug(f'Path "{path}" already exists and is empty')
             else:
                 logger.debug(f'Path "{path}" already exists')
         else:
-            raise IOError(f'Path "{path}" exists but is not a directory')
+            raise OSError(f'Path "{path}" exists but is not a directory')
     else:
         logger.debug(f'Creating path "{path}"')
         if not dry_run:
@@ -69,53 +67,51 @@ class BenchmarkData:
     PREDICTION_CSV = "prediction.csv"
     SIMULATOR_JSON = "simulator.json"
 
-    def __init__(self, base_path: Optional[str] = None):
+    def __init__(self, base_path: str | None = None):
         self.base_path = base_path
 
-        self.materials: Dict[str, MaterialMeta] = {}
-        self.depositions: Dict[str, DepositionMeta] = {}
-        self.simulators: Dict[str, SimulatorMeta] = {}
+        self.materials: dict[str, MaterialMeta] = {}
+        self.depositions: dict[str, DepositionMeta] = {}
+        self.simulators: dict[str, SimulatorMeta] = {}
 
         self.logger = logging.getLogger(__name__)
 
-    def get_benchmark_dir_path(self, path: Optional[str], benchmark_dir: str):
+    def get_benchmark_dir_path(self, path: str | None, benchmark_dir: str):
         if path:
             return path
-        else:
-            if self.base_path:
-                return os.path.join(self.base_path, benchmark_dir)
-            else:
-                raise ValueError("Base path not provided")
+        if self.base_path:
+            return os.path.join(self.base_path, benchmark_dir)
+        raise ValueError("Base path not provided")
 
-    def read_materials(self, path: Optional[str] = None) -> Dict[str, MaterialMeta]:
+    def read_materials(self, path: str | None = None) -> dict[str, MaterialMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.MATERIAL_DIR)
         self.logger.debug("Reading materials")
         self.materials = create_instance_for_each_managed_dir(path, MaterialMeta, recursive=True)
         self.logger.info(f"{len(self.materials)} materials read")
         return self.materials
 
-    def read_depositions(self, path: Optional[str] = None) -> Dict[str, DepositionMeta]:
+    def read_depositions(self, path: str | None = None) -> dict[str, DepositionMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.DEPOSITION_DIR)
         self.logger.debug("Reading depositions")
         self.depositions = create_instance_for_each_managed_dir(path, DepositionMeta, recursive=True)
         self.logger.info(f"{len(self.depositions)} depositions read")
         return self.depositions
 
-    def read_simulators(self, path: Optional[str] = None) -> Dict[str, SimulatorMeta]:
+    def read_simulators(self, path: str | None = None) -> dict[str, SimulatorMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.SIMULATOR_DIR)
         self.logger.debug("Reading simulators")
         self.simulators = create_instance_for_each_managed_dir(path, SimulatorMeta, recursive=True)
         self.logger.info(f"{len(self.simulators)} simulators read")
         return self.simulators
 
-    def read_references(self, path: Optional[str] = None) -> Dict[str, ReferenceMeta]:
+    def read_references(self, path: str | None = None) -> dict[str, ReferenceMeta]:
         path = self.get_benchmark_dir_path(path, BenchmarkData.REFERENCE_DIR)
         self.logger.debug("Reading references")
         references = create_instance_for_each_managed_dir(path, ReferenceMeta, recursive=True)
         self.logger.info(f"{len(references)} references read")
         return references
 
-    def read_base(self, path: Optional[str] = None) -> None:
+    def read_base(self, path: str | None = None) -> None:
         if not path and not self.base_path:
             raise ValueError("Neither path nor base path provided")
 
@@ -123,7 +119,7 @@ class BenchmarkData:
         self.read_depositions(path)
         self.read_simulators(path)
 
-    def validate_references(self, references: Dict[str, ReferenceMeta]):
+    def validate_references(self, references: dict[str, ReferenceMeta]):
         self.logger.debug("Validating references")
         for _, reference in references.items():
             self.logger.debug(f'Validating reference "{reference}"')
@@ -133,7 +129,7 @@ class BenchmarkData:
                 raise ValueError(f'Deposition "{reference.deposition}" not found in depositions')
         self.logger.info("References validated")
 
-    def validate_simulators(self, sim_identifiers: List[str]):
+    def validate_simulators(self, sim_identifiers: list[str]):
         self.logger.debug("Validating simulators")
         for sim_identifier in sim_identifiers:
             self.logger.debug(f'Validating simulator identifier "{sim_identifier}"')
@@ -175,7 +171,7 @@ class BenchmarkData:
         self.validate_deposition(deposition_identifiers)
         return self.depositions[deposition_identifiers]
 
-    def write_material(self, material_meta: MaterialMeta, path: Optional[str] = None):
+    def write_material(self, material_meta: MaterialMeta, path: str | None = None):
         path = self.get_benchmark_dir_path(path, os.path.join(BenchmarkData.MATERIAL_DIR, material_meta.identifier))
 
         if not os.path.exists(path):
@@ -195,7 +191,7 @@ class BenchmarkData:
         if prediction is not None:
             write_data_file(prediction.data, os.path.join(path, BenchmarkData.PREDICTION_CSV))
 
-    def write_deposition(self, deposition_meta: DepositionMeta, path: Optional[str] = None):
+    def write_deposition(self, deposition_meta: DepositionMeta, path: str | None = None):
         path = self.get_benchmark_dir_path(path, os.path.join(BenchmarkData.DEPOSITION_DIR, deposition_meta.identifier))
         if not os.path.exists(path):
             self.logger.debug(f'Creating directory "{path}"')
