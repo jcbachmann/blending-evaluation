@@ -97,7 +97,7 @@ def get_evaluator(
     def get_dask_evaluator():
         nonlocal evaluator_kwargs
         try:
-            from .jmetal_ext.component.dask_evaluator import DaskEvaluator
+            from jmetalpy_extensions.util.evaluator import DaskEvaluator
             if 'scheduler' in kwargs and kwargs.get('scheduler'):
                 evaluator_kwargs['scheduler'] = kwargs.get('scheduler')
             return DaskEvaluator
@@ -108,7 +108,7 @@ def get_evaluator(
     def get_distributed_evaluator():
         nonlocal evaluator_kwargs
         try:
-            from .jmetal_ext.component.distributed_evaluator import DistributedEvaluator
+            from jmetalpy_extensions.util.evaluator import DistributedEvaluator
             if 'scheduler' in kwargs:
                 if 'scheduler' in kwargs and kwargs.get('scheduler'):
                     evaluator_kwargs['scheduler'] = kwargs.get('scheduler')
