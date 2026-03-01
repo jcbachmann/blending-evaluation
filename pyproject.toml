@@ -3,7 +3,7 @@ name = "blending-evaluation"
 version = "0.1.0"
 description = "Bulk Material Homogenization Evaluation Workspace"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "jmetalpy_extensions",
     "bmh",
@@ -15,7 +15,6 @@ dependencies = [
     "solution_explorer",
     "demo_plant_simulator"
 ]
-
 
 [dependency-groups]
 dev = [
