@@ -47,8 +47,8 @@ def get_height_map_volume_df(height_map_df, size):
 def load_results_from_path(path, size):
     results = []
 
-    r1 = re.compile(r'heights-(\d+)-(\d+)\.txt')
-    r2 = re.compile(r'heights-vol(\d+)-res([\d.]+)-run(\d+)\.txt')
+    r1 = re.compile(r"heights-(\d+)-(\d+)\.txt")
+    r2 = re.compile(r"heights-vol(\d+)-res([\d.]+)-run(\d+)\.txt")
     for file in os.listdir(path):
         in_volume = 0.0
         ppm3 = 1.0
@@ -72,17 +72,17 @@ def load_results_from_path(path, size):
 
 
 def execute_for_bulk_density(
-        pos: float,
-        size: float,
-        volume: float,
-        ppm3: float,
-        run: int,
-        dropheight: float,
-        detailed: bool,
-        bulkdensity: float,
+    pos: float,
+    size: float,
+    volume: float,
+    ppm3: float,
+    run: int,
+    dropheight: float,
+    detailed: bool,
+    bulkdensity: float,
 ):
     logger = logging.getLogger(__name__)
-    logger.info(f'processing volume {volume} with ppm3 {ppm3:.1f} (run {run})')
+    logger.info(f"processing volume {volume} with ppm3 {ppm3:.1f} (run {run})")
 
     sim = BslBlendingSimulator(
         bed_size_x=size,
@@ -90,18 +90,18 @@ def execute_for_bulk_density(
         ppm3=ppm3,
         dropheight=dropheight,
         detailed=detailed,
-        bulkdensity=bulkdensity
+        bulkdensity=bulkdensity,
     )
     sim.stack(0, pos, pos, volume, [])
     return sim.get_heights()
 
 
-def load_for_bulk_density(file: str, path: str = '/tmp'):
+def load_for_bulk_density(file: str, path: str = "/tmp"):
     if path is None:
-        path = '/tmp'
-    path += f'/{file}'
+        path = "/tmp"
+    path += f"/{file}"
     if os.path.isfile(path):
-        return pd.read_csv(path, header=None, delimiter='\t', index_col=None)
+        return pd.read_csv(path, header=None, delimiter="\t", index_col=None)
     else:
         return None
 
@@ -139,40 +139,39 @@ def acquire_results(args):
 def main(args):
     results_df = DataFrame(
         list(filter(lambda entry: entry[2] is not None, acquire_results(args))),
-        columns=['in_volume', 'ppm3', 'run', 'out_volume']
+        columns=["in_volume", "ppm3", "run", "out_volume"],
     )
 
     pretty_scatter_plot(
         data=results_df,
-        x_col='in_volume',
-        y_col='out_volume',
-        split_col='ppm3',
-        log_scale=True
+        x_col="in_volume",
+        y_col="out_volume",
+        split_col="ppm3",
+        log_scale=True,
     )
 
-    results_df['out/in volume ratio'] = results_df['out_volume'] / results_df['in_volume']
+    results_df["out/in volume ratio"] = results_df["out_volume"] / results_df["in_volume"]
     pretty_scatter_plot(
         data=results_df,
-        x_col='ppm3',
-        y_col='out/in volume ratio',
-        split_col='in_volume',
+        x_col="ppm3",
+        y_col="out/in volume ratio",
+        split_col="in_volume",
         log_scale=False,
-        equal=False
+        equal=False,
     )
     plt.show()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='height map evaluator')
-    parser.add_argument('--volumes', type=int, default=[1000, 2000, 5000, 10000, 20000], nargs='+', help='Volumes')
-    parser.add_argument('--ppm3s', type=float, default=[1.0 / 27.0, 0.125, 1.0], nargs='+',
-                        help='Particles per cubic meter')
-    parser.add_argument('--size', type=int, default=100, help='Blending bed length and depth')
-    parser.add_argument('--dropheight', type=float, default=25, help='Stacker drop height')
-    parser.add_argument('--runs', type=int, default=3, help='Runs')
-    parser.add_argument('--detailed', action='store_true', help='Use detailed simulation')
-    parser.add_argument('--reuse', action='store_true', help='Reuse old calculation data')
-    parser.add_argument('--path', type=str, default='/tmp', help='Output path for intermediate files')
-    parser.add_argument('--bulkdensity', type=float, default=1.0, help='Bulk density')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="height map evaluator")
+    parser.add_argument("--volumes", type=int, default=[1000, 2000, 5000, 10000, 20000], nargs="+", help="Volumes")
+    parser.add_argument("--ppm3s", type=float, default=[1.0 / 27.0, 0.125, 1.0], nargs="+", help="Particles per cubic meter")
+    parser.add_argument("--size", type=int, default=100, help="Blending bed length and depth")
+    parser.add_argument("--dropheight", type=float, default=25, help="Stacker drop height")
+    parser.add_argument("--runs", type=int, default=3, help="Runs")
+    parser.add_argument("--detailed", action="store_true", help="Use detailed simulation")
+    parser.add_argument("--reuse", action="store_true", help="Reuse old calculation data")
+    parser.add_argument("--path", type=str, default="/tmp", help="Output path for intermediate files")
+    parser.add_argument("--bulkdensity", type=float, default=1.0, help="Bulk density")
 
     main(parser.parse_args())

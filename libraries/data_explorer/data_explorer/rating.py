@@ -11,7 +11,7 @@ class Rating(Enum):
 
     def to_color(self):
         if self == Rating.CUSTOM:
-            raise Exception('Illegal call to Rating.to_color() for CUSTOM rating')
+            raise Exception("Illegal call to Rating.to_color() for CUSTOM rating")
 
         return {
             Rating.NEUTRAL: None,
@@ -24,10 +24,10 @@ class Rating(Enum):
 
 class Rater:
     def rate(self, value):
-        raise Exception('abstract')
+        raise Exception("abstract")
 
     def get_color(self, value):
-        raise Exception('CUSTOM rating requires implementation of Rater.get_color()')
+        raise Exception("CUSTOM rating requires implementation of Rater.get_color()")
 
 
 class RaterCheckValue(Rater):
@@ -75,13 +75,13 @@ class RaterColorScale(Rater):
         self.color_func = color_func
 
         if minimum >= maximum:
-            raise Exception(f'RaterColorScale requires minimum [{minimum}] < maximum [{maximum}]')
+            raise Exception(f"RaterColorScale requires minimum [{minimum}] < maximum [{maximum}]")
 
     def rate(self, value):
         return Rating.CUSTOM
 
     def get_color(self, value):
         if value < self.minimum or value > self.maximum:
-            raise Exception(f'Range violation minimum [{self.minimum}] <= value [{value}] <= maximum [{self.maximum}]')
+            raise Exception(f"Range violation minimum [{self.minimum}] <= value [{value}] <= maximum [{self.maximum}]")
 
         return self.color_func((value - self.minimum) / (self.maximum - self.minimum))

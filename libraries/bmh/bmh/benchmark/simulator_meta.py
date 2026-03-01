@@ -7,12 +7,12 @@ from ..simulation.mathematical_blending_simulator import MathematicalBlendingSim
 from ..simulation.smooth_blending_simulator import SmoothBlendingSimulator
 
 SIMULATOR_TYPE = {
-    'mathematical': MathematicalBlendingSimulator,
-    'MathematicalBlendingSimulator': MathematicalBlendingSimulator,
-    'smooth': SmoothBlendingSimulator,
-    'SmoothBlendingSimulator': SmoothBlendingSimulator,
-    'bsl': BslBlendingSimulator,
-    'BslBlendingSimulator': BslBlendingSimulator,
+    "mathematical": MathematicalBlendingSimulator,
+    "MathematicalBlendingSimulator": MathematicalBlendingSimulator,
+    "smooth": SmoothBlendingSimulator,
+    "SmoothBlendingSimulator": SmoothBlendingSimulator,
+    "bsl": BslBlendingSimulator,
+    "BslBlendingSimulator": BslBlendingSimulator,
 }
 
 
@@ -31,8 +31,8 @@ class SimulatorMeta:
         self.path = path
 
         # copy data read from json file
-        self.type = meta_dict['type']
-        self.params = meta_dict['params']
+        self.type = meta_dict["type"]
+        self.params = meta_dict["params"]
 
         # original data read from json file and stored in dict
         self.meta_dict = meta_dict
@@ -52,8 +52,8 @@ class SimulatorMeta:
         :return: dict with relevant meta information about this reference
         """
         return {
-            'type': self.type,
-            'params': self.params
+            "type": self.type,
+            "params": self.params,
         }
 
     def get_params(self) -> Dict:

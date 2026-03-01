@@ -19,32 +19,32 @@ def get_stockpile_volume_from_slices(core_length: float, height: float):
 
 class TestStockpileMath(unittest.TestCase):
     TEST_SET = [
-        {'height': 12.3, 'length': 321.0, 'volume': 50512.78536550256, 'delta': 1.0},
-        {'height': 111.1, 'length': 3.2, 'volume': 1475552.3506640848, 'delta': 30.0},
-        {'height': 12.3, 'length': 131231.0, 'volume': 19855886.685365506, 'delta': 400.0},
-        {'height': 1231234.3, 'length': 1.0, 'volume': 1.9545692940755512e+18, 'delta': 2.0e+13},
-        {'height': 12.3, 'length': 0.0, 'volume': 1948.6953655025595, 'delta': 0.04},
-        {'height': 0.0, 'length': 321.0, 'volume': 0.0, 'delta': 0.0},
+        {"height": 12.3, "length": 321.0, "volume": 50512.78536550256, "delta": 1.0},
+        {"height": 111.1, "length": 3.2, "volume": 1475552.3506640848, "delta": 30.0},
+        {"height": 12.3, "length": 131231.0, "volume": 19855886.685365506, "delta": 400.0},
+        {"height": 1231234.3, "length": 1.0, "volume": 1.9545692940755512e18, "delta": 2.0e13},
+        {"height": 12.3, "length": 0.0, "volume": 1948.6953655025595, "delta": 0.04},
+        {"height": 0.0, "length": 321.0, "volume": 0.0, "delta": 0.0},
     ]
 
     def test_get_stockpile_volume(self):
         for entry in TestStockpileMath.TEST_SET:
             self.assertAlmostEqual(
                 get_stockpile_volume(
-                    height=entry['height'],
-                    core_length=entry['length']
+                    height=entry["height"],
+                    core_length=entry["length"],
                 ),
-                entry['volume']
+                entry["volume"],
             )
 
     def test_get_stockpile_height(self):
         for entry in TestStockpileMath.TEST_SET:
             self.assertAlmostEqual(
                 get_stockpile_height(
-                    volume=entry['volume'],
-                    core_length=entry['length']
+                    volume=entry["volume"],
+                    core_length=entry["length"],
                 ),
-                entry['height']
+                entry["height"],
             )
 
     def test_array_get_stockpile_volume(self):
@@ -63,9 +63,9 @@ class TestStockpileMath(unittest.TestCase):
         for entry in TestStockpileMath.TEST_SET:
             self.assertAlmostEqual(
                 get_stockpile_volume_from_slices(
-                    core_length=entry['length'],
-                    height=entry['height']
+                    core_length=entry["length"],
+                    height=entry["height"],
                 ),
-                entry['volume'],
-                delta=entry['delta']
+                entry["volume"],
+                delta=entry["delta"],
             )

@@ -23,7 +23,7 @@ def read_evaluation(evaluation_path: str) -> Evaluation:
 def main(args):
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
-        format='%(asctime)s %(levelname)s [%(module)s]: %(message)s'
+        format="%(asctime)s %(levelname)s [%(module)s]: %(message)s",
     )
 
     standard = read_evaluation(args.standard)
@@ -31,33 +31,25 @@ def main(args):
 
     static_testlets: List[Testlet] = [
         testlets.MaterialIdentifierTestlet(),
-        testlets.DepositionIdentifierTestlet()
+        testlets.DepositionIdentifierTestlet(),
     ]
 
-    dynamic_testlets: List[Testlet] = [
-        testlets.CorrelationTestlet(e) for e in evaluations
-    ]
+    dynamic_testlets: List[Testlet] = [testlets.CorrelationTestlet(e) for e in evaluations]
 
     app.execute(
         path=os.path.abspath(args.path),
         entry_list=[s for _, s in standard.references.items()],
         testlet_list=static_testlets + dynamic_testlets,
-        label='Benchmark Explorer'
+        label="Benchmark Explorer",
     )
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Benchmark Explorer'
-    )
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Benchmark Explorer")
 
-    parser.add_argument('--path', default='.', type=str,
-                        help='output path for images')
-    parser.add_argument('-v', '--verbose', default=False, action='store_true',
-                        help='enables verbose logging')
-    parser.add_argument('--standard', default='./standard', type=str,
-                        help='standard which all other results are compared to')
-    parser.add_argument('evaluations', type=str, nargs='+',
-                        help='paths to evaluations which are compared against standard')
+    parser.add_argument("--path", default=".", type=str, help="output path for images")
+    parser.add_argument("-v", "--verbose", default=False, action="store_true", help="enables verbose logging")
+    parser.add_argument("--standard", default="./standard", type=str, help="standard which all other results are compared to")
+    parser.add_argument("evaluations", type=str, nargs="+", help="paths to evaluations which are compared against standard")
 
     main(parser.parse_args())

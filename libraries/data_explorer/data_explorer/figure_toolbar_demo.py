@@ -2,11 +2,7 @@ import random
 import sys
 
 import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import (
-    QApplication,
-    QDialog,
-    QVBoxLayout
-)
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
@@ -27,15 +23,15 @@ class Window(QDialog):
         for _ in range(3):
             data = [random.random() for _ in range(25)]
             ax = figure.add_subplot(111)
-            ax.plot(data, '*-')
+            ax.plot(data, "*-")
             canvas.draw()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     main = Window()
-    main.setWindowTitle('Interactive Plot')
+    main.setWindowTitle("Interactive Plot")
     main.show()
 
     sys.exit(app.exec_())

@@ -23,7 +23,7 @@ class RoundnessEvaluator:
         self.logger = logging.getLogger(__name__)
 
     def simulate(self, likelihood, pos, volume, run):
-        self.logger.info(f'processing volume {volume} with likelihood {likelihood} (run {run})')
+        self.logger.info(f"processing volume {volume} with likelihood {likelihood} (run {run})")
         simulator = BslBlendingSimulator(
             bed_size_x=pos * 2.0,
             bed_size_z=pos * 2.0,
@@ -60,7 +60,7 @@ class RoundnessEvaluator:
             self.shapes_range[angle_seg_range][distance_seg][1] += height
 
     def add_from_file(self, input_file):
-        df = pd.read_csv(input_file, header=None, delimiter='\t', index_col=None)
+        df = pd.read_csv(input_file, header=None, delimiter="\t", index_col=None)
 
         # Calculate weighted center
         df_cols = DataFrame()
@@ -80,13 +80,13 @@ class RoundnessEvaluator:
         self.shapes_main = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(3)]
         self.shapes_range = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(self.angle_seg_count)]
 
-        with open(input_file, 'r') as csv_file:
-            reader = csv.reader(csv_file, delimiter='\t')
+        with open(input_file, "r") as csv_file:
+            reader = csv.reader(csv_file, delimiter="\t")
             z_abs = 0
             for row in reader:
                 x_abs = 0
                 for value in row:
-                    if value != '':
+                    if value != "":
                         v = float(value)
                         if v > 0:
                             self.add(x_abs, z_abs, v)
@@ -118,14 +118,8 @@ class RoundnessEvaluator:
 
         for shape in self.shapes_range:
             if min_shape is not None:
-                min_shape = [
-                    min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for
-                    entry, min_shape_entry in zip(shape, min_shape)
-                ]
-                max_shape = [
-                    max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for
-                    entry, max_shape_entry in zip(shape, max_shape)
-                ]
+                min_shape = [min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for entry, min_shape_entry in zip(shape, min_shape)]
+                max_shape = [max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for entry, max_shape_entry in zip(shape, max_shape)]
             else:
                 min_shape = [entry[1] / entry[0] if entry[0] > 0 else 0 for entry in shape]
                 max_shape = list(min_shape)
@@ -139,20 +133,14 @@ class RoundnessEvaluator:
         return diff / max_total
 
     def plot(self, label, c):
-        color_map = cm.get_cmap('brg')
+        color_map = cm.get_cmap("brg")
         min_shape = None
         max_shape = None
 
         for shape in self.shapes_range:
             if min_shape is not None:
-                min_shape = [
-                    min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for
-                    entry, min_shape_entry in zip(shape, min_shape)
-                ]
-                max_shape = [
-                    max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for
-                    entry, max_shape_entry in zip(shape, max_shape)
-                ]
+                min_shape = [min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for entry, min_shape_entry in zip(shape, min_shape)]
+                max_shape = [max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for entry, max_shape_entry in zip(shape, max_shape)]
             else:
                 min_shape = [entry[1] / entry[0] if entry[0] > 0 else 0 for entry in shape]
                 max_shape = list(min_shape)
@@ -162,10 +150,10 @@ class RoundnessEvaluator:
             plt.plot(
                 [x * self.dist_seg_size for x in range(len(shape) + 1)],
                 [entry[1] / entry[0] if entry[0] > 0 else None for entry in shape] + [0],
-                label=f'Shape {i * 45 / 2:.1f}°' if c == 0 else None,
-                linestyle='-' if i == 0 else '--' if i == 1 else ':',
+                label=f"Shape {i * 45 / 2:.1f}°" if c == 0 else None,
+                linestyle="-" if i == 0 else "--" if i == 1 else ":",
                 color=color_map(c),
-                alpha=0.5
+                alpha=0.5,
             )
             i += 1
 
@@ -175,7 +163,7 @@ class RoundnessEvaluator:
             max_shape,
             alpha=0.2,
             facecolor=color_map(c),
-            label=label
+            label=label,
         )
-        plt.xlabel('distance from center')
-        plt.ylabel('height')
+        plt.xlabel("distance from center")
+        plt.ylabel("height")

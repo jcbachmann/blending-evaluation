@@ -21,25 +21,31 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         deposition_meta = DepositionMeta.create_empty(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
-            reclaim_x_per_s=1.0
+            reclaim_x_per_s=1.0,
         )
         deposition_prefix = None
 
         deposition = variables_to_deposition_generic(
-            variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix,
-            v_max=v_max
+            variables=variables,
+            x_min=x_min,
+            x_max=x_max,
+            max_timestamp=max_timestamp,
+            deposition_meta=deposition_meta,
+            deposition_prefix=deposition_prefix,
+            v_max=v_max,
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
         self.assertEqual(deposition.meta.bed_size_z, bed_size_z)
         self.assertEqual(deposition.meta.time, max_timestamp)
 
-        reference_data = DataFrame({
-            'timestamp': [0, max_timestamp],
-            'x': [x_min, x_max],
-            'z': [z, z],
-        })
+        reference_data = DataFrame(
+            {
+                "timestamp": [0, max_timestamp],
+                "x": [x_min, x_max],
+                "z": [z, z],
+            }
+        )
 
         assert_frame_equal(reference_data, deposition.data)
 
@@ -55,25 +61,35 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         deposition_meta = DepositionMeta.create_empty(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
-            reclaim_x_per_s=1.0
+            reclaim_x_per_s=1.0,
         )
-        deposition_prefix = Deposition.create_empty(bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=1.0)
+        deposition_prefix = Deposition.create_empty(
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            reclaim_x_per_s=1.0,
+        )
 
         deposition = variables_to_deposition_generic(
-            variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix,
-            v_max=v_max
+            variables=variables,
+            x_min=x_min,
+            x_max=x_max,
+            max_timestamp=max_timestamp,
+            deposition_meta=deposition_meta,
+            deposition_prefix=deposition_prefix,
+            v_max=v_max,
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
         self.assertEqual(deposition.meta.bed_size_z, bed_size_z)
         self.assertEqual(deposition.meta.time, max_timestamp)
 
-        reference_data = DataFrame({
-            'timestamp': [0, max_timestamp],
-            'x': [x_min, x_max],
-            'z': [z, z],
-        })
+        reference_data = DataFrame(
+            {
+                "timestamp": [0, max_timestamp],
+                "x": [x_min, x_max],
+                "z": [z, z],
+            }
+        )
 
         assert_frame_equal(reference_data, deposition.data)
 
@@ -89,29 +105,41 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
         deposition_meta = DepositionMeta.create_empty(
             bed_size_x=bed_size_x,
             bed_size_z=bed_size_z,
-            reclaim_x_per_s=1.0
+            reclaim_x_per_s=1.0,
         )
-        deposition_prefix = Deposition.create_empty(bed_size_x=bed_size_x, bed_size_z=bed_size_z, reclaim_x_per_s=1.0)
-        deposition_prefix.data = DataFrame({
-            'timestamp': [0, 1.0 / 3.0 * max_timestamp],
-            'x': [x_min, x_max],
-            'z': [z, z],
-        })
+        deposition_prefix = Deposition.create_empty(
+            bed_size_x=bed_size_x,
+            bed_size_z=bed_size_z,
+            reclaim_x_per_s=1.0,
+        )
+        deposition_prefix.data = DataFrame(
+            {
+                "timestamp": [0, 1.0 / 3.0 * max_timestamp],
+                "x": [x_min, x_max],
+                "z": [z, z],
+            }
+        )
 
         deposition = variables_to_deposition_generic(
-            variables=variables, x_min=x_min, x_max=x_max, max_timestamp=max_timestamp,
-            deposition_meta=deposition_meta, deposition_prefix=deposition_prefix,
-            v_max=v_max
+            variables=variables,
+            x_min=x_min,
+            x_max=x_max,
+            max_timestamp=max_timestamp,
+            deposition_meta=deposition_meta,
+            deposition_prefix=deposition_prefix,
+            v_max=v_max,
         )
 
         self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
         self.assertEqual(deposition.meta.bed_size_z, bed_size_z)
         self.assertEqual(deposition.meta.time, max_timestamp)
 
-        reference_data = DataFrame({
-            'timestamp': [0, 1.0 / 3.0 * max_timestamp, 2.0 / 3.0 * max_timestamp, max_timestamp],
-            'x': [x_min, x_max, x_min, x_max],
-            'z': [z, z, z, z],
-        })
+        reference_data = DataFrame(
+            {
+                "timestamp": [0, 1.0 / 3.0 * max_timestamp, 2.0 / 3.0 * max_timestamp, max_timestamp],
+                "x": [x_min, x_max, x_min, x_max],
+                "z": [z, z, z, z],
+            }
+        )
 
         assert_frame_equal(reference_data, deposition.data)

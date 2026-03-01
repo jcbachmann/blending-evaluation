@@ -4,7 +4,7 @@ from typing import Optional
 
 from .material_deposition import MaterialMeta
 
-META_JSON = 'meta.json'
+META_JSON = "meta.json"
 
 
 class ReferenceMeta:
@@ -22,8 +22,8 @@ class ReferenceMeta:
         self.path = path
 
         # copy data read from json file
-        self.material = meta_dict['material']
-        self.deposition = meta_dict['deposition']
+        self.material = meta_dict["material"]
+        self.deposition = meta_dict["deposition"]
 
         # original data read from json file and stored in dict
         self.meta_dict = meta_dict
@@ -40,18 +40,18 @@ class ReferenceMeta:
         :return: dict with relevant meta information about this reference
         """
         return {
-            'material': self.material,
-            'deposition': self.deposition,
+            "material": self.material,
+            "deposition": self.deposition,
         }
 
     def get_reclaimed_material_meta(self) -> MaterialMeta:
         if self.reclaimed_material_meta is None:
-            path = os.path.join(self.path, 'material')
+            path = os.path.join(self.path, "material")
             meta = json.load(open(os.path.join(path, META_JSON)))
             self.reclaimed_material_meta = MaterialMeta(
-                'reclaimed material for ' + self.identifier,
+                "reclaimed material for " + self.identifier,
                 path,
-                meta
+                meta,
             )
 
         return self.reclaimed_material_meta

@@ -15,8 +15,7 @@ from jmetal.util.comparator import RankingAndCrowdingDistanceComparator
 from jmetal.util.evaluator import Evaluator, S
 from jmetal.util.generator import Generator
 from jmetal.util.observer import WriteFrontToFileObserver
-from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file, \
-    read_solutions
+from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file, read_solutions
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
 from jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
@@ -30,7 +29,7 @@ from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_v
 
 
 def solutions_to_fitness_values(solutions: List[S], number_of_objectives: int):
-    return dict([(f'f{i + 1}', [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
+    return dict([(f"f{i + 1}", [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
 
 
 class VerboseHoardingAlgorithmObserver(Observer):
@@ -42,16 +41,15 @@ class VerboseHoardingAlgorithmObserver(Observer):
         self.logger = logging.getLogger(__name__)
 
     def update(self, *args, **kwargs):
-        evaluations = kwargs['EVALUATIONS']
-        self.population = kwargs['SOLUTIONS']
-        computing_time = kwargs['COMPUTING_TIME']
+        evaluations = kwargs["EVALUATIONS"]
+        self.population = kwargs["SOLUTIONS"]
+        computing_time = kwargs["COMPUTING_TIME"]
         e_diff = evaluations - self.last_evaluations if self.last_evaluations else evaluations
         t_diff = computing_time - self.last_computing_time if self.last_computing_time else computing_time
-        cps = e_diff / t_diff if t_diff > 0 else '-'
+        cps = e_diff / t_diff if t_diff > 0 else "-"
         best = min(self.population, key=lambda s: np.sum(np.square(s.objectives)))
         self.logger.info(
-            f'{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, '
-            f'best: {best.objectives}'
+            f"{evaluations} evaluations / {computing_time:.1f}s @{cps:.2f}cps, best: {best.objectives}",
         )
         self.last_evaluations = evaluations
         self.last_computing_time = computing_time
@@ -81,92 +79,93 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         if 0 <= solution_id < len(self.solutions):
             return self.solutions[solution_id]
 
-        raise ValueError(f'Invalid solution ID {solution_id}')
+        raise ValueError(f"Invalid solution ID {solution_id}")
 
     def reset(self):
         self.solutions = []
 
 
-def get_evaluator(
-        evaluator_str: Optional[str], *, kwargs: Dict[str, Any], evaluator_observer: EvaluatorObserver
-) -> Optional[Evaluator[S]]:
+def get_evaluator(evaluator_str: Optional[str], *, kwargs: Dict[str, Any], evaluator_observer: EvaluatorObserver) -> Optional[Evaluator[S]]:
     logger = logging.getLogger(__name__)
 
-    evaluator_kwargs = {'observer': evaluator_observer}
+    evaluator_kwargs = {"observer": evaluator_observer}
 
     def get_dask_evaluator():
         nonlocal evaluator_kwargs
         try:
             from jmetalpy_extensions.util.evaluator import DaskEvaluator
-            if 'scheduler' in kwargs and kwargs.get('scheduler'):
-                evaluator_kwargs['scheduler'] = kwargs.get('scheduler')
+
+            if "scheduler" in kwargs and kwargs.get("scheduler"):
+                evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
             return DaskEvaluator
         except ImportError:
-            logger.error(f'Please install DaskEvaluator requirements')
+            logger.error(f"Please install DaskEvaluator requirements")
             raise
 
     def get_distributed_evaluator():
         nonlocal evaluator_kwargs
         try:
             from jmetalpy_extensions.util.evaluator import DistributedEvaluator
-            if 'scheduler' in kwargs:
-                if 'scheduler' in kwargs and kwargs.get('scheduler'):
-                    evaluator_kwargs['scheduler'] = kwargs.get('scheduler')
+
+            if "scheduler" in kwargs:
+                if "scheduler" in kwargs and kwargs.get("scheduler"):
+                    evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
             return DistributedEvaluator
         except ImportError:
-            logger.error(f'Please install DistributedEvaluator requirements')
+            logger.error(f"Please install DistributedEvaluator requirements")
             raise
 
     def get_multiprocess_evaluator():
-        if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
-            evaluator_kwargs['processes'] = min(os.cpu_count(), kwargs.get('offspring_size'))
+        if "offspring_size" in kwargs and kwargs.get("offspring_size"):
+            evaluator_kwargs["processes"] = min(os.cpu_count(), kwargs.get("offspring_size"))
         return MultiprocessEvaluator
 
     def get_none():
         return None
 
     evaluator_dict = {
-        'dask': get_dask_evaluator,
-        'distributed': get_distributed_evaluator,
-        'multiprocess': get_multiprocess_evaluator,
-        'none': get_none,
-        'None': get_none,
-        'default': get_none,
+        "dask": get_dask_evaluator,
+        "distributed": get_distributed_evaluator,
+        "multiprocess": get_multiprocess_evaluator,
+        "none": get_none,
+        "None": get_none,
+        "default": get_none,
     }
 
     if evaluator_str:
         if evaluator_str in evaluator_dict:
             evaluator_type = evaluator_dict[evaluator_str]()
             if evaluator_type:
-                logger.debug(f'Creating evaluator {evaluator_type.__name__} with kwargs: {evaluator_kwargs}')
+                logger.debug(f"Creating evaluator {evaluator_type.__name__} with kwargs: {evaluator_kwargs}")
                 return evaluator_type(**evaluator_kwargs)
         else:
-            raise ValueError(f'Invalid evaluator {evaluator_str} (please choose one of these: {evaluator_dict.keys()})')
+            raise ValueError(f"Invalid evaluator {evaluator_str} (please choose one of these: {evaluator_dict.keys()})")
 
     return None
 
 
 def get_algorithm(
-        algorithm_str: str, *,
-        problem: Problem,
-        variables: int,
-        population_size: int,
-        max_evaluations: int,
-        evaluator: Evaluator[S],
-        population_generator: Generator,
-        kwargs: Dict[str, Any]
+    algorithm_str: str,
+    *,
+    problem: Problem,
+    variables: int,
+    population_size: int,
+    max_evaluations: int,
+    evaluator: Evaluator[S],
+    population_generator: Generator,
+    kwargs: Dict[str, Any],
 ) -> Algorithm:
     logger = logging.getLogger(__name__)
 
     algorithm_kwargs = {}
     if evaluator:
-        algorithm_kwargs['population_evaluator'] = evaluator
+        algorithm_kwargs["population_evaluator"] = evaluator
 
     if population_generator:
-        algorithm_kwargs['population_generator'] = population_generator
+        algorithm_kwargs["population_generator"] = population_generator
 
-    if 'offspring_size' in kwargs and kwargs.get('offspring_size'):
-        algorithm_kwargs['offspring_population_size'] = kwargs.get('offspring_size')
+    if "offspring_size" in kwargs and kwargs.get("offspring_size"):
+        algorithm_kwargs["offspring_population_size"] = kwargs.get("offspring_size")
 
     def get_nsgaii():
         return NSGAII[FloatSolution, List[FloatSolution]]
@@ -175,13 +174,13 @@ def get_algorithm(
         return FastNSGAII[FloatSolution, List[FloatSolution]]
 
     algorithm_dict = {
-        'nsgaii': get_nsgaii,
-        'fast_nsgaii': get_fast_nsgaii,
+        "nsgaii": get_nsgaii,
+        "fast_nsgaii": get_fast_nsgaii,
     }
 
     if algorithm_str in algorithm_dict:
         algorithm_type = algorithm_dict[algorithm_str]()
-        logger.debug(f'Creating algorithm {algorithm_type} with kwargs: {algorithm_kwargs}')
+        logger.debug(f"Creating algorithm {algorithm_type} with kwargs: {algorithm_kwargs}")
         return algorithm_type(
             problem=problem,
             population_size=population_size,
@@ -189,72 +188,70 @@ def get_algorithm(
             mutation=PolynomialMutation(min(3.3 / variables, 1.0), distribution_index=20),
             crossover=SBXCrossover(0.9, distribution_index=15),
             selection=BinaryTournamentSelection(RankingAndCrowdingDistanceComparator()),
-            **algorithm_kwargs
+            **algorithm_kwargs,
         )
     else:
-        raise ValueError(f'Invalid algorithm {algorithm_str} (please choose one of these: {algorithm_dict.keys()})')
+        raise ValueError(f"Invalid algorithm {algorithm_str} (please choose one of these: {algorithm_dict.keys()})")
 
 
-def get_plot_server(
-        plot_server_str: Optional[str], *, plot_server_interface: PlotServerInterface, port: int
-) -> Optional[PlotServer]:
+def get_plot_server(plot_server_str: Optional[str], *, plot_server_interface: PlotServerInterface, port: int) -> Optional[PlotServer]:
     logger = logging.getLogger(__name__)
 
     def get_bokeh_plot_server():
         try:
             from .plot_server.bokeh_plot_server import BokehPlotServer
+
             return BokehPlotServer
         except ImportError:
-            logger.error(f'Please install BokehPlotServer requirements')
+            logger.error(f"Please install BokehPlotServer requirements")
             raise
 
     def get_none():
         return None
 
     plot_server_dict = {
-        'bokeh': get_bokeh_plot_server,
-        'none': get_none,
-        'None': get_none,
-        'default': get_none,
+        "bokeh": get_bokeh_plot_server,
+        "none": get_none,
+        "None": get_none,
+        "default": get_none,
     }
 
     if plot_server_str:
         if plot_server_str in plot_server_dict:
             plot_server_type = plot_server_dict[plot_server_str]()
             if plot_server_type:
-                logger.debug(f'Creating plot server {plot_server_type.__name__}')
+                logger.debug(f"Creating plot server {plot_server_type.__name__}")
                 return plot_server_type(plot_server_interface=plot_server_interface, port=port)
         else:
-            raise ValueError(
-                f'Invalid plot server {plot_server_str} (please choose one of these: {plot_server_dict.keys()})')
+            raise ValueError(f"Invalid plot server {plot_server_str} (please choose one of these: {plot_server_dict.keys()})")
 
     return None
 
 
 class DepositionOptimizer(PlotServerInterface):
     def __init__(
-            self,
-            *,
-            deposition_meta: DepositionMeta,
-            x_min: float,
-            x_max: float,
-            population_size: int = 250,
-            max_evaluations: int = 25000,
-            evaluator_str: Optional[str] = 'multiprocess',
-            algorithm_str: str = 'fast_nsgaii',
-            plot_server_str: Optional[str] = 'none',
-            plot_server_port: int = PlotServer.DEFAULT_PORT,
-            auto_start: bool = True,
-            v_max: float,
-            parameter_labels: List[str],
-            ppm3: float = 1.0,
-            objectives: List[str],
-            reference_front_file: str = None,
-            write_fronts: bool = False,
-            **kwargs
+        self,
+        *,
+        deposition_meta: DepositionMeta,
+        x_min: float,
+        x_max: float,
+        population_size: int = 250,
+        max_evaluations: int = 25000,
+        evaluator_str: Optional[str] = "multiprocess",
+        algorithm_str: str = "fast_nsgaii",
+        plot_server_str: Optional[str] = "none",
+        plot_server_port: int = PlotServer.DEFAULT_PORT,
+        auto_start: bool = True,
+        v_max: float,
+        parameter_labels: List[str],
+        ppm3: float = 1.0,
+        objectives: List[str],
+        reference_front_file: str = None,
+        write_fronts: bool = False,
+        **kwargs,
     ):
         self.logger = logging.getLogger(__name__)
-        self.logger.debug('Initializing optimization problem')
+        self.logger.debug("Initializing optimization problem")
 
         # Copy arguments
         self.deposition_meta = deposition_meta
@@ -281,9 +278,7 @@ class DepositionOptimizer(PlotServerInterface):
         self.algorithm_observer = VerboseHoardingAlgorithmObserver(len(objectives))
         self.plot_server = get_plot_server(self.plot_server_str, plot_server_interface=self, port=plot_server_port)
         self.evaluator_observer = HoardingEvaluatorObserver(len(objectives)) if self.plot_server else None
-        self.evaluator = get_evaluator(
-            self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer
-        )
+        self.evaluator = get_evaluator(self.evaluator_str, kwargs=self.kwargs, evaluator_observer=self.evaluator_observer)
         self.deposition_prefix: Optional[Deposition] = None
 
     def start(self):
@@ -291,9 +286,13 @@ class DepositionOptimizer(PlotServerInterface):
             self.plot_server.serve_background()
 
     def run(
-            self, *, material: Material, variables: int, deposition_prefix: Deposition = None,
-            timestamps: Optional[List[float]] = None,
-            population_generator: Generator = None
+        self,
+        *,
+        material: Material,
+        variables: int,
+        deposition_prefix: Deposition = None,
+        timestamps: Optional[List[float]] = None,
+        population_generator: Generator = None,
     ) -> None:
         if self.algorithm_observer:
             self.algorithm_observer.reset()
@@ -314,7 +313,7 @@ class DepositionOptimizer(PlotServerInterface):
             v_max=self.v_max,
             ppm3=self.ppm3,
             timestamps=timestamps,
-            objectives=self.objectives
+            objectives=self.objectives,
         )
 
         self.algorithm = get_algorithm(
@@ -325,12 +324,12 @@ class DepositionOptimizer(PlotServerInterface):
             max_evaluations=self.max_evaluations,
             evaluator=self.evaluator,
             population_generator=population_generator,
-            kwargs=self.kwargs
+            kwargs=self.kwargs,
         )
         self.algorithm.observable.register(self.algorithm_observer)
 
         if self.write_fronts:
-            self.algorithm.observable.register(WriteFrontToFileObserver(output_directory='./fronts'))
+            self.algorithm.observable.register(WriteFrontToFileObserver(output_directory="./fronts"))
 
         quality_indicators = [
             HyperVolume(reference_point=[1.0] * len(self.objectives)),
@@ -340,35 +339,37 @@ class DepositionOptimizer(PlotServerInterface):
             reference_front_objectives = [solution.objectives for solution in reference_front]
             quality_indicators.append(GenerationalDistance(reference_front=reference_front_objectives))
             quality_indicators.append(InvertedGenerationalDistance(reference_front=reference_front_objectives))
-        self.algorithm.observable.register(WriteQualityIndicatorsToFileObserver(
-            output_file='./quality_indicators.csv',
-            quality_indicators=quality_indicators
-        ))
+        self.algorithm.observable.register(
+            WriteQualityIndicatorsToFileObserver(
+                output_file="./quality_indicators.csv",
+                quality_indicators=quality_indicators,
+            )
+        )
 
         if self.auto_start:
-            self.logger.debug('Starting DepositionOptimizer')
+            self.logger.debug("Starting DepositionOptimizer")
         self.start()
 
-        self.logger.debug('Running algorithm')
+        self.logger.debug("Running algorithm")
         self.algorithm.run()
-        self.logger.debug('Algorithm finished')
+        self.logger.debug("Algorithm finished")
 
         if self.auto_start:
-            self.logger.debug('Stopping DepositionOptimizer')
+            self.logger.debug("Stopping DepositionOptimizer")
         self.stop()
 
         front = get_non_dominated_solutions(self.algorithm.get_result())
-        print_function_values_to_file(front, 'FUN')
-        print_variables_to_file(front, 'VAR')
-        with open('OBJ', 'w') as f:
-            f.write(f'{self.problem.get_objective_labels()}')
+        print_function_values_to_file(front, "FUN")
+        print_variables_to_file(front, "VAR")
+        with open("OBJ", "w") as f:
+            f.write(f"{self.problem.get_objective_labels()}")
 
     def stop(self):
         if self.plot_server:
             self.plot_server.stop_background()
 
         if self.evaluator:
-            evaluator_stop = getattr(self.evaluator, 'stop', None)
+            evaluator_stop = getattr(self.evaluator, "stop", None)
             if callable(evaluator_stop):
                 evaluator_stop()
 
@@ -392,18 +393,18 @@ class DepositionOptimizer(PlotServerInterface):
                 objectives=solution.objectives,
                 objective_labels=self.problem.get_objective_labels(),
                 reclaimed_material=process_material_deposition(
-                    material=self.problem.material, deposition=deposition, ppm3=self.ppm3
-                )
+                    material=self.problem.material,
+                    deposition=deposition,
+                    ppm3=self.ppm3,
+                ),
             )
 
-        raise RuntimeError('DepositionOptimizer not initialized')
+        raise RuntimeError("DepositionOptimizer not initialized")
 
     def get_best_solution(self) -> Optional[OptimizationResult]:
         if self.algorithm_observer and self.problem:
             if len(self.algorithm_observer.population) > 0:
-                solution = min(
-                    self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives))
-                )
+                solution = min(self.algorithm_observer.population, key=lambda r: np.sum(np.square(r.objectives)))
                 deposition = self.problem.variables_to_deposition(solution.variables)
                 return OptimizationResult(
                     deposition=deposition,
@@ -411,13 +412,15 @@ class DepositionOptimizer(PlotServerInterface):
                     objectives=solution.objectives,
                     objective_labels=self.problem.get_objective_labels(),
                     reclaimed_material=process_material_deposition(
-                        material=self.problem.material, deposition=deposition, ppm3=self.ppm3
-                    )
+                        material=self.problem.material,
+                        deposition=deposition,
+                        ppm3=self.ppm3,
+                    ),
                 )
             else:
                 return None
 
-        raise RuntimeError('DepositionOptimizer not initialized')
+        raise RuntimeError("DepositionOptimizer not initialized")
 
     def get_reference(self) -> Optional[OptimizationResult]:
         deposition, material, objectives = self.problem.get_reference_relative()
@@ -426,44 +429,49 @@ class DepositionOptimizer(PlotServerInterface):
             variables=[],
             objectives=list(objectives.values()),
             objective_labels=list(objectives.keys()),
-            reclaimed_material=material
+            reclaimed_material=material,
         )
 
     def get_ideal_reclaimed_material(self) -> Material:
         _, material, _ = self.problem.get_reference_relative()
         ideal = material.copy()
         for p in material.get_parameter_columns():
-            avg = np.average(ideal.data[p], weights=ideal.data['volume'])
+            avg = np.average(ideal.data[p], weights=ideal.data["volume"])
             ideal.data[p] = avg
-        height = get_stockpile_height(ideal.data['volume'].sum(), self.x_max - self.x_min)
-        ideal.data['x_diff'] = (ideal.data['x'] - ideal.data['x'].shift(1)).fillna(0.0)
-        ideal.data['volume'] = ideal.data.apply(
-            lambda row: get_stockpile_slice_volume(
-                row['x'], self.x_max - self.x_min, height, self.x_min, row['x_diff']
-            ), axis=1
+        height = get_stockpile_height(ideal.data["volume"].sum(), self.x_max - self.x_min)
+        ideal.data["x_diff"] = (ideal.data["x"] - ideal.data["x"].shift(1)).fillna(0.0)
+        ideal.data["volume"] = ideal.data.apply(
+            lambda row: get_stockpile_slice_volume(row["x"], self.x_max - self.x_min, height, self.x_min, row["x_diff"]),
+            axis=1,
         )
         return ideal
 
     def get_final_results(self) -> List[OptimizationResult]:
-        self.logger.debug('Collecting final results')
+        self.logger.debug("Collecting final results")
         return self.solutions_to_optimization_results(self.algorithm.get_result())
 
     def solutions_to_optimization_results(self, solutions: List[S]) -> List[OptimizationResult]:
         objective_labels = self.problem.get_objective_labels()
-        return [OptimizationResult(
-            self.problem.variables_to_deposition(s.variables), s.variables, s.objectives, objective_labels
-        ) for s in solutions]
+        return [
+            OptimizationResult(
+                self.problem.variables_to_deposition(s.variables),
+                s.variables,
+                s.objectives,
+                objective_labels,
+            )
+            for s in solutions
+        ]
 
     def get_material(self) -> Material:
         if self.problem:
             return self.problem.material
 
-        raise RuntimeError('DepositionOptimizer not initialized')
+        raise RuntimeError("DepositionOptimizer not initialized")
 
     def get_progress(self) -> Dict[str, float]:
         if self.deposition_prefix:
             return {
-                't_start': self.deposition_prefix.meta.time
+                "t_start": self.deposition_prefix.meta.time,
             }
 
     def get_parameter_labels(self) -> List[str]:

@@ -1,1 +1,1 @@
-name = 'data_explorer'
+name = "data_explorer"

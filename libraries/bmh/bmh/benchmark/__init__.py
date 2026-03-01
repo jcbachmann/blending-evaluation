@@ -1,1 +1,1 @@
-name = 'benchmark'
+name = "benchmark"

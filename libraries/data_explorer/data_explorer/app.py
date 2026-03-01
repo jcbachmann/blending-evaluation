@@ -7,12 +7,7 @@ from .gui import MainWindow
 
 
 def execute(
-        path: str,
-        entry_list: list,
-        testlet_list: list,
-        main_figures=None,
-        label: str = 'Unknown',
-        icon: str = os.path.join(os.path.dirname(__file__), 'icon.svg')
+    path: str, entry_list: list, testlet_list: list, main_figures=None, label: str = "Unknown", icon: str = os.path.join(os.path.dirname(__file__), "icon.svg")
 ):
     app = QApplication([])
     win = MainWindow(path, entry_list, testlet_list, label, main_figures=main_figures, icon=icon)

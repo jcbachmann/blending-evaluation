@@ -17,10 +17,10 @@ def main(args):
     plt.show()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Evaluate height map roundness from height map input files')
-    parser.add_argument('input_files', type=str, help='Height map file', nargs='+')
-    parser.add_argument('--dist_seg_size', type=float, default=5.0, help='Size of a single distance segment')
-    parser.add_argument('--angle_seg_count', type=int, default=9, help='Amount of angle segments in range 0-45°')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Evaluate height map roundness from height map input files")
+    parser.add_argument("input_files", type=str, help="Height map file", nargs="+")
+    parser.add_argument("--dist_seg_size", type=float, default=5.0, help="Size of a single distance segment")
+    parser.add_argument("--angle_seg_count", type=int, default=9, help="Amount of angle segments in range 0-45°")
 
     main(parser.parse_args())

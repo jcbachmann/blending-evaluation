@@ -5,7 +5,7 @@ from typing import TypeVar, List
 from jmetal.util.comparator import Comparator, SolutionAttributeComparator
 from jmetal.util.ranking import Ranking
 
-S = TypeVar('S')
+S = TypeVar("S")
 
 
 # This is a caching implementation of the compare method of DominanceComparator
@@ -28,13 +28,13 @@ def compare(objectives1: tuple, objectives2: tuple) -> int:
 # Warning: this class completely ignores the dominance comparator and does not evaluate constraints
 # It is simply meant to be the fastest version of
 class FastestNonDominatedRanking(Ranking[List[S]]):
-    """ Class implementing the non-dominated ranking of NSGA-II proposed by Deb et al., see [Deb2002]_ """
+    """Class implementing the non-dominated ranking of NSGA-II proposed by Deb et al., see [Deb2002]_"""
 
     def __init__(self):
         super(FastestNonDominatedRanking, self).__init__()
 
     def compute_ranking(self, solutions: List[S], k: int = None):
-        """ Compute ranking of solutions.
+        """Compute ranking of solutions.
 
         :param solutions: Solution list.
         :param k: Number of individuals.
@@ -70,7 +70,7 @@ class FastestNonDominatedRanking(Ranking[List[S]]):
         for i in range(len(solutions)):
             if dominating_ith[i] == 0:
                 front[0].append(i)
-                solutions[i].attributes['dominance_ranking'] = 0
+                solutions[i].attributes["dominance_ranking"] = 0
 
         i = 0
         while len(front[i]) != 0:
@@ -81,7 +81,7 @@ class FastestNonDominatedRanking(Ranking[List[S]]):
                         dominating_ith[q] -= 1
                         if dominating_ith[q] == 0:
                             front[i].append(q)
-                            solutions[q].attributes['dominance_ranking'] = i
+                            solutions[q].attributes["dominance_ranking"] = i
 
         self.ranked_sublists = [[]] * i
         for j in range(i):
@@ -95,11 +95,11 @@ class FastestNonDominatedRanking(Ranking[List[S]]):
             for i, front in enumerate(self.ranked_sublists):
                 count += len(front)
                 if count >= k:
-                    self.ranked_sublists = self.ranked_sublists[:i + 1]
+                    self.ranked_sublists = self.ranked_sublists[: i + 1]
                     break
 
         return self.ranked_sublists
 
     @classmethod
     def get_comparator(cls) -> Comparator:
-        return SolutionAttributeComparator('dominance_ranking')
+        return SolutionAttributeComparator("dominance_ranking")

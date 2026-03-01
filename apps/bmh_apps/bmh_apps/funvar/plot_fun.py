@@ -25,34 +25,38 @@ def plot_fun_2d(results: FunVarResults, label: str):
         results.df,
         x=results.fun_columns[0],
         y=results.fun_columns[1],
-        color='run',
-        title=label
+        color="run",
+        title=label,
     )
 
     fig.update_xaxes(
         range=[0, 1.5],
-        constrain="domain"
+        constrain="domain",
     )
     fig.update_yaxes(
         range=[0, 1.5],
         scaleanchor="x",
         scaleratio=1,
-        constrain="domain"
+        constrain="domain",
     )
-    fig.add_trace(go.Scatter(
-        x=[1],
-        y=[1],
-        mode='markers',
-        marker=dict(
-            size=20,
-            color='rgba(0, 0, 0, 1)',
-        ),
-        name='Reference Point'
-    ))
-    fig.write_html(os.path.join(
-        os.path.commonpath(results.df['file_path'].to_list()),
-        f"plot fun 2d {label} {str(uuid.uuid4())[:4]}.html"
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[1],
+            y=[1],
+            mode="markers",
+            marker=dict(
+                size=20,
+                color="rgba(0, 0, 0, 1)",
+            ),
+            name="Reference Point",
+        )
+    )
+    fig.write_html(
+        os.path.join(
+            os.path.commonpath(results.df["file_path"].to_list()),
+            f"plot fun 2d {label} {str(uuid.uuid4())[:4]}.html",
+        )
+    )
     fig.show()
 
 
@@ -62,8 +66,8 @@ def plot_fun_3d(results: FunVarResults, label: str):
         x=results.fun_columns[0],
         y=results.fun_columns[1],
         z=results.fun_columns[2],
-        color='run',
-        title=label
+        color="run",
+        title=label,
     )
     fig.update_layout(
         scene=dict(
@@ -72,22 +76,21 @@ def plot_fun_3d(results: FunVarResults, label: str):
             zaxis=dict(range=[0, 1.5]),
         ),
     )
-    fig.add_trace(go.Scatter3d(
-        x=[1],
-        y=[1],
-        z=[1],
-        mode='markers',
-        marker=dict(
-            size=20,
-            color='rgba(0, 0, 0, 1)',
-        ),
-        name='Reference Point'
-    ))
-    fig.update_layout(scene_aspectmode='cube')
-    fig.write_html(os.path.join(
-        os.path.commonpath(results.df['file_path'].to_list()),
-        f"plot fun 3d {label} {str(uuid.uuid4())[:4]}.html"
-    ))
+    fig.add_trace(
+        go.Scatter3d(
+            x=[1],
+            y=[1],
+            z=[1],
+            mode="markers",
+            marker=dict(
+                size=20,
+                color="rgba(0, 0, 0, 1)",
+            ),
+            name="Reference Point",
+        )
+    )
+    fig.update_layout(scene_aspectmode="cube")
+    fig.write_html(os.path.join(os.path.commonpath(results.df["file_path"].to_list()), f"plot fun 3d {label} {str(uuid.uuid4())[:4]}.html"))
     fig.show()
 
 
@@ -112,12 +115,14 @@ def plot_fun_5d(results: FunVarResults):
         size=results.fun_columns[3],
         color=results.fun_columns[4],
     )
-    fig.update_layout(legend=dict(
-        yanchor="bottom",
-        y=1.02,
-        xanchor="left",
-        x=0
-    ))
+    fig.update_layout(
+        legend=dict(
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+        )
+    )
     fig.write_html(f"trade-offs-1-{int(time.time())}.html")
     fig.show()
 
@@ -129,22 +134,24 @@ def plot_fun_5d(results: FunVarResults):
         size=results.fun_columns[0],
         color=results.fun_columns[1],
     )
-    fig.update_layout(legend=dict(
-        yanchor="bottom",
-        y=1.02,
-        xanchor="left",
-        x=0
-    ))
+    fig.update_layout(
+        legend=dict(
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+        )
+    )
     fig.write_html(f"trade-offs-2-{int(time.time())}.html")
     fig.show()
 
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str, nargs='+')
-    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
-    parser.add_argument('--non-dominated', action='store_true', default=False, help='Show only non-dominated solutions')
-    parser.add_argument('--drop-columns', type=str, nargs='*', default=False, help='Columns/objectives to be dropped')
+    parser.add_argument("filename", type=str, nargs="+")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable verbose logging")
+    parser.add_argument("--non-dominated", action="store_true", default=False, help="Show only non-dominated solutions")
+    parser.add_argument("--drop-columns", type=str, nargs="*", default=False, help="Columns/objectives to be dropped")
     return parser.parse_args()
 
 
@@ -182,5 +189,5 @@ def main():
         raise Exception("Invalid number of columns")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -43,12 +43,10 @@ class BlendingSimulator:
 
         # call self.stack for every material-deposition row
         param_cols = material_deposition.material.get_parameter_columns()
-        material_deposition_data = material_deposition.data.filter(
-            ['timestamp', 'x', 'z', 'volume']
-        ).to_dict(orient='records')
-        material_deposition_parameters = material_deposition.data.filter(param_cols).to_dict(orient='split')['data']
+        material_deposition_data = material_deposition.data.filter(["timestamp", "x", "z", "volume"]).to_dict(orient="records")
+        material_deposition_parameters = material_deposition.data.filter(param_cols).to_dict(orient="split")["data"]
         for i, p in enumerate(material_deposition_parameters):
-            material_deposition_data[i]['parameter'] = p  # WTF? Parameter? Multiple parameters?
+            material_deposition_data[i]["parameter"] = p  # WTF? Parameter? Multiple parameters?
 
         for row in material_deposition_data:
             self.stack(**row)
@@ -57,20 +55,25 @@ class BlendingSimulator:
         data_list = self.reclaim()
 
         # reorganize reclaimed material into pandas DataFrame
-        data_dict = DataFrame(
-            [row[2] for row in data_list], columns=material_deposition.material.get_parameter_columns()
-        ).fillna(0).to_dict(orient='list')
-        data_dict['x'] = [row[0] for row in data_list]
-        data_dict['volume'] = [row[1] for row in data_list]
+        data_dict = (
+            DataFrame(
+                [row[2] for row in data_list],
+                columns=material_deposition.material.get_parameter_columns(),
+            )
+            .fillna(0)
+            .to_dict(orient="list")
+        )
+        data_dict["x"] = [row[0] for row in data_list]
+        data_dict["volume"] = [row[1] for row in data_list]
         data = DataFrame(data_dict)
 
         # Extract reclaimer speed from deposition meta
         reclaim_x_per_s = material_deposition.deposition.meta.reclaim_x_per_s
 
         # calculate timestamp column from x positions
-        data['timestamp'] = data['x'] / reclaim_x_per_s
+        data["timestamp"] = data["x"] / reclaim_x_per_s
 
         # reorder columns and remove x position
-        data = data[['timestamp', 'volume'] + material_deposition.material.get_parameter_columns()]
+        data = data[["timestamp", "volume"] + material_deposition.material.get_parameter_columns()]
 
-        return Material.from_data(data, category='reclaimed')
+        return Material.from_data(data, category="reclaimed")

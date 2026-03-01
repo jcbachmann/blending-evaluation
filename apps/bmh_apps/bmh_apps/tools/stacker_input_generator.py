@@ -58,14 +58,14 @@ class Generator:
 
             if red_part > blue_part:
                 if red_part > yellow_part:
-                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 1 0 0\n')
+                    sys.stdout.write(f"{t} {x} {z} {m3_this_time} 1 0 0\n")
                 else:
-                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 0 0 1\n')
+                    sys.stdout.write(f"{t} {x} {z} {m3_this_time} 0 0 1\n")
             else:
                 if blue_part > yellow_part:
-                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 0 1 0\n')
+                    sys.stdout.write(f"{t} {x} {z} {m3_this_time} 0 1 0\n")
                 else:
-                    sys.stdout.write(f'{t} {x} {z} {m3_this_time} 0 0 1\n')
+                    sys.stdout.write(f"{t} {x} {z} {m3_this_time} 0 0 1\n")
 
             t += self.t_diff
             m3_total -= m3_this_time
@@ -81,8 +81,7 @@ class Generator:
         a_max = 300
 
         # Total volume in cubic meters
-        m3_total = math.pi / 3 * (
-                pow(0.5 * half_size + r, 3) - 2 * pow(0.5 * half_size, 3) + pow(0.5 * half_size - r, 3))
+        m3_total = math.pi / 3 * (pow(0.5 * half_size + r, 3) - 2 * pow(0.5 * half_size, 3) + pow(0.5 * half_size - r, 3))
         m3_total *= (a_max - a_min) / 360
         m3_pile = 0.9 * math.pi / 3 * pow(r, 3)
         m3_afterpile = m3_total - m3_pile
@@ -99,8 +98,7 @@ class Generator:
             if int(t_sub / sub_period) % 2:
                 sub = 1 - sub
             if m3_stacked > m3_pile:
-                a = max(a_min,
-                        min((m3_stacked - m3_pile) / m3_afterpile * (a_max - a_min - 20) + a_min + sub * a_sub, a_max))
+                a = max(a_min, min((m3_stacked - m3_pile) / m3_afterpile * (a_max - a_min - 20) + a_min + sub * a_sub, a_max))
             else:
                 a = a_min
             r = a / 360 * 2 * math.pi - 0.5 * math.pi
@@ -115,14 +113,14 @@ class Generator:
 
             if red_part > blue_part:
                 if red_part > yellow_part:
-                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 1 0 0\n')
+                    sys.stdout.write(f"{t_mat} {x} {z} {m3_this_time} 1 0 0\n")
                 else:
-                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 0 0 1\n')
+                    sys.stdout.write(f"{t_mat} {x} {z} {m3_this_time} 0 0 1\n")
             else:
                 if blue_part > yellow_part:
-                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 0 1 0\n')
+                    sys.stdout.write(f"{t_mat} {x} {z} {m3_this_time} 0 1 0\n")
                 else:
-                    sys.stdout.write(f'{t_mat} {x} {z} {m3_this_time} 0 0 1\n')
+                    sys.stdout.write(f"{t_mat} {x} {z} {m3_this_time} 0 0 1\n")
 
             t_mat += self.t_diff
             if m3_stacked > m3_pile:
@@ -132,19 +130,19 @@ class Generator:
         sys.stdout.close()
 
     def run(self):
-        self.logger.info('Starting generator')
+        self.logger.info("Starting generator")
         try:
             if self.circular:
                 self.run_circular()
             else:
                 self.run_linear()
         except IOError:
-            self.logger.error('Stopping generator due to IOError')
+            self.logger.error("Stopping generator due to IOError")
             self.finish = True
-        self.logger.info('Generator stopped')
+        self.logger.info("Generator stopped")
 
     def signal_handler(self, _signum, _frame):
-        self.logger.info('Stopping generator')
+        self.logger.info("Stopping generator")
         self.finish = True
 
 
@@ -152,10 +150,10 @@ def main(args):
     Generator(args).run()
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='height map evaluator')
-    parser.add_argument('--length', type=float, default=300, help='Blending bed length')
-    parser.add_argument('--depth', type=float, default=50, help='Blending bed depth')
-    parser.add_argument('--circular', action='store_true', help='Generate output for circular blending bed')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="height map evaluator")
+    parser.add_argument("--length", type=float, default=300, help="Blending bed length")
+    parser.add_argument("--depth", type=float, default=50, help="Blending bed depth")
+    parser.add_argument("--circular", action="store_true", help="Generate output for circular blending bed")
 
     main(parser.parse_args())

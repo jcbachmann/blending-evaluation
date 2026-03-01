@@ -8,10 +8,19 @@ from .blending_simulator import BlendingSimulator, MaterialDeposition, Material
 
 
 class BslBlendingSimulator(BlendingSimulator):
-    def __init__(self, bed_size_x: float, bed_size_z: float, reclaimangle: Optional[float] = None,
-                 ppm3: Optional[float] = None, circular: Optional[bool] = None, eight: Optional[float] = None,
-                 bulkdensity: Optional[float] = None, dropheight: Optional[float] = None,
-                 detailed: Optional[bool] = None, reclaimincrement: Optional[float] = None):
+    def __init__(
+        self,
+        bed_size_x: float,
+        bed_size_z: float,
+        reclaimangle: Optional[float] = None,
+        ppm3: Optional[float] = None,
+        circular: Optional[bool] = None,
+        eight: Optional[float] = None,
+        bulkdensity: Optional[float] = None,
+        dropheight: Optional[float] = None,
+        detailed: Optional[bool] = None,
+        reclaimincrement: Optional[float] = None,
+    ):
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
             reclaimangle = 45.0
@@ -40,7 +49,7 @@ class BslBlendingSimulator(BlendingSimulator):
             bulkdensity,
             dropheight,
             detailed,
-            reclaimincrement
+            reclaimincrement,
         )
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: List[float]) -> None:
@@ -59,7 +68,7 @@ class BslBlendingSimulator(BlendingSimulator):
         # stack all data
         self.bsl.stack_list(
             material_deposition.data.to_numpy(),
-            material_deposition.data.columns.values.tolist()
+            material_deposition.data.columns.values.tolist(),
         )
 
         # reclaim stacked material
@@ -69,12 +78,12 @@ class BslBlendingSimulator(BlendingSimulator):
         reclaim_x_per_s = material_deposition.deposition.meta.reclaim_x_per_s
 
         # calculate timestamp column from x positions
-        data_dict['timestamp'] = [v / reclaim_x_per_s for v in data_dict['x']]
+        data_dict["timestamp"] = [v / reclaim_x_per_s for v in data_dict["x"]]
 
         # reorganize reclaimed material into pandas DataFrame
         data = DataFrame(data_dict)
 
-        return Material.from_data(data, category='reclaimed')
+        return Material.from_data(data, category="reclaimed")
 
     def get_heights(self):
         return self.bsl.get_heights()

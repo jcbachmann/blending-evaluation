@@ -137,7 +137,7 @@ class ZoomOnWheel(MplInteraction):
         :param float scale_factor: The scale factor to apply on wheel event.
         """
         super(ZoomOnWheel, self).__init__(figure)
-        self._add_connection('scroll_event', self._on_mouse_wheel)
+        self._add_connection("scroll_event", self._on_mouse_wheel)
 
         self.scale_factor = scale_factor
 
@@ -156,13 +156,12 @@ class ZoomOnWheel(MplInteraction):
         else:
             min_, max_ = end, begin
 
-        if scale == 'linear':
+        if scale == "linear":
             old_min, old_max = min_, max_
-        elif scale == 'log':
-            old_min = numpy.log10(min_ if min_ > 0. else numpy.nextafter(0, 1))
-            center = numpy.log10(
-                center if center > 0. else numpy.nextafter(0, 1))
-            old_max = numpy.log10(max_) if max_ > 0. else 0.
+        elif scale == "log":
+            old_min = numpy.log10(min_ if min_ > 0.0 else numpy.nextafter(0, 1))
+            center = numpy.log10(center if center > 0.0 else numpy.nextafter(0, 1))
+            old_max = numpy.log10(max_) if max_ > 0.0 else 0.0
         else:
             logger = logging.getLogger(__name__)
             logger.warning(f'Zoom on wheel not implemented for scale "{scale}"')
@@ -171,14 +170,14 @@ class ZoomOnWheel(MplInteraction):
         offset = (center - old_min) / (old_max - old_min)
         range_ = (old_max - old_min) / scale_factor
         new_min = center - offset * range_
-        new_max = center + (1. - offset) * range_
+        new_max = center + (1.0 - offset) * range_
 
-        if scale == 'log':
+        if scale == "log":
             try:
-                new_min, new_max = 10. ** float(new_min), 10. ** float(new_max)
+                new_min, new_max = 10.0 ** float(new_min), 10.0 ** float(new_max)
             except OverflowError:  # Limit case
                 new_min, new_max = min_, max_
-            if new_min <= 0. or new_max <= 0.:  # Limit case
+            if new_min <= 0.0 or new_max <= 0.0:  # Limit case
                 new_min, new_max = min_, max_
 
         if begin < end:
@@ -190,7 +189,7 @@ class ZoomOnWheel(MplInteraction):
         if event.step > 0:
             scale_factor = self.scale_factor
         else:
-            scale_factor = 1. / self.scale_factor
+            scale_factor = 1.0 / self.scale_factor
 
         # Go through all axes to enable zoom for multiple axes subplots
         x_axes, y_axes = self._axes_to_update(event)
@@ -200,9 +199,7 @@ class ZoomOnWheel(MplInteraction):
             xdata, ydata = transform.transform_point((event.x, event.y))
 
             xlim = ax.get_xlim()
-            xlim = self._zoom_range(xlim[0], xlim[1],
-                                    xdata, scale_factor,
-                                    ax.get_xscale())
+            xlim = self._zoom_range(xlim[0], xlim[1], xdata, scale_factor, ax.get_xscale())
             ax.set_xlim(xlim)
 
         for ax in y_axes:
@@ -210,9 +207,7 @@ class ZoomOnWheel(MplInteraction):
             xdata, ydata = transform.transform_point((event.x, event.y))
 
             ylim = ax.get_ylim()
-            ylim = self._zoom_range(ylim[0], ylim[1],
-                                    ydata, scale_factor,
-                                    ax.get_yscale())
+            ylim = self._zoom_range(ylim[0], ylim[1], ydata, scale_factor, ax.get_yscale())
             ax.set_ylim(ylim)
 
         if x_axes or y_axes:
@@ -231,9 +226,9 @@ class PanAndZoom(ZoomOnWheel):
         :param float scale_factor: The scale factor to apply on wheel event.
         """
         super(PanAndZoom, self).__init__(figure, scale_factor)
-        self._add_connection('button_press_event', self._on_mouse_press)
-        self._add_connection('button_release_event', self._on_mouse_release)
-        self._add_connection('motion_notify_event', self._on_mouse_motion)
+        self._add_connection("button_press_event", self._on_mouse_press)
+        self._add_connection("button_release_event", self._on_mouse_release)
+        self._add_connection("motion_notify_event", self._on_mouse_motion)
 
         self._pressed_button = None  # To store active button
         self._axes = None  # To store x and y axes concerned by interaction
@@ -254,15 +249,13 @@ class PanAndZoom(ZoomOnWheel):
         data = pixel_to_data.transform_point((event.x, event.y))
         last_data = pixel_to_data.transform_point((last_event.x, last_event.y))
 
-        if scale == 'linear':
+        if scale == "linear":
             delta = data[axis_id] - last_data[axis_id]
             new_lim = lim[0] - delta, lim[1] - delta
-        elif scale == 'log':
+        elif scale == "log":
             try:
-                delta = math.log10(data[axis_id]) - \
-                        math.log10(last_data[axis_id])
-                new_lim = [pow(10., (math.log10(lim[0]) - delta)),
-                           pow(10., (math.log10(lim[1]) - delta))]
+                delta = math.log10(data[axis_id]) - math.log10(last_data[axis_id])
+                new_lim = [pow(10.0, (math.log10(lim[0]) - delta)), pow(10.0, (math.log10(lim[1]) - delta))]
             except (ValueError, OverflowError):
                 new_lim = lim  # Keep previous limits
         else:
@@ -272,13 +265,13 @@ class PanAndZoom(ZoomOnWheel):
         return new_lim
 
     def _pan(self, event):
-        if event.name == 'button_press_event':  # begin pan
+        if event.name == "button_press_event":  # begin pan
             self._event = event
 
-        elif event.name == 'button_release_event':  # end pan
+        elif event.name == "button_release_event":  # end pan
             self._event = None
 
-        elif event.name == 'motion_notify_event':  # pan
+        elif event.name == "motion_notify_event":  # pan
             if self._event is None:
                 return
 
@@ -298,19 +291,16 @@ class PanAndZoom(ZoomOnWheel):
             self._event = event
 
     def _zoom_area(self, event):
-        if event.name == 'button_press_event':  # begin drag
+        if event.name == "button_press_event":  # begin drag
             self._event = event
-            self._patch = _plt.Rectangle(
-                xy=(event.xdata, event.ydata), width=0, height=0,
-                fill=False, linewidth=1., linestyle='solid', color='black')
+            self._patch = _plt.Rectangle(xy=(event.xdata, event.ydata), width=0, height=0, fill=False, linewidth=1.0, linestyle="solid", color="black")
             self._event.inaxes.add_patch(self._patch)
 
-        elif event.name == 'button_release_event':  # end drag
+        elif event.name == "button_release_event":  # end drag
             self._patch.remove()
             del self._patch
 
-            if (abs(event.x - self._event.x) < 3 or
-                    abs(event.y - self._event.y) < 3):
+            if abs(event.x - self._event.x) < 3 or abs(event.y - self._event.y) < 3:
                 return  # No zoom when points are too close
 
             x_axes, y_axes = self._axes
@@ -318,8 +308,7 @@ class PanAndZoom(ZoomOnWheel):
             for ax in x_axes:
                 pixel_to_data = ax.transData.inverted()
                 begin_pt = pixel_to_data.transform_point((event.x, event.y))
-                end_pt = pixel_to_data.transform_point(
-                    (self._event.x, self._event.y))
+                end_pt = pixel_to_data.transform_point((self._event.x, self._event.y))
 
                 min_ = min(begin_pt[0], end_pt[0])
                 max_ = max(begin_pt[0], end_pt[0])
@@ -331,8 +320,7 @@ class PanAndZoom(ZoomOnWheel):
             for ax in y_axes:
                 pixel_to_data = ax.transData.inverted()
                 begin_pt = pixel_to_data.transform_point((event.x, event.y))
-                end_pt = pixel_to_data.transform_point(
-                    (self._event.x, self._event.y))
+                end_pt = pixel_to_data.transform_point((self._event.x, self._event.y))
 
                 min_ = min(begin_pt[1], end_pt[1])
                 max_ = max(begin_pt[1], end_pt[1])
@@ -343,7 +331,7 @@ class PanAndZoom(ZoomOnWheel):
 
             self._event = None
 
-        elif event.name == 'motion_notify_event':  # drag
+        elif event.name == "motion_notify_event":  # drag
             if self._event is None:
                 return
 
@@ -403,40 +391,39 @@ def main():
     nrow, ncol = 2, 3
 
     ax1 = fig.add_subplot(nrow, ncol, 1)
-    ax1.set_title('basic')
+    ax1.set_title("basic")
     ax1.plot((1, 2, 3))
 
     ax2 = fig.add_subplot(nrow, ncol, 2)
-    ax2.set_title('log + twinx')
-    ax2.set_yscale('log')
+    ax2.set_title("log + twinx")
+    ax2.set_yscale("log")
     ax2.plot((1, 2, 1))
 
     ax2bis = ax2.twinx()
-    ax2bis.plot((3, 2, 1), color='red')
+    ax2bis.plot((3, 2, 1), color="red")
 
     ax3 = fig.add_subplot(nrow, ncol, 3)
-    ax3.set_title('inverted y axis')
+    ax3.set_title("inverted y axis")
     ax3.plot((1, 2, 3))
     lim = ax3.get_ylim()
     ax3.set_ylim(lim[1], lim[0])
 
     ax4 = fig.add_subplot(nrow, ncol, 4)
-    ax4.set_title('keep ratio')
-    ax4.axis('equal')
+    ax4.set_title("keep ratio")
+    ax4.axis("equal")
     ax4.imshow(numpy.arange(100).reshape(10, 10))
 
     ax5 = fig.add_subplot(nrow, ncol, 5)
-    ax5.set_xlabel('symlog scale + twiny')
-    ax5.set_xscale('symlog')
+    ax5.set_xlabel("symlog scale + twiny")
+    ax5.set_xscale("symlog")
     ax5.plot((1, 2, 3))
     ax5bis = ax5.twiny()
-    ax5bis.plot((3, 2, 1), color='red')
+    ax5bis.plot((3, 2, 1), color="red")
 
     # The following is taken from:
     # http://matplotlib.org/examples/axes_grid/demo_curvelinear_grid.html
     from mpl_toolkits.axisartist import Subplot
-    from mpl_toolkits.axisartist.grid_helper_curvelinear import \
-        GridHelperCurveLinear
+    from mpl_toolkits.axisartist.grid_helper_curvelinear import GridHelperCurveLinear
 
     def tr(x, y):  # source (data) to target (rectilinear plot) coordinates
         x, y = numpy.asarray(x), numpy.asarray(y)
@@ -450,21 +437,21 @@ def main():
 
     ax6 = Subplot(fig, nrow, ncol, 6, grid_helper=grid_helper)
     fig.add_subplot(ax6)
-    ax6.set_title('non-ortho axes')
+    ax6.set_title("non-ortho axes")
 
-    xx, yy = tr([3, 6], [5.0, 10.])
+    xx, yy = tr([3, 6], [5.0, 10.0])
     ax6.plot(xx, yy)
 
-    ax6.set_aspect(1.)
-    ax6.set_xlim(0, 10.)
-    ax6.set_ylim(0, 10.)
+    ax6.set_aspect(1.0)
+    ax6.set_xlim(0, 10.0)
+    ax6.set_ylim(0, 10.0)
 
-    ax6.axis['t'] = ax6.new_floating_axis(0, 3.)
-    ax6.axis['t2'] = ax6.new_floating_axis(1, 7.)
+    ax6.axis["t"] = ax6.new_floating_axis(0, 3.0)
+    ax6.axis["t2"] = ax6.new_floating_axis(1, 7.0)
     ax6.grid(True)
 
     plt.show()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

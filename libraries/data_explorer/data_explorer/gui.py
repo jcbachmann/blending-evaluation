@@ -5,16 +5,7 @@ from typing import List, Optional
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon
-from PyQt5.QtWidgets import (
-    QTableWidget,
-    QTableWidgetItem,
-    QMainWindow,
-    QAction,
-    QSplitter,
-    QHBoxLayout,
-    QWidget,
-    QSizePolicy
-)
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QMainWindow, QAction, QSplitter, QHBoxLayout, QWidget, QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pandas import DataFrame
@@ -33,7 +24,7 @@ class ExpandingFigureCanvas(FigureCanvas):
 
 
 class MainWindow(QMainWindow):
-    testlet_evaluated = pyqtSignal(int, list, name='testlet evaluated')
+    testlet_evaluated = pyqtSignal(int, list, name="testlet evaluated")
     table_widget: Optional[QTableWidget] = None
 
     def __init__(self, path, entry_list, testlet_list, label, main_figures=None, icon=None):
@@ -49,29 +40,29 @@ class MainWindow(QMainWindow):
         self.testlet_list = testlet_list
 
         self.setGeometry(50, 50, 1600, 900)
-        self.setWindowTitle(f'{label} - Homogenization Optimization Results Explorer')
+        self.setWindowTitle(f"{label} - Homogenization Optimization Results Explorer")
 
         # Add menu
         main_menu = self.menuBar()
 
-        file_menu = main_menu.addMenu('&File')
+        file_menu = main_menu.addMenu("&File")
 
-        quit_action = QAction('&Quit', self)
-        quit_action.setShortcut('Ctrl+Q')
-        quit_action.setStatusTip('Leave App')
+        quit_action = QAction("&Quit", self)
+        quit_action.setShortcut("Ctrl+Q")
+        quit_action.setStatusTip("Leave App")
         # noinspection PyUnresolvedReferences
         quit_action.triggered.connect(self.close_application)
         file_menu.addAction(quit_action)
 
-        action_menu = main_menu.addMenu('&Action')
+        action_menu = main_menu.addMenu("&Action")
 
-        save_png_action = QAction('Save Figures as PNG', self)
-        save_png_action.setStatusTip('Save Figures to PNG Files')
+        save_png_action = QAction("Save Figures as PNG", self)
+        save_png_action.setStatusTip("Save Figures to PNG Files")
         # noinspection PyUnresolvedReferences
         save_png_action.triggered.connect(self.save_figures_png)
         action_menu.addAction(save_png_action)
-        save_svg_action = QAction('Save Figures as SVG', self)
-        save_svg_action.setStatusTip('Save Figures to SVG Files')
+        save_svg_action = QAction("Save Figures as SVG", self)
+        save_svg_action.setStatusTip("Save Figures to SVG Files")
         # noinspection PyUnresolvedReferences
         save_svg_action.triggered.connect(self.save_figures_svg)
         action_menu.addAction(save_svg_action)
@@ -92,7 +83,7 @@ class MainWindow(QMainWindow):
                 self.main_figures.append(canvas)
                 horizontal_splitter.addWidget(canvas)
             else:
-                raise Exception('Invalid main figure type')
+                raise Exception("Invalid main figure type")
 
         if isinstance(main_figures, list):
             for main_figure in main_figures:
@@ -117,18 +108,18 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def close_application(self):
-        self.logger.warning('Closing application from UI')
+        self.logger.warning("Closing application from UI")
         sys.exit()
 
     def save_figures_png(self):
-        self.logger.info('Saving figures')
+        self.logger.info("Saving figures")
         for fig in self.main_figures:
-            fig.savefig(f'{self.path}/{fig}.png')
+            fig.savefig(f"{self.path}/{fig}.png")
 
     def save_figures_svg(self):
-        self.logger.info('Saving figures')
+        self.logger.info("Saving figures")
         for fig in self.main_figures:
-            fig.savefig(f'{self.path}/{fig}.svg')
+            fig.savefig(f"{self.path}/{fig}.svg")
 
     @staticmethod
     def set_cell(table_widget: QTableWidget, row: int, col: int, testlet_result: TestletResult):
@@ -157,7 +148,7 @@ class MainWindow(QMainWindow):
 
         for row, entry in enumerate(entry_list):
             for col, testlet in enumerate(testlet_list):
-                item = QTableWidgetItem('loading...')
+                item = QTableWidgetItem("loading...")
                 item.setBackground(QColor(0xA0, 0xA0, 0xA0))
                 self.table_widget.setItem(row, col, item)
 

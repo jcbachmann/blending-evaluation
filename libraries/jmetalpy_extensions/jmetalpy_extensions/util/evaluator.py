@@ -63,15 +63,13 @@ class MultiprocessEvaluator(ObservableEvaluator[S]):
 
 
 class DaskEvaluator(ObservableEvaluator[S]):
-    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler='processes'):
+    def __init__(self, observer: Optional[EvaluatorObserver] = None, scheduler="processes"):
         super().__init__(observer)
         self.scheduler = scheduler
 
     def observed_evaluate(self, solution_list: List[S], problem: Problem) -> List[S]:
         with dask.config.set(scheduler=self.scheduler):
-            return list(dask.compute(*[
-                dask.delayed(evaluate_solution)(solution=solution, problem=problem) for solution in solution_list
-            ]))
+            return list(dask.compute(*[dask.delayed(evaluate_solution)(solution=solution, problem=problem) for solution in solution_list]))
 
 
 class DistributedEvaluator(ObservableEvaluator[S]):

@@ -14,8 +14,8 @@ from jmetal.util.termination_criterion import TerminationCriterion
 
 from jmetalpy_extensions.util.ranking import FastestNonDominatedRanking
 
-S = TypeVar('S')
-R = TypeVar('R')
+S = TypeVar("S")
+R = TypeVar("R")
 
 """
 .. module:: NSGA-II
@@ -28,19 +28,18 @@ R = TypeVar('R')
 
 # This is a trivial copy of NSGAII with the sole purpose of using FastestNonDominatedRanking for ranking
 class FastNSGAII(GeneticAlgorithm[S, R]):
-
-    def __init__(self,
-                 problem: Problem,
-                 population_size: int,
-                 offspring_population_size: int,
-                 mutation: Mutation,
-                 crossover: Crossover,
-                 selection: Selection = BinaryTournamentSelection(
-                     MultiComparator([FastNonDominatedRanking.get_comparator(),
-                                      CrowdingDistance.get_comparator()])),
-                 termination_criterion: TerminationCriterion = store.default_termination_criteria,
-                 population_generator: Generator = store.default_generator,
-                 population_evaluator: Evaluator = store.default_evaluator):
+    def __init__(
+        self,
+        problem: Problem,
+        population_size: int,
+        offspring_population_size: int,
+        mutation: Mutation,
+        crossover: Crossover,
+        selection: Selection = BinaryTournamentSelection(MultiComparator([FastNonDominatedRanking.get_comparator(), CrowdingDistance.get_comparator()])),
+        termination_criterion: TerminationCriterion = store.default_termination_criteria,
+        population_generator: Generator = store.default_generator,
+        population_evaluator: Evaluator = store.default_evaluator,
+    ):
         """
         NSGA-II implementation as described in
 
@@ -69,11 +68,11 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
             selection=selection,
             termination_criterion=termination_criterion,
             population_evaluator=population_evaluator,
-            population_generator=population_generator
+            population_generator=population_generator,
         )
 
     def replacement(self, population: List[S], offspring_population: List[S]) -> List[List[S]]:
-        """ This method joins the current and offspring populations to produce the population of the next generation
+        """This method joins the current and offspring populations to produce the population of the next generation
         by applying the ranking and crowding distance selection.
 
         :param population: Parent population.
@@ -92,4 +91,4 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
         return self.solutions
 
     def get_name(self) -> str:
-        return 'FastNSGAII'
+        return "FastNSGAII"

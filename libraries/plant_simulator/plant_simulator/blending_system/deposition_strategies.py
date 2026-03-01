@@ -12,14 +12,14 @@ class DepositionStrategy:
 
 
 class DepositionStrategyTimeChevron(DepositionStrategy):
-    def __init__(self, layers: int = 1, by: str = 'mass'):
+    def __init__(self, layers: int = 1, by: str = "mass"):
         super().__init__()
 
         self.layers = layers
         self.by = by
 
     def get_pos(self, timestamp: float, stockpile: Stockpile) -> Tuple[float, float]:
-        if self.by == 'mass':
+        if self.by == "mass":
             p = stockpile.stacked_tons / stockpile.max_tons
             p_layers = p * self.layers
             forward = int(p_layers) % 2 == 0
@@ -38,6 +38,6 @@ class DepositionStrategyPile(DepositionStrategy):
 
 
 DEPOSITION_STRATEGIES = {
-    'Chevron': DepositionStrategyTimeChevron,
-    'Pile': DepositionStrategyPile
+    "Chevron": DepositionStrategyTimeChevron,
+    "Pile": DepositionStrategyPile,
 }

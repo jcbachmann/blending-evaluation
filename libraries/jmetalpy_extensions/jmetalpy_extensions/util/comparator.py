@@ -3,7 +3,7 @@ from typing import TypeVar
 from jmetal.core.solution import Solution
 from jmetal.util.comparator import Comparator
 
-S = TypeVar('S')
+S = TypeVar("S")
 
 
 # This is a fast version of the standard DominanceComparator which ignores constraint evaluation

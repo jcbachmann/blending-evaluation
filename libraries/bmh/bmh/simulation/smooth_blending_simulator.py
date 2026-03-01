@@ -6,7 +6,7 @@ from .blending_simulator import BlendingSimulator
 
 
 def gaussian(x, sigma):
-    return np.exp(-np.power(x / sigma, 2.) / 2.)
+    return np.exp(-np.power(x / sigma, 2.0) / 2.0)
 
 
 class SmoothBlendingSimulator(BlendingSimulator):

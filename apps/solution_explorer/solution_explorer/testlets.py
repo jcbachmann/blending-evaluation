@@ -24,11 +24,11 @@ class ObjectiveTestlet(Testlet):
         if self.label is not None:
             return self.label
 
-        return f'Objective {self.index}'
+        return f"Objective {self.index}"
 
     def evaluate(self, solution: Solution):
         value = solution.objectives[self.index]
-        return value, f'{value:.3f}'
+        return value, f"{value:.3f}"
 
     def get_result_rater(self) -> Rater:
         return RaterColorScale(minimum=0, maximum=self.maximum, color_func=white_to_red)
@@ -40,11 +40,11 @@ class PathDistanceTestlet(Testlet):
         self.variables_count = variables_count
 
     def __str__(self):
-        return 'Distance'
+        return "Distance"
 
     def evaluate(self, solution: Solution):
         value = sum(abs(solution.variables[:-1] - solution.variables[1:]))
-        return value, f'{value:.2f}'
+        return value, f"{value:.2f}"
 
     def get_result_rater(self) -> Rater:
         return RaterColorScale(minimum=0, maximum=self.variables_count - 1, color_func=white_to_red)
@@ -52,12 +52,12 @@ class PathDistanceTestlet(Testlet):
 
 class PathGraphTestlet(Testlet):
     def __str__(self):
-        return 'Path'
+        return "Path"
 
     def evaluate(self, solution: Solution):
         fig = plt.figure(figsize=(2, 1), dpi=75)
         ax = fig.add_subplot(111)
-        ax.plot(np.linspace(0, 1, len(solution.variables)), solution.variables, ls='-')
+        ax.plot(np.linspace(0, 1, len(solution.variables)), solution.variables, ls="-")
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.get_xaxis().set_visible(False)

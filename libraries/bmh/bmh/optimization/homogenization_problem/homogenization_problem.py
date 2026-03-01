@@ -16,75 +16,82 @@ def process_material_deposition(material: Material, deposition: Deposition, ppm3
     sim = BslBlendingSimulator(
         bed_size_x=deposition.meta.bed_size_x,
         bed_size_z=deposition.meta.bed_size_z,
-        ppm3=ppm3
+        ppm3=ppm3,
     )
     material_deposition = MaterialDeposition(
         material=material,
-        deposition=deposition
+        deposition=deposition,
     )
     return sim.stack_reclaim(material_deposition)
 
 
-def verify_timestamps(timestamps: List[float], *, number_of_variables: int, max_timestamp: float,
-                      deposition_prefix: Deposition = None):
+def verify_timestamps(timestamps: List[float], *, number_of_variables: int, max_timestamp: float, deposition_prefix: Deposition = None):
     if len(timestamps) != number_of_variables:
-        raise ValueError(f'Length of timestamps {len(timestamps)}'
-                         f' does not match length of variables {number_of_variables}')
+        raise ValueError(f"Length of timestamps {len(timestamps)} does not match length of variables {number_of_variables}")
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        if timestamps[0] <= deposition_prefix.data['timestamp'].values[-1]:
-            raise ValueError(f'First timestamp {timestamps[0]} must be greater than '
-                             f"last deposition prefix timestamp {deposition_prefix.data['timestamp'].values[-1]}")
+        if timestamps[0] <= deposition_prefix.data["timestamp"].values[-1]:
+            raise ValueError(
+                f"First timestamp {timestamps[0]} must be greater than last deposition prefix timestamp {deposition_prefix.data['timestamp'].values[-1]}"
+            )
     else:
         if timestamps[0] != 0.0:
-            raise ValueError(f'First timestamp {timestamps[0]} != 0.0')
+            raise ValueError(f"First timestamp {timestamps[0]} != 0.0")
 
     if timestamps[-1] != max_timestamp:
-        raise ValueError(f'Last timestamp {timestamps[-1]} does not match max timestamp {max_timestamp}')
+        raise ValueError(f"Last timestamp {timestamps[-1]} does not match max timestamp {max_timestamp}")
 
 
 def variables_to_deposition_generic(
-        variables: List[float], *, x_min: float, x_max: float, max_timestamp: float, v_max: float,
-        deposition_meta: DepositionMeta, deposition_prefix: Optional[Deposition] = None,
-        timestamps: Optional[List[float]] = None
+    variables: List[float],
+    *,
+    x_min: float,
+    x_max: float,
+    max_timestamp: float,
+    v_max: float,
+    deposition_meta: DepositionMeta,
+    deposition_prefix: Optional[Deposition] = None,
+    timestamps: Optional[List[float]] = None,
 ) -> Deposition:
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        start_timestamp = deposition_prefix.data['timestamp'].values[-1]
+        start_timestamp = deposition_prefix.data["timestamp"].values[-1]
         min_timestamp = start_timestamp + (max_timestamp - start_timestamp) / len(variables)
     else:
         min_timestamp = 0.0
 
     deposition = Deposition(
         meta=deposition_meta.copy(),
-        data=DataFrame({
-            'timestamp': timestamps if timestamps else np.linspace(min_timestamp, max_timestamp, len(variables)),
-            'x': [elem * (x_max - x_min) + x_min for elem in variables],
-            'z': [deposition_meta.bed_size_z / 2] * len(variables),
-        })
+        data=DataFrame(
+            {
+                "timestamp": timestamps if timestamps else np.linspace(min_timestamp, max_timestamp, len(variables)),
+                "x": [elem * (x_max - x_min) + x_min for elem in variables],
+                "z": [deposition_meta.bed_size_z / 2] * len(variables),
+            }
+        ),
     )
 
     # Check and fix speed always below v_max
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        t_last = deposition_prefix.data['timestamp'].values[-1]
-        x_last = deposition_prefix.data['x'].values[-1]
+        t_last = deposition_prefix.data["timestamp"].values[-1]
+        x_last = deposition_prefix.data["x"].values[-1]
     else:
-        t_last = deposition.data['timestamp'].values[0]
-        x_last = deposition.data['x'].values[0]
+        t_last = deposition.data["timestamp"].values[0]
+        x_last = deposition.data["x"].values[0]
     for i in deposition.data.index:
-        t = deposition.data.at[i, 'timestamp']
-        x = deposition.data.at[i, 'x']
+        t = deposition.data.at[i, "timestamp"]
+        x = deposition.data.at[i, "x"]
         x_diff_max = v_max * (t - t_last)
         x_diff = x - x_last
         if abs(x_diff) > x_diff_max:
             x = x_last + math.copysign(x_diff_max, x_diff)
-        deposition.data.at[i, 'x'] = x
+        deposition.data.at[i, "x"] = x
         t_last = t
         x_last = x
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
         deposition.data = deposition_prefix.data.append(deposition.data, ignore_index=True, sort=False)
 
-    deposition.meta.time = deposition.data['timestamp'].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].values[-1]
 
     return deposition
 
@@ -116,20 +123,21 @@ def get_chevron_deposition(x_min: float, x_max: float, max_timestamp: float, v: 
 
     deposition = Deposition(
         meta=deposition_meta.copy(),
-        data=DataFrame({
-            'timestamp': np.append(np.arange(0, max_timestamp, time_per_layer), max_timestamp),
-            'x': get_chevron(),
-            'z': [deposition_meta.bed_size_z / 2] * steps,
-        })
+        data=DataFrame(
+            {
+                "timestamp": np.append(np.arange(0, max_timestamp, time_per_layer), max_timestamp),
+                "x": get_chevron(),
+                "z": [deposition_meta.bed_size_z / 2] * steps,
+            }
+        ),
     )
 
-    deposition.meta.time = deposition.data['timestamp'].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].values[-1]
 
     return deposition
 
 
-def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max: float, max_timestamp: float,
-                                 v_max: float, deposition_meta: DepositionMeta):
+def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max: float, max_timestamp: float, v_max: float, deposition_meta: DepositionMeta):
     layers = len(variables) - 1
     move_time_v_max_per_layer = (x_max - x_min) / v_max
     move_time_v_max_total = move_time_v_max_per_layer * layers
@@ -164,21 +172,21 @@ def get_chevron_ideal_deposition(variables: List[float], *, x_min: float, x_max:
 
     deposition = Deposition(
         meta=deposition_meta.copy(),
-        data=DataFrame({
-            'timestamp': get_timestamps(),
-            'x': get_positions(),
-            'z': [deposition_meta.bed_size_z / 2] * (2 * len(variables)),
-        })
+        data=DataFrame(
+            {
+                "timestamp": get_timestamps(),
+                "x": get_positions(),
+                "z": [deposition_meta.bed_size_z / 2] * (2 * len(variables)),
+            }
+        ),
     )
 
-    deposition.meta.time = deposition.data['timestamp'].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].values[-1]
 
     return deposition
 
 
-def get_full_speed_deposition(
-        x_min: float, x_max: float, deposition_meta: DepositionMeta, t_max: float, v_max: float
-) -> Deposition:
+def get_full_speed_deposition(x_min: float, x_max: float, deposition_meta: DepositionMeta, t_max: float, v_max: float) -> Deposition:
     # Generate a Chevron deposition with maximum speed
     x_center = 0.5 * (x_min + x_max)
     z_center = deposition_meta.bed_size_z / 2
@@ -186,21 +194,27 @@ def get_full_speed_deposition(
 
     t = 0.0
     x = x_min
-    data = DataFrame({'timestamp': [0.0], 'x': [x_min], 'z': [z_center], })
+    data = DataFrame(
+        {
+            "timestamp": [0.0],
+            "x": [x_min],
+            "z": [z_center],
+        }
+    )
     while t < t_max:
         t_last = t
         t = min(t + time_per_section, t_max)
         x_diff = (t - t_last) * v_max
         x = x_min + x_diff if x < x_center else x_max - x_diff
         data = pd.concat(
-            [data, DataFrame({'timestamp': [t], 'x': [x], 'z': [z_center]})],
+            [data, DataFrame({"timestamp": [t], "x": [x], "z": [z_center]})],
             ignore_index=True,
-            sort=False
+            sort=False,
         )
 
     deposition = Deposition(meta=deposition_meta.copy(), data=data)
     deposition.meta.data = deposition
-    deposition.meta.time = deposition.data['timestamp'].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].values[-1]
     return deposition
 
 
@@ -214,14 +228,25 @@ def calculate_reference_objectives(reclaimed_material: Material) -> Dict[str, fl
 
     return {
         **chevron_parameter_stdev,
-        'F2': worst_acceptable_volume_stdev,
+        "F2": worst_acceptable_volume_stdev,
     }
 
 
 class HomogenizationProblem(FloatProblem):
-    def __init__(self, *, deposition_meta: DepositionMeta, x_min: float, x_max: float, material: Material,
-                 number_of_variables: int = 2, deposition_prefix: Deposition = None, v_max: float, ppm3: float,
-                 timestamps: Optional[List[float]] = None, objectives: List[str] = None):
+    def __init__(
+        self,
+        *,
+        deposition_meta: DepositionMeta,
+        x_min: float,
+        x_max: float,
+        material: Material,
+        number_of_variables: int = 2,
+        deposition_prefix: Deposition = None,
+        v_max: float,
+        ppm3: float,
+        timestamps: Optional[List[float]] = None,
+        objectives: List[str] = None,
+    ):
         super(HomogenizationProblem, self).__init__()
 
         # Copy parameters
@@ -237,23 +262,19 @@ class HomogenizationProblem(FloatProblem):
         self.objectives = objectives
 
         # Buffer values
-        self.max_timestamp = material.data['timestamp'].values[-1]
+        self.max_timestamp = material.data["timestamp"].values[-1]
 
         # Check timestamps
         if timestamps:
             verify_timestamps(
-                self.timestamps, number_of_variables=self.number_of_variables,
-                max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix
+                self.timestamps, number_of_variables=self.number_of_variables, max_timestamp=self.max_timestamp, deposition_prefix=self.deposition_prefix
             )
 
         # Reference deposition (full speed Chevron deposition)
         self.reference_deposition = get_full_speed_deposition(
-            x_min=self.x_min, x_max=self.x_max, deposition_meta=self.deposition_meta,
-            t_max=self.max_timestamp, v_max=self.v_max
+            x_min=self.x_min, x_max=self.x_max, deposition_meta=self.deposition_meta, t_max=self.max_timestamp, v_max=self.v_max
         )
-        self.reference_reclaimed_material = process_material_deposition(
-            self.material, self.reference_deposition, ppm3=self.ppm3
-        )
+        self.reference_reclaimed_material = process_material_deposition(self.material, self.reference_deposition, ppm3=self.ppm3)
         # Biased absolute reference objectives
         self.reference_objectives = calculate_reference_objectives(self.reference_reclaimed_material)
         # Objectives of the reference deposition relative to the reference objectives
@@ -276,16 +297,16 @@ class HomogenizationProblem(FloatProblem):
         return "Homogenization Problem"
 
     def evaluate_objective(self, deposition: Deposition, reclaimed_material: Material, objective: str) -> float:
-        objective_type = objective.split('/')[0]
-        if objective_type == 'F1':
+        objective_type = objective.split("/")[0]
+        if objective_type == "F1":
             evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
-            return evaluator.get_single_parameter_stdev(objective.split('/')[1]) / self.reference_objectives[objective]
-        elif objective_type == 'F2':
+            return evaluator.get_single_parameter_stdev(objective.split("/")[1]) / self.reference_objectives[objective]
+        elif objective_type == "F2":
             evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max)
             return evaluator.get_volume_stdev() / self.reference_objectives[objective]
-        elif objective_type == 'F3':
+        elif objective_type == "F3":
             return self.evaluate_distance_travelled(deposition)
-        elif objective_type == 'F4':
+        elif objective_type == "F4":
             return self.evaluate_max_speed(deposition)
 
         raise ValueError(f"Unknown objective: {objective_type}")
@@ -293,32 +314,32 @@ class HomogenizationProblem(FloatProblem):
     def evaluate(self, solution: FloatSolution) -> None:
         deposition = self.variables_to_deposition(variables=solution.variables)
         reclaimed_material = process_material_deposition(material=self.material, deposition=deposition, ppm3=self.ppm3)
-        solution.objectives = [
-            self.evaluate_objective(deposition, reclaimed_material, objective)
-            for objective in self.objectives
-        ]
+        solution.objectives = [self.evaluate_objective(deposition, reclaimed_material, objective) for objective in self.objectives]
 
     def evaluate_reclaimed_material(self, reclaimed_material: Material) -> Dict[str, float]:
         return ReclaimedMaterialEvaluator.get_relative(
-            ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min,
-                                       x_max=self.x_max).get_all_stdev(),
-            self.reference_objectives
+            ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=self.x_min, x_max=self.x_max).get_all_stdev(), self.reference_objectives
         )
 
     def evaluate_distance_travelled(self, deposition: Deposition) -> float:
-        return deposition.data['x'].diff().abs().sum()  # FIXME normalize correctly with self.v_max
+        return deposition.data["x"].diff().abs().sum()  # FIXME normalize correctly with self.v_max
 
     def evaluate_max_speed(self, deposition: Deposition) -> float:
-        return deposition.data['x'].diff().abs().max() / self.v_max  # FIXME normalize correctly with self.v_max
+        return deposition.data["x"].diff().abs().max() / self.v_max  # FIXME normalize correctly with self.v_max
 
     def get_objective_labels(self) -> List[str]:
         return self.objectives
 
     def variables_to_deposition(self, variables: List[float]) -> Deposition:
         return variables_to_deposition_generic(
-            variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v_max=self.v_max,
-            deposition_meta=self.deposition_meta, deposition_prefix=self.deposition_prefix,
-            timestamps=self.timestamps
+            variables,
+            x_min=self.x_min,
+            x_max=self.x_max,
+            max_timestamp=self.max_timestamp,
+            v_max=self.v_max,
+            deposition_meta=self.deposition_meta,
+            deposition_prefix=self.deposition_prefix,
+            timestamps=self.timestamps,
         )
         # return get_chevron_deposition(
         #     x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v=self.v_max * variables[0],

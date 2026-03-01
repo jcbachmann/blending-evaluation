@@ -6,10 +6,20 @@ from ..plant import Plant
 
 
 class BlendingSystem(MaterialHandler):
-    def __init__(self, label, plant, src, length: float = 600, depth: float = 50, max_stacker_speed: float = 0.5,
-                 max_reclaimer_speed: float = 0.005, strategy: str = 'A', strategy_params=None,
-                 simulator: str = 'fast'):
-        super().__init__(label, plant, 'cylinder')
+    def __init__(
+        self,
+        label,
+        plant,
+        src,
+        length: float = 600,
+        depth: float = 50,
+        max_stacker_speed: float = 0.5,
+        max_reclaimer_speed: float = 0.005,
+        strategy: str = "A",
+        strategy_params=None,
+        simulator: str = "fast",
+    ):
+        super().__init__(label, plant, "cylinder")
 
         self.src_gen = self.unpack_src_gen(src)
         self._sample = (0, 0)
@@ -26,8 +36,8 @@ class BlendingSystem(MaterialHandler):
                 self.reclaimer.stockpile = self.stacker.stockpile
                 self.stacker.stockpile = None
             else:
-                self.logger.warning('Illegal situation occurred: stacker is full while reclaimer is not yet finished')
-                self.logger.warning(f'Material illegally dropped: {tph} tph, quality: {q}')
+                self.logger.warning("Illegal situation occurred: stacker is full while reclaimer is not yet finished")
+                self.logger.warning(f"Material illegally dropped: {tph} tph, quality: {q}")
                 tph, q = 0, 0
 
         if self.stacker.stockpile is None:

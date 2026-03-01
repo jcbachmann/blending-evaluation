@@ -17,22 +17,19 @@ def main(args: argparse.Namespace):
         results.df = filter_efficient_front(results.df, results.fun_columns)
         label += " (non-dominated)"
 
-    file_path = os.path.join(
-        os.path.commonpath(results.df['file_path'].to_list()),
-        f"{label} {str(uuid.uuid4())[:4]}.FUN"
-    )
+    file_path = os.path.join(os.path.commonpath(results.df["file_path"].to_list()), f"{label} {str(uuid.uuid4())[:4]}.FUN")
 
     logging.info(f"Exporting {len(results.df)} FUN values to {file_path}")
-    results.df[results.fun_columns].to_csv(file_path, index=False, sep=' ')
+    results.df[results.fun_columns].to_csv(file_path, index=False, sep=" ")
 
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str, nargs='+')
-    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
-    parser.add_argument('--non-dominated', action='store_true', default=False, help='Show only non-dominated solutions')
+    parser.add_argument("filename", type=str, nargs="+")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable verbose logging")
+    parser.add_argument("--non-dominated", action="store_true", default=False, help="Show only non-dominated solutions")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(get_args())

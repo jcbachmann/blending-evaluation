@@ -11,88 +11,101 @@ from dash import Dash, dcc, Input, Output, dash_table
 
 def main(args: argparse.Namespace):
     app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-    app.config['suppress_callback_exceptions'] = True
+    app.config["suppress_callback_exceptions"] = True
 
-    app.layout = dash.html.Div([
-        dbc.Row([
-            dbc.Col(
-                dbc.Card(
-                    dbc.CardBody(
-                        dash_table.DataTable(
-                            [{"Run": f"Run {i}"} for i, _ in enumerate(args.experiment)],
-                            [{"name": "Run", "id": "Run"}],
-                            id='runs',
-                            style_table={'max-height': '500px', 'overflowY': 'auto'}
+    app.layout = dash.html.Div(
+        [
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                dash_table.DataTable(
+                                    [{"Run": f"Run {i}"} for i, _ in enumerate(args.experiment)],
+                                    [{"name": "Run", "id": "Run"}],
+                                    id="runs",
+                                    style_table={"max-height": "500px", "overflowY": "auto"},
+                                ),
+                            ),
+                            style={"height": "100%"},
                         ),
+                        xl=1,
+                        lg=2,
+                        sm=2,
                     ),
-                    style={'height': '100%'}
-                ),
-                xl=1, lg=2, sm=2
-            ),
-            dbc.Col(
-                dbc.Card(
-                    dbc.CardBody(
-                        dcc.Graph(id='front-evolution', style={'height': '100%'})
+                    dbc.Col(
+                        dbc.Card(dbc.CardBody(dcc.Graph(id="front-evolution", style={"height": "100%"})), style={"height": "100%"}),
+                        xl=11,
+                        lg=10,
+                        sm=10,
                     ),
-                    style={'height': '100%'}
-                ),
-                xl=11, lg=10, sm=10,
+                ],
+                className="g-0",
+                style={"flex": "1"},
             ),
-        ], className='g-0', style={'flex': '1'}),
-        dbc.Row(
-            dbc.Col(
-                dbc.Card([
-                    dbc.CardBody(
+            dbc.Row(
+                dbc.Col(
+                    dbc.Card(
                         [
-                            dcc.Graph(id='quality-indicators', style={'flex': '1'}),
-                            dcc.Slider(
-                                min=0, max=0, step=100, value=0,
-                                id='generation-slider', updatemode='drag', marks=None,
-                                tooltip={"placement": "bottom", "always_visible": True}
+                            dbc.CardBody(
+                                [
+                                    dcc.Graph(id="quality-indicators", style={"flex": "1"}),
+                                    dcc.Slider(
+                                        min=0,
+                                        max=0,
+                                        step=100,
+                                        value=0,
+                                        id="generation-slider",
+                                        updatemode="drag",
+                                        marks=None,
+                                        tooltip={"placement": "bottom", "always_visible": True},
+                                    ),
+                                ],
+                                style={"display": "flex", "flexDirection": "column"},
                             )
                         ],
-                        style={'display': 'flex', 'flexDirection': 'column'}
+                        style={"height": "100%"},
                     )
-                ], style={'height': '100%'})
+                ),
+                className="g-0",
+                style={"height": "300px"},
             ),
-            className='g-0',
-            style={'height': '300px'}
-        )
-    ], style={'height': '100vh', 'display': 'flex', 'flexDirection': 'column'})
+        ],
+        style={"height": "100vh", "display": "flex", "flexDirection": "column"},
+    )
 
     def get_row(active_cell):
-        return active_cell['row'] if active_cell else 0
+        return active_cell["row"] if active_cell else 0
 
     @app.callback(
-        Output('generation-slider', 'max'),
-        Input('runs', 'active_cell')
+        Output("generation-slider", "max"),
+        Input("runs", "active_cell"),
     )
     def render_content(active_cell):
-        quality_indicators_df = pd.read_csv(
-            os.path.join(args.experiment[get_row(active_cell)], 'quality_indicators.csv'))
+        quality_indicators_df = pd.read_csv(os.path.join(args.experiment[get_row(active_cell)], "quality_indicators.csv"))
         return len(quality_indicators_df) - 1
 
     @app.callback(
-        Output('front-evolution', 'figure'),
-        Input('runs', 'active_cell'),
-        Input('generation-slider', 'value')
+        Output("front-evolution", "figure"),
+        Input("runs", "active_cell"),
+        Input("generation-slider", "value"),
     )
     def update_figure(active_cell, generation: int):
-        objective_labels = ['F1/Ash (%)', 'F1/Sulphur (%)', 'F2']
+        objective_labels = ["F1/Ash (%)", "F1/Sulphur (%)", "F2"]
         fun_df = pd.read_csv(
-            os.path.join(args.experiment[get_row(active_cell)], 'fronts', f'FUN.{generation}'),
-            sep=' ',
+            os.path.join(args.experiment[get_row(active_cell)], "fronts", f"FUN.{generation}"),
+            sep=" ",
             header=None,
             index_col=False,
-            names=objective_labels
+            names=objective_labels,
         )
 
         reference_df = pd.read_csv(
             os.path.join(args.reference),
-            sep=' ',
+            sep=" ",
             header=None,
             index_col=False,
-            names=objective_labels
+            names=objective_labels,
         )
 
         layout = go.Layout(
@@ -108,10 +121,10 @@ def main(args: argparse.Namespace):
                 xaxis=dict(range=[0, 2], title=objective_labels[0]),
                 yaxis=dict(range=[0, 2], title=objective_labels[1]),
                 zaxis=dict(range=[0, 2], title=objective_labels[2]),
-                aspectmode='cube',
+                aspectmode="cube",
             ),
-            hovermode='closest',
-            uirevision=True
+            hovermode="closest",
+            uirevision=True,
         )
 
         data = []
@@ -120,18 +133,15 @@ def main(args: argparse.Namespace):
             x=reference_df[objective_labels[0]],
             y=reference_df[objective_labels[1]],
             z=reference_df[objective_labels[2]],
-            mode='markers',
+            mode="markers",
             marker=dict(
-                color='black',
+                color="black",
                 size=2,
-                symbol='circle',
-                line=dict(
-                    color='#236FA4',
-                    width=1
-                ),
-                opacity=0.8
+                symbol="circle",
+                line=dict(color="#236FA4", width=1),
+                opacity=0.8,
             ),
-            name='Reference front'
+            name="Reference front",
         )
         data.append(trace)
 
@@ -139,18 +149,18 @@ def main(args: argparse.Namespace):
             x=[1],
             y=[1],
             z=[1],
-            mode='markers',
+            mode="markers",
             marker=dict(
-                color='red',
+                color="red",
                 size=8,
-                symbol='circle',
+                symbol="circle",
                 line=dict(
-                    color='#236FA4',
-                    width=1
+                    color="#236FA4",
+                    width=1,
                 ),
-                opacity=0.8
+                opacity=0.8,
             ),
-            name='Reference point'
+            name="Reference point",
         )
         data.append(trace)
 
@@ -158,18 +168,18 @@ def main(args: argparse.Namespace):
             x=fun_df[objective_labels[0]],
             y=fun_df[objective_labels[1]],
             z=fun_df[objective_labels[2]],
-            mode='markers',
+            mode="markers",
             marker=dict(
-                color='#236FA4',
+                color="#236FA4",
                 size=4,
-                symbol='circle',
+                symbol="circle",
                 line=dict(
-                    color='#236FA4',
-                    width=1
+                    color="#236FA4",
+                    width=1,
                 ),
-                opacity=0.8
+                opacity=0.8,
             ),
-            name='Front approximation'
+            name="Front approximation",
         )
         data.append(trace)
 
@@ -178,12 +188,11 @@ def main(args: argparse.Namespace):
         return fig
 
     @app.callback(
-        Output('quality-indicators', 'figure'),
-        Input('runs', 'active_cell')
+        Output("quality-indicators", "figure"),
+        Input("runs", "active_cell"),
     )
     def update_figure(active_cell):
-        quality_indicators_df = pd.read_csv(
-            os.path.join(args.experiment[get_row(active_cell)], 'quality_indicators.csv'))
+        quality_indicators_df = pd.read_csv(os.path.join(args.experiment[get_row(active_cell)], "quality_indicators.csv"))
         fig = px.line(quality_indicators_df)
         fig.update_layout(
             legend=dict(
@@ -194,7 +203,7 @@ def main(args: argparse.Namespace):
                 yanchor="top",
             ),
             margin=dict(l=0, r=0, b=0, t=0),
-            uirevision=True
+            uirevision=True,
         )
         fig.update_yaxes(range=[0, 0.5])
 
@@ -205,8 +214,8 @@ def main(args: argparse.Namespace):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--experiment", type=str, nargs='+', help='Path to directory containing experiment results')
-    parser.add_argument("--reference", type=str, required=True, help='Path to reference front')
+    parser.add_argument("--experiment", type=str, nargs="+", help="Path to directory containing experiment results")
+    parser.add_argument("--reference", type=str, required=True, help="Path to reference front")
     return parser.parse_args()
 
 

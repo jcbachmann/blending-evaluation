@@ -8,7 +8,7 @@ from ..plant import Plant
 
 
 class Stockpile:
-    def __init__(self, length: float, depth: float, simulator: str = 'fast'):
+    def __init__(self, length: float, depth: float, simulator: str = "fast"):
         self.length = length
         self.depth = depth
         self.max_tons = (length - depth) * 0.25 * depth * depth
@@ -20,19 +20,19 @@ class Stockpile:
         self.reclaimer_position = 0.0
 
         self.simulator = {
-            'fast': lambda: BslBlendingSimulator(
+            "fast": lambda: BslBlendingSimulator(
                 bed_size_x=length,
                 bed_size_z=depth,
-                ppm3=1
+                ppm3=1,
             ),
-            'smooth': lambda: SmoothBlendingSimulator(
+            "smooth": lambda: SmoothBlendingSimulator(
                 bed_size_x=length,
                 buffer_size=80,
-                sigma_x=10
+                sigma_x=10,
             ),
-            'mathematical': lambda: MathematicalBlendingSimulator(
+            "mathematical": lambda: MathematicalBlendingSimulator(
                 bed_size_x=length,
-                buffer_size=80
+                buffer_size=80,
             ),
         }[simulator]()
 

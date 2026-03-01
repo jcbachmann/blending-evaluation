@@ -18,27 +18,27 @@ def main(args: argparse.Namespace):
 
     results = FunVarResults.from_files(args.filename)
     if results.len() == 0:
-        logging.warning('No results found')
+        logging.warning("No results found")
         return
 
     df = results.df.melt(
         id_vars=results.misc_columns,
         value_vars=results.var_columns,
-        var_name='var',
-        value_name='value'
+        var_name="var",
+        value_name="value",
     )
 
-    fig = px.line(df, x='var', y='value', line_group='run_individual', color='run')
+    fig = px.line(df, x="var", y="value", line_group="run_individual", color="run")
     fig.update_traces(opacity=get_opacity(results.len()))
     fig.show()
 
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str, nargs='+')
-    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
+    parser.add_argument("filename", type=str, nargs="+")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable verbose logging")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(get_args())

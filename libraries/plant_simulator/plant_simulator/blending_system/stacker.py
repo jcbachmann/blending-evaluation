@@ -21,7 +21,7 @@ class Stacker:
             dz = new_pos[1] - self.last_pos[1]
             speed = math.sqrt(dx * dx + dz * dz) / Plant.TIME_INCREMENT
             if speed > self.max_speed:
-                raise ValueError(f'Stacker speed too high: {speed:.2f} > {self.max_speed:.2f}')
+                raise ValueError(f"Stacker speed too high: {speed:.2f} > {self.max_speed:.2f}")
         self.stockpile.stack(time, new_pos[0], new_pos[1], tons, q)
         self.last_pos = new_pos
 

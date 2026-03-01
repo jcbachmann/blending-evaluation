@@ -41,26 +41,30 @@ class MaterialDumper(MaterialHandler):
         return [self._sample]
 
     def save_file(self):
-        rnd_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-        identifier = self.label.replace(' ', '_') + '_' + str(rnd_id)
-        file_dir = os.path.join(self.path, 'generated_material', identifier)
+        rnd_id = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
+        identifier = self.label.replace(" ", "_") + "_" + str(rnd_id)
+        file_dir = os.path.join(self.path, "generated_material", identifier)
         os.makedirs(file_dir)
 
-        with open(os.path.join(file_dir, 'data.csv'), 'w') as f:
-            lines = ['\t'.join([str(i) for i in row]) for row in self.buffer]
-            f.write('\n'.join(lines))
+        with open(os.path.join(file_dir, "data.csv"), "w") as f:
+            lines = ["\t".join([str(i) for i in row]) for row in self.buffer]
+            f.write("\n".join(lines))
 
-        json.dump({
-            'label': f'{self.label} {rnd_id}',
-            'description': f'Generated material stream from MaterialDumper with label {self.label}',
-            'category': 'generated',
-            'time': self.plant.time - self.time_reference,
-            'volume': self.total_volume,
-            'data': 'data.csv'
-        }, open(os.path.join(file_dir, 'meta.json'), 'w'), indent=4)
+        json.dump(
+            {
+                "label": f"{self.label} {rnd_id}",
+                "description": f"Generated material stream from MaterialDumper with label {self.label}",
+                "category": "generated",
+                "time": self.plant.time - self.time_reference,
+                "volume": self.total_volume,
+                "data": "data.csv",
+            },
+            open(os.path.join(file_dir, "meta.json"), "w"),
+            indent=4,
+        )
 
     def reset_random_limit(self):
         self.time_limit = self.plant.time + random.uniform(10, 48) * 60 * 60
         self.time_reference = self.plant.time
-        self.buffer = [['timestamp', 'volume', 'parameter']]  # TODO make work with multiple parameters
+        self.buffer = [["timestamp", "volume", "parameter"]]  # TODO make work with multiple parameters
         self.total_volume = 0

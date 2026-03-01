@@ -12,10 +12,10 @@ from .fun_var_results import FunVarResults
 
 def filter_data(df: pd.DataFrame, fun_columns: List[str]):
     df = filter_relevant_region(df, fun_columns)
-    logging.info(f'Region filtered dataframe has {df.shape[0]} rows')
+    logging.info(f"Region filtered dataframe has {df.shape[0]} rows")
 
     df = filter_efficient_front(df, fun_columns)
-    logging.info(f'Efficient front has {df.shape[0]} entries')
+    logging.info(f"Efficient front has {df.shape[0]} entries")
 
     return df
 
@@ -34,18 +34,18 @@ def main(args: argparse.Namespace):
     print(tsne.get_params())
     print(tsne_results)
 
-    df['tsne-1'] = tsne_results[:, 0]
-    df['tsne-2'] = tsne_results[:, 1]
-    fig = px.scatter(df, x='tsne-1', y='tsne-2', color='cluster', title='TSNE')
+    df["tsne-1"] = tsne_results[:, 0]
+    df["tsne-2"] = tsne_results[:, 1]
+    fig = px.scatter(df, x="tsne-1", y="tsne-2", color="cluster", title="TSNE")
     fig.show()
 
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str, nargs='+')
-    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
+    parser.add_argument("filename", type=str, nargs="+")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable verbose logging")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(get_args())

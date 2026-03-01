@@ -17,8 +17,7 @@ from bmh.optimization.optimization import DepositionOptimizer
 from ..helpers.configure_logging import configure_logging
 
 
-def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-                           chevron_layers: int, starting_side: int = 0) -> None:
+def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta, chevron_layers: int, starting_side: int = 0) -> None:
     """
     Set the deposition to traditional Chevron stacking in layers
     :param identifier: identifier of this deposition computation
@@ -29,18 +28,18 @@ def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposit
     """
     core_length = deposition_meta.bed_size_x - deposition_meta.bed_size_z
 
-    deposition_data = DataFrame({
-        'timestamp': [material_meta.time * layer / chevron_layers for layer in range(0, chevron_layers + 1)],
-        'x': [0.5 * deposition_meta.bed_size_z + core_length * float((layer + starting_side) % 2) for layer in
-              range(0, chevron_layers + 1)],
-        'z': [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
-    })
+    deposition_data = DataFrame(
+        {
+            "timestamp": [material_meta.time * layer / chevron_layers for layer in range(0, chevron_layers + 1)],
+            "x": [0.5 * deposition_meta.bed_size_z + core_length * float((layer + starting_side) % 2) for layer in range(0, chevron_layers + 1)],
+            "z": [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
+        }
+    )
     deposition_meta.data = Deposition(data=deposition_data, meta=deposition_meta)
-    deposition_meta.label = f'{identifier} - Chevron {chevron_layers} layers'
+    deposition_meta.label = f"{identifier} - Chevron {chevron_layers} layers"
 
 
-def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta,
-                             chevron_layers: int, objectives: List[str]) -> None:
+def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta, chevron_layers: int, objectives: List[str]) -> None:
     """
     Optimize the deposition regarding the material information provided
     :param identifier: identifier of this deposition computation
@@ -66,7 +65,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
     )
     optimizer.run(
         material=material,
-        variables=chevron_layers + 1
+        variables=chevron_layers + 1,
     )
 
     results = optimizer.get_final_results()
@@ -74,7 +73,7 @@ def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, depos
 
     selection.deposition.meta = deposition_meta
     deposition_meta.data = selection.deposition
-    deposition_meta.label = f'{identifier} - Optimized {chevron_layers + 1} variables'
+    deposition_meta.label = f"{identifier} - Optimized {chevron_layers + 1} variables"
 
 
 def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives: List[str]) -> DepositionMeta:
@@ -94,16 +93,20 @@ def compute_deposition(identifier: str, material_meta: MaterialMeta, objectives:
     # Use as much time for reclaiming, as for stacking
     reclaim_x_per_s = bed_size_x / material_meta.time
 
-    deposition_meta = DepositionMeta(identifier, path='', meta_dict={
-        'label': f'Computed {identifier}',
-        'description': f'Computed deposition for {identifier}',
-        'category': 'computed',
-        'time': material_meta.time,
-        'data': BenchmarkData.DATA_CSV,
-        'bed_size_x': bed_size_x,
-        'bed_size_z': bed_size_z,
-        'reclaim_x_per_s': reclaim_x_per_s
-    })
+    deposition_meta = DepositionMeta(
+        identifier,
+        path="",
+        meta_dict={
+            "label": f"Computed {identifier}",
+            "description": f"Computed deposition for {identifier}",
+            "category": "computed",
+            "time": material_meta.time,
+            "data": BenchmarkData.DATA_CSV,
+            "bed_size_x": bed_size_x,
+            "bed_size_z": bed_size_z,
+            "reclaim_x_per_s": reclaim_x_per_s,
+        },
+    )
 
     # Currently fixed amount of layers for Chevron stacking
     set_optimized_deposition(identifier, material_meta, deposition_meta, chevron_layers=60, objectives=objectives)
@@ -117,8 +120,8 @@ def main(args: argparse.Namespace):
     logger = logging.getLogger(__name__)
 
     # Setup timestamp identifier
-    timestamp_str = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
-    logger.info(f'Starting evaluation with timestamp {timestamp_str}')
+    timestamp_str = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    logger.info(f"Starting evaluation with timestamp {timestamp_str}")
 
     # Load benchmark base data
     benchmark = BenchmarkData(args.path)
@@ -134,13 +137,13 @@ def main(args: argparse.Namespace):
     core.test_simulator(simulator_meta)
 
     # Set identifier
-    identifier = f'{timestamp_str} {material_identifier} {sim_identifier}'
+    identifier = f"{timestamp_str} {material_identifier} {sim_identifier}"
 
     # Compute and evaluate deposition
     deposition_meta = compute_deposition(
         identifier=identifier,
         material_meta=material_meta,
-        objectives=args.objectives
+        objectives=args.objectives,
     )
 
     core.process(
@@ -155,18 +158,16 @@ def main(args: argparse.Namespace):
     if not args.dry_run:
         benchmark.write_deposition(deposition_meta)
 
-    logger.info('Processing finished')
+    logger.info("Processing finished")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Determine deposition and evaluate data for a given material curve'
-    )
-    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose logging')
-    parser.add_argument('--path', default='.', help='Benchmark path')
-    parser.add_argument('--dry_run', action='store_true', help='Do not write files')
-    parser.add_argument('--sim', type=str, default='bsl_low', help='Simulator identifier')
-    parser.add_argument('--material', type=str, default='generated_2Y45', help='Material curve identifier')
-    parser.add_argument('--objectives', type=str, nargs='+', help='Objectives to optimize')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Determine deposition and evaluate data for a given material curve")
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--path", default=".", help="Benchmark path")
+    parser.add_argument("--dry_run", action="store_true", help="Do not write files")
+    parser.add_argument("--sim", type=str, default="bsl_low", help="Simulator identifier")
+    parser.add_argument("--material", type=str, default="generated_2Y45", help="Material curve identifier")
+    parser.add_argument("--objectives", type=str, nargs="+", help="Objectives to optimize")
 
     main(parser.parse_args())

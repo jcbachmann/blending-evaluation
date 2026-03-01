@@ -26,24 +26,26 @@ class OptEvaluator:
 
         df_i = DataFrame(
             results,
-            columns=['likelihood', 'volume', 'run_group', 'run', 'results']
+            columns=["likelihood", "volume", "run_group", "run", "results"],
         )
         self.df = self.df.append(df_i, ignore_index=True)
 
         OptEvaluator.evaluations += 1
 
-        return df_i['results'].mean()
+        return df_i["results"].mean()
 
 
 def visualize(df):
     ax = pretty_line_plot(
         data=df,
-        x_col='likelihood',
-        unique_col='run_group',
-        split_col='volume',
-        y_col='results'
+        x_col="likelihood",
+        unique_col="run_group",
+        split_col="volume",
+        y_col="results",
     )
-    ax.set_ylim(0, )
+    ax.set_ylim(
+        0,
+    )
 
 
 def calculate_optimized_scipy(args):
@@ -57,11 +59,11 @@ def calculate_optimized_scipy(args):
         xtol=0.001,
         maxfun=200,
         full_output=True,
-        disp=3
+        disp=3,
     )
 
     logger = logging.getLogger(__name__)
-    logger.info(f'Optimum found: {x_opt}')
+    logger.info(f"Optimum found: {x_opt}")
 
     # Visualize results
     visualize(e.df)
@@ -90,7 +92,7 @@ def minimize_brute_force(func, x_start, x_stop, args, x_tol, f_tol):
         x_stop = x_start + x_range
 
     logger = logging.getLogger(__name__)
-    logger.info(f'Optimum found: f({x_opt}) = {f_opt}')
+    logger.info(f"Optimum found: f({x_opt}) = {f_opt}")
 
     return x_opt
 
@@ -103,7 +105,7 @@ def optimize_single(volume, args):
         x_stop=args.stop,
         args=(args.dist_seg_size, args.angle_seg_count, args.pos, volume, args.runs),
         x_tol=0.01,
-        f_tol=0.01
+        f_tol=0.01,
     )
     return x_opt, e.df
 
@@ -124,16 +126,15 @@ def main(args):
     calculate_optimized(args)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Find best cone shape')
-    parser.add_argument('--pos', type=int, default=150, help='Pile position')
-    parser.add_argument('--dist_seg_size', type=float, default=2.0, help='Size of a single distance segment')
-    parser.add_argument('--angle_seg_count', type=int, default=9, help='Amount of angle segments in range 0-45°')
-    parser.add_argument('--start', type=float, default=0.0, help='Likelihood range start')
-    parser.add_argument('--stop', type=float, default=1.0, help='Likelihood range stop')
-    parser.add_argument('--steps', type=int, default=5, help='Likelihood range step count')
-    parser.add_argument('--runs', type=int, default=5, help='Amount of runs to evaluate statistical variation')
-    parser.add_argument('--volumes', type=int, nargs='+', default=range(1000, 10000, 1000),
-                        help='Volumes to be evaluated')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Find best cone shape")
+    parser.add_argument("--pos", type=int, default=150, help="Pile position")
+    parser.add_argument("--dist_seg_size", type=float, default=2.0, help="Size of a single distance segment")
+    parser.add_argument("--angle_seg_count", type=int, default=9, help="Amount of angle segments in range 0-45°")
+    parser.add_argument("--start", type=float, default=0.0, help="Likelihood range start")
+    parser.add_argument("--stop", type=float, default=1.0, help="Likelihood range stop")
+    parser.add_argument("--steps", type=int, default=5, help="Likelihood range step count")
+    parser.add_argument("--runs", type=int, default=5, help="Amount of runs to evaluate statistical variation")
+    parser.add_argument("--volumes", type=int, nargs="+", default=range(1000, 10000, 1000), help="Volumes to be evaluated")
 
     main(parser.parse_args())

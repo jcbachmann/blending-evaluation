@@ -12,7 +12,7 @@ class FullSpeedGenerator(Generator):
             problem.lower_bound,
             problem.upper_bound,
             problem.number_of_objectives,
-            problem.number_of_constraints
+            problem.number_of_constraints,
         )
         starting_side = random.choice([0, 1])
         solution.variables = [float((i + starting_side) % 2) for i in range(problem.number_of_variables)]
@@ -25,7 +25,7 @@ class RandomEndGenerator(Generator):
             problem.lower_bound,
             problem.upper_bound,
             problem.number_of_objectives,
-            problem.number_of_constraints
+            problem.number_of_constraints,
         )
         solution.variables = [random.choice([0.0, 1.0]) for _ in range(problem.number_of_variables)]
         return solution
@@ -37,7 +37,7 @@ class FixedRandomSpeedGenerator(Generator):
             problem.lower_bound,
             problem.upper_bound,
             problem.number_of_objectives,
-            problem.number_of_constraints
+            problem.number_of_constraints,
         )
         starting_side = random.choice([0, 1])
         speed = random.randint(1, 10)
@@ -58,7 +58,7 @@ class RandomSpeedGenerator(Generator):
             problem.lower_bound,
             problem.upper_bound,
             problem.number_of_objectives,
-            problem.number_of_constraints
+            problem.number_of_constraints,
         )
         offset = 0
         speed = random.randint(1, 10)

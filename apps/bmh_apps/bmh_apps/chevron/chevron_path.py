@@ -6,4 +6,4 @@ def chevron_path(layers: float) -> DataFrame:
     if layers - int(layers) > 0:
         # incomplete layer
         path.append([layers, (layers - int(layers)) if int(layers) % 2 == 0 else (1 - (layers - int(layers)))])
-    return DataFrame(data=path, columns=['part', 'path'])
+    return DataFrame(data=path, columns=["part", "path"])

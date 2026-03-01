@@ -19,11 +19,11 @@ def test_cluster_counts(df: pd.DataFrame):
     model = KMeans()
 
     def get_silhouette_score(n_clusters):
-        logging.debug(f'Computing silhouette score for {n_clusters} clusters')
+        logging.debug(f"Computing silhouette score for {n_clusters} clusters")
         model.set_params(n_clusters=n_clusters)
         model.fit(df)
         score = metrics.silhouette_score(df, model.labels_)
-        logging.info(f'Silhouette score for {n_clusters} clusters: {score}')
+        logging.info(f"Silhouette score for {n_clusters} clusters: {score}")
         return score
 
     cluster_counts = range(2, math.ceil(df.shape[0] / 2.5), math.ceil(df.shape[0] / 2.5 / 30))
@@ -31,8 +31,8 @@ def test_cluster_counts(df: pd.DataFrame):
     fig = px.bar(
         x=cluster_counts,
         y=silhouette_scores,
-        title='Silhouette Score vs. Cluster Count',
-        labels=dict(x='Cluster Count', y='Silhouette Score')
+        title="Silhouette Score vs. Cluster Count",
+        labels=dict(x="Cluster Count", y="Silhouette Score"),
     )
     fig.show()
 
@@ -42,11 +42,11 @@ def test_cluster_counts(df: pd.DataFrame):
 
 def test_pca(df: pd.DataFrame):
     def get_explained_variation(n: int):
-        logging.debug(f'Computing PCA with {n} components')
+        logging.debug(f"Computing PCA with {n} components")
         pca = PCA(n_components=n)
         pca.fit_transform(df)
         cum_explained_variation = np.sum(pca.explained_variance_ratio_)
-        logging.info(f'Cumulative explained variation for {n} components: {cum_explained_variation}')
+        logging.info(f"Cumulative explained variation for {n} components: {cum_explained_variation}")
         return cum_explained_variation
 
     n_options = list(range(1, min(df.shape[0], df.shape[1])))
@@ -54,8 +54,8 @@ def test_pca(df: pd.DataFrame):
     fig = px.bar(
         x=n_options,
         y=explained_variations,
-        title='Cumulative Explained Variation vs. Number of Components',
-        labels=dict(x='Number of Components', y='Cumulative Explained Variation')
+        title="Cumulative Explained Variation vs. Number of Components",
+        labels=dict(x="Number of Components", y="Cumulative Explained Variation"),
     )
     fig.show()
 
@@ -64,8 +64,7 @@ def pca_2_components(df: pd.DataFrame):
     pca = PCA(n_components=2)
     pca_result = pca.fit_transform(df)
     logging.info(
-        f'PCA for 2 components results in cumulative variance explained of: '
-        f'{np.sum(pca.explained_variance_ratio_)}'
+        f"PCA for 2 components results in cumulative variance explained of: {np.sum(pca.explained_variance_ratio_)}",
     )
     return pca, pca_result
 
@@ -76,35 +75,35 @@ def do_kmeans(df: pd.DataFrame, cluster_count: int, title: str):
     centroids = kmeans.cluster_centers_
 
     df = df.copy()
-    df['solution'] = df.index
-    df['cluster'] = kmeans.labels_
+    df["solution"] = df.index
+    df["cluster"] = kmeans.labels_
     df = df.melt(
-        id_vars=['solution', 'cluster'],
-        var_name='var',
-        value_name='value'
+        id_vars=["solution", "cluster"],
+        var_name="var",
+        value_name="value",
     )
 
-    fig = px.line(df, x='var', y='value', line_group='solution', color='cluster')
+    fig = px.line(df, x="var", y="value", line_group="solution", color="cluster")
     fig.update_layout(
-        title=title if title else 'Clustered Solutions',
-        xaxis_title='Variable',
-        yaxis_title='Position',
+        title=title if title else "Clustered Solutions",
+        xaxis_title="Variable",
+        yaxis_title="Position",
     )
     fig.write_html(f"{title or 'clustered-solutions'}-{int(time.time())}.html")
     fig.show()
 
     df = pd.DataFrame(centroids)
-    df['cluster'] = df.index
+    df["cluster"] = df.index
     df = df.melt(
-        id_vars='cluster',
-        var_name='var',
-        value_name='value'
+        id_vars="cluster",
+        var_name="var",
+        value_name="value",
     )
-    fig = px.line(df, x='var', y='value', color='cluster')
+    fig = px.line(df, x="var", y="value", color="cluster")
     fig.update_layout(
-        title=f'Centroids for Clustered Solutions',
-        xaxis_title='Variable',
-        yaxis_title='Position',
+        title=f"Centroids for Clustered Solutions",
+        xaxis_title="Variable",
+        yaxis_title="Position",
     )
     fig.show()
 
@@ -113,24 +112,28 @@ def do_kmeans(df: pd.DataFrame, cluster_count: int, title: str):
 
 def plot_clusters(cluster_data, centroids, labels, title: str):
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=cluster_data[:, 0],
-        y=cluster_data[:, 1],
-        mode='markers',
-        name='Results',
-        text=labels
-    ))
-    fig.add_trace(go.Scatter(
-        x=centroids[:, 0],
-        y=centroids[:, 1],
-        mode='markers+text',
-        name='Centroids',
-        marker=dict(color='red'),
-        text=list(range(centroids.shape[0])),
-        textposition='top center',
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=cluster_data[:, 0],
+            y=cluster_data[:, 1],
+            mode="markers",
+            name="Results",
+            text=labels,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=centroids[:, 0],
+            y=centroids[:, 1],
+            mode="markers+text",
+            name="Centroids",
+            marker=dict(color="red"),
+            text=list(range(centroids.shape[0])),
+            textposition="top center",
+        )
+    )
     fig.update_layout(
-        title=title if title else 'Clusters',
+        title=title if title else "Clusters",
     )
     fig.write_html(f"{title or 'clusters'}-{int(time.time())}.html")
     fig.show()
@@ -145,7 +148,7 @@ def cluster_in_variable_space(df: pd.DataFrame, results: FunVarResults):
     centroids, kmeans_labels = do_kmeans(
         df,
         cluster_count=optimal_cluster_count,
-        title='clustered-solutions-in-variable-space'
+        title="clustered-solutions-in-variable-space",
     )
 
     # Visualize clustering
@@ -155,7 +158,7 @@ def cluster_in_variable_space(df: pd.DataFrame, results: FunVarResults):
         cluster_data=pca_result,
         centroids=centroids_pca,
         labels=kmeans_labels,
-        title='clusters-in-variable-space'
+        title="clusters-in-variable-space",
     )
 
 
@@ -163,7 +166,7 @@ def cluster_in_objective_space(df: pd.DataFrame, results: FunVarResults):
     # Prepare data for clustering
     df_fun = df[results.fun_columns[:3]].reset_index(drop=True)
 
-    centroids, kmeans_labels = do_kmeans(df_fun, cluster_count=5, title='clustered-solutions-in-objective-space')
+    centroids, kmeans_labels = do_kmeans(df_fun, cluster_count=5, title="clustered-solutions-in-objective-space")
 
     fig = px.scatter_3d(
         df_fun,
@@ -172,36 +175,38 @@ def cluster_in_objective_space(df: pd.DataFrame, results: FunVarResults):
         z=results.fun_columns[2],
         color=kmeans_labels,
     )
-    fig.add_trace(go.Scatter3d(
-        x=centroids[:, 0],
-        y=centroids[:, 1],
-        z=centroids[:, 2],
-        mode='markers+text',
-        name='Centroids',
-        marker=dict(color='red'),
-        text=list(range(centroids.shape[0])),
-        textposition='top center',
-    ))
+    fig.add_trace(
+        go.Scatter3d(
+            x=centroids[:, 0],
+            y=centroids[:, 1],
+            z=centroids[:, 2],
+            mode="markers+text",
+            name="Centroids",
+            marker=dict(color="red"),
+            text=list(range(centroids.shape[0])),
+            textposition="top center",
+        )
+    )
     fig.update_layout(
-        title='Clusters in Objective Space',
+        title="Clusters in Objective Space",
     )
     fig.write_html(f"clusters-in-objective-space-{int(time.time())}.html")
     fig.show()
 
     df = df[results.var_columns].reset_index(drop=True)
-    df['solution'] = df.index
-    df['cluster'] = kmeans_labels
+    df["solution"] = df.index
+    df["cluster"] = kmeans_labels
     df = df.melt(
-        id_vars=['solution', 'cluster'],
-        var_name='var',
-        value_name='value'
+        id_vars=["solution", "cluster"],
+        var_name="var",
+        value_name="value",
     )
 
-    fig = px.line(df, x='var', y='value', line_group='solution', color='cluster')
+    fig = px.line(df, x="var", y="value", line_group="solution", color="cluster")
     fig.update_layout(
-        title=f'Solutions Clustered in Objective Space',
-        xaxis_title='Variable',
-        yaxis_title='Position',
+        title=f"Solutions Clustered in Objective Space",
+        xaxis_title="Variable",
+        yaxis_title="Position",
     )
     fig.write_html(f"solutions-clustered-in-objective-space-{int(time.time())}.html")
     fig.show()
@@ -215,7 +220,7 @@ def main(args: argparse.Namespace):
 
     if args.non_dominated:
         df = filter_efficient_front(results.df, results.fun_columns)
-        logging.info(f'Efficient front has {df.shape[0]} entries')
+        logging.info(f"Efficient front has {df.shape[0]} entries")
 
     cluster_in_variable_space(df, results)
     cluster_in_objective_space(df, results)
@@ -223,11 +228,11 @@ def main(args: argparse.Namespace):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('filename', type=str, nargs='+')
-    parser.add_argument('--verbose', action='store_true', default=False, help='Enable verbose logging')
-    parser.add_argument('--non-dominated', action='store_true', default=False, help='Show only non-dominated solutions')
+    parser.add_argument("filename", type=str, nargs="+")
+    parser.add_argument("--verbose", action="store_true", default=False, help="Enable verbose logging")
+    parser.add_argument("--non-dominated", action="store_true", default=False, help="Show only non-dominated solutions")
     return parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(get_args())

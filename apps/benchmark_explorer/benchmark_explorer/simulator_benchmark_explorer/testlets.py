@@ -19,9 +19,9 @@ def get_correlation(standard_reference: ReferenceMeta, evaluation_reference: Ref
     b = evaluation_material.data.copy()
 
     if len(a.index) != len(b.index):
-        raise ValueError('Index length does not match')  # TODO
+        raise ValueError("Index length does not match")  # TODO
 
-    return pearsonr(a['parameter'].values, b['parameter'].values)[0]  # TODO make work with more parameters
+    return pearsonr(a["parameter"].values, b["parameter"].values)[0]  # TODO make work with more parameters
 
 
 class CorrelationTestlet(Testlet):
@@ -34,9 +34,9 @@ class CorrelationTestlet(Testlet):
 
     def evaluate(self, standard_reference: ReferenceMeta):
         if standard_reference.identifier not in self.evaluation.references:
-            return None, f'-'
+            return None, f"-"
         value = get_correlation(standard_reference, self.evaluation.references[standard_reference.identifier])
-        return value, f'{value:.2f}'
+        return value, f"{value:.2f}"
 
     def get_result_rater(self) -> Rater:
         return RaterColorScale(minimum=0, maximum=1, color_func=red_to_green)
@@ -48,18 +48,18 @@ class SimulatorIdentifier(Testlet):
         self.evaluation = evaluation
 
     def __str__(self):
-        return 'Material'
+        return "Material"
 
     def evaluate(self, standard_reference: ReferenceMeta):
         if standard_reference.identifier not in self.evaluation.references:
-            return None, f'-'
+            return None, f"-"
         value = get_correlation(standard_reference, self.evaluation.references[standard_reference.identifier])
-        return value, f'{value:.2f}'
+        return value, f"{value:.2f}"
 
 
 class MaterialIdentifierTestlet(Testlet):
     def __str__(self):
-        return 'Material'
+        return "Material"
 
     def evaluate(self, standard_reference: ReferenceMeta):
         return str(standard_reference.material), str(standard_reference.material)
@@ -67,7 +67,7 @@ class MaterialIdentifierTestlet(Testlet):
 
 class DepositionIdentifierTestlet(Testlet):
     def __str__(self):
-        return 'Deposition'
+        return "Deposition"
 
     def evaluate(self, standard_reference: ReferenceMeta):
         return str(standard_reference.deposition), str(standard_reference.deposition)

@@ -6,8 +6,7 @@ from omegaconf import DictConfig
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import DepositionMeta
-from bmh.optimization.homogenization_problem.generator import FullSpeedGenerator, RandomEndGenerator, \
-    FixedRandomSpeedGenerator, RandomSpeedGenerator
+from bmh.optimization.homogenization_problem.generator import FullSpeedGenerator, RandomEndGenerator, FixedRandomSpeedGenerator, RandomSpeedGenerator
 from bmh.optimization.optimization import DepositionOptimizer
 from bmh_apps.helpers.bed_size import get_bed_size
 from jmetalpy_extensions.util.generator import MultiGenerator
@@ -37,7 +36,7 @@ from jmetalpy_extensions.util.generator import MultiGenerator
 # cs.store(group="optimization/objectives", name="base_objective_config", node=ObjectiveConfig)
 
 
-@hydra.main(version_base='1.1', config_path='conf', config_name='config')
+@hydra.main(version_base="1.1", config_path="conf", config_name="config")
 def main(cfg: DictConfig):
     benchmark = BenchmarkData(cfg.benchmark_path)
     benchmark.read_base()
@@ -69,17 +68,21 @@ def main(cfg: DictConfig):
     optimizer.run(
         material=material,
         variables=cfg.optimization.variable_count,
-        population_generator=MultiGenerator([
-            # mixed starting population with standard strategies (Chevron), random solutions and memory
-            # good start but no extraordinary solutions
-            (RandomGenerator(), 5),
-            (FullSpeedGenerator(), 1),
-            (RandomEndGenerator(), 5),
-            (FixedRandomSpeedGenerator(), 5),
-            (RandomSpeedGenerator(), 1)
-        ]) if cfg.optimization.precondition_population else None,
+        population_generator=MultiGenerator(
+            [
+                # mixed starting population with standard strategies (Chevron), random solutions and memory
+                # good start but no extraordinary solutions
+                (RandomGenerator(), 5),
+                (FullSpeedGenerator(), 1),
+                (RandomEndGenerator(), 5),
+                (FixedRandomSpeedGenerator(), 5),
+                (RandomSpeedGenerator(), 1),
+            ]
+        )
+        if cfg.optimization.precondition_population
+        else None,
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

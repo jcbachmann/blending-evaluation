@@ -53,7 +53,4 @@ class TestFastDominanceComparator(TestCase):
             s1.objectives = v1
             s2 = Solution(number_of_variables=0, number_of_objectives=len(v2))
             s2.objectives = v2
-            self.assertEqual(
-                dc.compare(s1, s2),
-                fdc.compare(s1, s2)
-            )
+            self.assertEqual(dc.compare(s1, s2), fdc.compare(s1, s2))

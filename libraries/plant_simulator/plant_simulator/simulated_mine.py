@@ -48,7 +48,7 @@ class SimulatedMine(MaterialSource):
             tph = self.tph_current
             q = 0 if self.currently_unavailable else self.q_current
 
-            self.logger.debug(f'Source {self.label}: ({tph:.1f}, {q:.1f})')
+            self.logger.debug(f"Source {self.label}: ({tph:.1f}, {q:.1f})")
             self._sample = (tph, q)
             yield tph, q
 

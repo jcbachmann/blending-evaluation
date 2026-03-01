@@ -6,7 +6,7 @@ from jmetal.core.problem import Problem
 from jmetal.core.solution import Solution
 from jmetal.util.generator import Generator
 
-R = TypeVar('R')
+R = TypeVar("R")
 
 
 class RandomChoiceInjectorGenerator(Generator):

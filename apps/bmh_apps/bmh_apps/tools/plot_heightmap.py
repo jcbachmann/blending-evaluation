@@ -12,7 +12,7 @@ def process_file(filename):
     depth = 0
     z = []
     with open(filename) as f:
-        for line in csv.reader(f, delimiter='\t'):
+        for line in csv.reader(f, delimiter="\t"):
             length += 1
             depth = len(line)
             z.append([float(i) for i in line])
@@ -30,8 +30,8 @@ def main(args):
     process_file(args.filename)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='script converting height map to png visualization')
-    parser.add_argument('filename', type=str, help='heightmap file to process')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="script converting height map to png visualization")
+    parser.add_argument("filename", type=str, help="heightmap file to process")
 
     main(parser.parse_args())
