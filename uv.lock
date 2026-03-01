@@ -94,6 +94,9 @@ dev = [
 name = "blending-simulator-lib"
 version = "0.0.1"
 source = { editable = "libraries/blending_simulator_lib" }
+dependencies = [
+    { name = "numpy" },
+]
 
 [package.optional-dependencies]
 dev = [
@@ -101,7 +104,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pybind11-stubgen", marker = "extra == 'dev'" }]
+requires-dist = [
+    { name = "numpy" },
+    { name = "pybind11-stubgen", marker = "extra == 'dev'" },
+]
 provides-extras = ["dev"]
 
 [[package]]
@@ -119,7 +125,9 @@ version = "0.0.1"
 source = { editable = "libraries/bmh" }
 dependencies = [
     { name = "blending-simulator-lib" },
+    { name = "bokeh" },
     { name = "jmetalpy" },
+    { name = "jmetalpy-extensions" },
     { name = "numpy" },
     { name = "pandas" },
 ]
@@ -139,11 +147,13 @@ distributedevaluator = [
 [package.metadata]
 requires-dist = [
     { name = "blending-simulator-lib", editable = "libraries/blending_simulator_lib" },
+    { name = "bokeh" },
     { name = "bokeh", marker = "extra == 'bokehplotserver'" },
     { name = "dask", marker = "extra == 'daskevaluator'" },
     { name = "dask", marker = "extra == 'distributedevaluator'" },
     { name = "distributed", marker = "extra == 'distributedevaluator'" },
     { name = "jmetalpy" },
+    { name = "jmetalpy-extensions", editable = "libraries/jmetalpy_extensions" },
     { name = "numpy" },
     { name = "pandas" },
 ]
@@ -156,7 +166,10 @@ source = { editable = "apps/bmh_apps" }
 dependencies = [
     { name = "bmh" },
     { name = "dash" },
+    { name = "dash-bootstrap-components" },
     { name = "hydra-core" },
+    { name = "jmetalpy" },
+    { name = "jmetalpy-extensions" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "omegaconf" },
@@ -165,13 +178,17 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "bmh", editable = "libraries/bmh" },
     { name = "dash" },
+    { name = "dash-bootstrap-components" },
     { name = "hydra-core" },
+    { name = "jmetalpy" },
+    { name = "jmetalpy-extensions", editable = "libraries/jmetalpy_extensions" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "omegaconf" },
@@ -180,6 +197,7 @@ requires-dist = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "seaborn" },
+    { name = "tqdm" },
 ]
 
 [[package]]
@@ -452,6 +470,18 @@ wheels = [
 ]
 
 [[package]]
+name = "dash-bootstrap-components"
+version = "2.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dash" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cc/d4/5b7da808ff5acb3a6ca702f504d8ef05bc7d4c475b18dadefd783b1120c3/dash_bootstrap_components-2.0.4.tar.gz", hash = "sha256:c3206c0923774bbc6a6ddaa7822b8d9aa5326b0d3c1e7cd795cc975025fe2484", size = 115599, upload-time = "2025-08-20T19:42:09.449Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d6/38/1efeec8b4d741c09ccd169baf8a00c07a0176b58e418d4cd0c30dffedd22/dash_bootstrap_components-2.0.4-py3-none-any.whl", hash = "sha256:767cf0084586c1b2b614ccf50f79fe4525fdbbf8e3a161ed60016e584a14f5d1", size = 204044, upload-time = "2025-08-20T19:42:07.928Z" },
+]
+
+[[package]]
 name = "dask"
 version = "2026.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -475,6 +505,7 @@ version = "0.0.1"
 source = { editable = "libraries/data_explorer" }
 dependencies = [
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "pyqt5" },
 ]
@@ -482,6 +513,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "matplotlib" },
+    { name = "numpy" },
     { name = "pandas" },
     { name = "pyqt5" },
 ]
@@ -703,11 +735,15 @@ name = "jmetalpy-extensions"
 version = "0.0.1"
 source = { editable = "libraries/jmetalpy_extensions" }
 dependencies = [
+    { name = "dask" },
     { name = "jmetalpy" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "jmetalpy" }]
+requires-dist = [
+    { name = "dask" },
+    { name = "jmetalpy" },
+]
 
 [[package]]
 name = "joblib"
