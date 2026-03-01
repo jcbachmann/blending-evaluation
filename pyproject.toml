@@ -102,17 +102,6 @@ docstring-code-line-length = 88
 
 [tool.mypy]
 python_version = "3.12"
-mypy_path = [
-    "libraries/bmh",
-    "libraries/data_explorer",
-    "libraries/plant_simulator",
-    "libraries/jmetalpy_extensions",
-    "libraries/blending_simulator_lib/src",
-    "apps/bmh_apps",
-    "apps/benchmark_explorer",
-    "apps/solution_explorer",
-    "apps/demo_plant_simulator"
-]
 exclude = [
     "build/",
     "dist/",
