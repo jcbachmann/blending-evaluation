@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "dask",
-    "jmetalpy==1.7.0",
+    "jmetalpy==1.5.5",
 ]
 license = { text = "MIT License" }
 

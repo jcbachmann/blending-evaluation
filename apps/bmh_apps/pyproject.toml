@@ -12,7 +12,7 @@ dependencies = [
     "dash",
     "dash_bootstrap_components",
     "hydra-core",
-    "jmetalpy==1.7.0",
+    "jmetalpy==1.5.5",
     "jmetalpy_extensions",
     "matplotlib",
     "numpy",
