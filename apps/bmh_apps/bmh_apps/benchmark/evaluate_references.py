@@ -42,7 +42,7 @@ def main(args: argparse.Namespace):
         # Processing
         for _, reference in references.items():
             core.process(
-                identifier=f"{reference.identifier}-{uuid.uuid4()[:4]}",
+                identifier=f"{reference.identifier}-{str(uuid.uuid4())[:4]}",
                 material_meta=benchmark_data.materials[reference.material],
                 deposition_meta=benchmark_data.depositions[reference.deposition],
                 simulator_meta=simulator_meta,
