@@ -5,7 +5,7 @@ from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.document import Document
 from bokeh.layouts import gridplot
-from bokeh.models import ColumnDataSource, FuncTickFormatter, Range1d
+from bokeh.models import ColumnDataSource, CustomJSTickFormatter, Range1d
 
 # noinspection PyUnresolvedReferences
 from bokeh.palettes import Category10
@@ -34,7 +34,7 @@ def create_live_graphs(source, palette, columns):
     p_live_q.legend.location = "bottom_left"
     p_live_q.legend.orientation = "horizontal"
     p_live_q.legend.click_policy = "hide"
-    p_live_q.yaxis.formatter = FuncTickFormatter(
+    p_live_q.yaxis.formatter = CustomJSTickFormatter(
         code="""
         return (100 * tick).toFixed(1) + ' %'
     """
@@ -80,7 +80,7 @@ def create_stats_graphs(source, palette, p_reference, columns):
     p_stats_q.legend.location = "bottom_left"
     p_stats_q.legend.orientation = "horizontal"
     p_stats_q.legend.click_policy = "hide"
-    p_stats_q.yaxis.formatter = FuncTickFormatter(
+    p_stats_q.yaxis.formatter = CustomJSTickFormatter(
         code="""
             return (100 * tick).toFixed(1) + ' %'
         """
