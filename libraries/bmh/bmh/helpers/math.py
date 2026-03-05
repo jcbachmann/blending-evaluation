@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 
-def stdev(values: np.array):
+def stdev(values: np.ndarray):
     variance = np.average((values - np.average(values)) ** 2)
     return math.sqrt(variance)
 

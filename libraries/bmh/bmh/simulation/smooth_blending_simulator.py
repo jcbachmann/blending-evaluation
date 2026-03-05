@@ -8,7 +8,7 @@ def gaussian(x, sigma):
 
 
 class SmoothBlendingSimulator(BlendingSimulator):
-    def __init__(self, bed_size_x: float, buffer_size: int, sigma_x: float, **kwargs):
+    def __init__(self, bed_size_x: float, buffer_size: int, sigma_x: float, **_kwargs):
         super().__init__(bed_size_x, 0)
         self.buffer_size = buffer_size
         self.sigma_x = sigma_x

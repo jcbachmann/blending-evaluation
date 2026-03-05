@@ -27,10 +27,10 @@ def test_simulator(simulator_meta: SimulatorMeta):
     # Create demo simulator to test if params are all accepted
     # If no exception occurs everything seems to be fine
     logger.debug("Testing creation of simulator")
-    sim = sim_type(**sim_params_copy)
+    _sim = sim_type(**sim_params_copy)
 
     logger.debug("Testing deletion of simulator")
-    del sim
+    del _sim
 
 
 def compute_sigma(material_meta: MaterialMeta):

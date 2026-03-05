@@ -101,7 +101,6 @@ def compute_deposition2(
     for layer in range(layers):
         height_before_this_layer = get_stockpile_height(layer * volume_per_layer, core_length)
         height_including_this_layer = get_stockpile_height((layer + 1) * volume_per_layer, core_length)
-        height_only_this_layer = height_including_this_layer - height_before_this_layer
         offset = total_height - height_including_this_layer
         t_start = layer * time_per_layer
         f = 1.0
