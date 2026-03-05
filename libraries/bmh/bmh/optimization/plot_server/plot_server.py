@@ -44,7 +44,7 @@ class PlotServerInterface(ABC):
         pass
 
     @abstractmethod
-    def get_progress(self) -> dict[str, float]:
+    def get_progress(self) -> dict[str, float] | None:
         pass
 
     @abstractmethod

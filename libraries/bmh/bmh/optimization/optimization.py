@@ -466,11 +466,12 @@ class DepositionOptimizer(PlotServerInterface):
 
         raise RuntimeError("DepositionOptimizer not initialized")
 
-    def get_progress(self) -> dict[str, float]:
+    def get_progress(self) -> dict[str, Any] | None:
         if self.deposition_prefix:
             return {
                 "t_start": self.deposition_prefix.meta.time,
             }
+        return None
 
     def get_parameter_labels(self) -> list[str]:
         return self.parameter_labels

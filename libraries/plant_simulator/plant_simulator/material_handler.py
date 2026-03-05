@@ -1,11 +1,11 @@
 import logging
 import random
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 import numpy as np
 
 
-class MaterialHandler:
+class MaterialHandler(ABC):
     dot = None
 
     def __init__(self, label: str, plant, shape=None):
