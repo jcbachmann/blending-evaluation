@@ -8,7 +8,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from .plot_quality_indicators import read_quality_indicators
+from bmh_apps.front_evolution.plot_quality_indicators import read_quality_indicators
 
 
 def main(args: argparse.Namespace):

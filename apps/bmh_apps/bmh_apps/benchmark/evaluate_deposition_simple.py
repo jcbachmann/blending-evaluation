@@ -15,7 +15,7 @@ from bmh.helpers.identifiers import get_identifier
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 from pandas import DataFrame
 
-from ..helpers.configure_logging import configure_logging
+from bmh_apps.helpers.configure_logging import configure_logging
 
 
 def compute_deposition1(

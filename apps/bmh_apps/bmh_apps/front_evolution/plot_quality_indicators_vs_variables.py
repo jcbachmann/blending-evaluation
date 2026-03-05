@@ -9,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from _plotly_utils.colors import sample_colorscale
 
-from .plot_quality_indicators import read_quality_indicators
+from bmh_apps.front_evolution.plot_quality_indicators import read_quality_indicators
 
 
 def main(args: argparse.Namespace):

@@ -5,8 +5,8 @@ import pandas as pd
 import plotly.express as px
 from sklearn.manifold import TSNE
 
-from .fun_var_math import filter_efficient_front, filter_relevant_region
-from .fun_var_results import FunVarResults
+from bmh_apps.funvar.fun_var_math import filter_efficient_front, filter_relevant_region
+from bmh_apps.funvar.fun_var_results import FunVarResults
 
 
 def filter_data(df: pd.DataFrame, fun_columns: list[str]):

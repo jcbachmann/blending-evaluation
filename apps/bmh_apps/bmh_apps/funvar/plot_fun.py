@@ -7,8 +7,8 @@ import uuid
 import plotly.express as px
 import plotly.graph_objects as go
 
-from .fun_var_math import filter_efficient_front
-from .fun_var_results import FunVarResults
+from bmh_apps.funvar.fun_var_math import filter_efficient_front
+from bmh_apps.funvar.fun_var_results import FunVarResults
 
 
 def plot_fun_1d(results: FunVarResults):

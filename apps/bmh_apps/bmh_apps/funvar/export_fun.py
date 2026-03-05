@@ -3,8 +3,8 @@ import logging
 import os
 import uuid
 
-from .fun_var_math import filter_efficient_front
-from .fun_var_results import FunVarResults
+from bmh_apps.funvar.fun_var_math import filter_efficient_front
+from bmh_apps.funvar.fun_var_results import FunVarResults
 
 
 def main(args: argparse.Namespace):

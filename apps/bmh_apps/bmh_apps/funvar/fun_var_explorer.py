@@ -7,8 +7,8 @@ import plotly.graph_objects as go
 from dash import dcc, html
 from dash.dependencies import Input, Output, State
 
-from .fun_var_math import filter_efficient_front
-from .fun_var_results import FunVarResults
+from bmh_apps.funvar.fun_var_math import filter_efficient_front
+from bmh_apps.funvar.fun_var_results import FunVarResults
 
 
 def get_fun_figure(results: FunVarResults, selected_points, selected_range, previous_visible):

@@ -8,7 +8,7 @@ from plant_simulator.material_handler import MaterialHandler
 from plant_simulator.plant import Plant
 from plant_simulator.plot_server import PlotServer
 
-from .my_demo_plant import MyDemoPlant
+from demo_plant_simulator.my_demo_plant import MyDemoPlant
 
 
 def main(args):

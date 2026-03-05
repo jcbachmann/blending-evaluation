@@ -3,7 +3,7 @@ import logging
 
 import plotly.express as px
 
-from .fun_var_results import FunVarResults
+from bmh_apps.funvar.fun_var_results import FunVarResults
 
 
 def get_opacity(count: int) -> float:

@@ -11,8 +11,8 @@ from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-from .fun_var_math import filter_efficient_front
-from .fun_var_results import FunVarResults
+from bmh_apps.funvar.fun_var_math import filter_efficient_front
+from bmh_apps.funvar.fun_var_results import FunVarResults
 
 
 def test_cluster_counts(df: pd.DataFrame):

@@ -8,7 +8,7 @@ import os
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
 
-from ..helpers.configure_logging import configure_logging
+from bmh_apps.helpers.configure_logging import configure_logging
 
 META_JSON = "meta.json"
 

@@ -2,7 +2,7 @@ import argparse
 
 import matplotlib.pyplot as plt
 
-from .roundness_evaluator import RoundnessEvaluator
+from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
 
 
 def main(args):

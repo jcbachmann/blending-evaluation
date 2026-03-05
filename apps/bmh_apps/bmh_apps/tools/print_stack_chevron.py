@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import argparse
 
-from ..chevron.chevron_path import chevron_path
-from ..helpers.material_path_io import merge_material_path, print_merged_material_path, read_material
+from bmh_apps.chevron.chevron_path import chevron_path
+from bmh_apps.helpers.material_path_io import merge_material_path, print_merged_material_path, read_material
 
 
 def main(args):

@@ -5,7 +5,7 @@ import pandas as pd
 from bmh.benchmark.material_deposition import Material
 from numpy.testing import assert_almost_equal
 
-from ..resampling import resample
+from bmh_apps.tools.resampling import resample
 
 
 class TestResampling(unittest.TestCase):
