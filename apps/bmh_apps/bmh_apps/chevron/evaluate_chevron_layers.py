@@ -149,7 +149,7 @@ def main(args):
     results = DataFrame()
     for layers in np.linspace(1, 100, 10):
         df = simulate(args, layers)
-        results = results.append(get_results(meta=layers, data=df))
+        results = pd.concat([results, get_results(meta=layers, data=df)])
 
     reference = get_reference(args.material)
     plot_results(reference, results)

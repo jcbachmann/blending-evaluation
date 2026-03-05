@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
 from bmh.helpers.identifiers import get_identifier
@@ -162,11 +163,7 @@ def main(path: str, material_identifier: str, verbose: bool):
     #         functools.partial(compute, material=material, bed_size_x=bed_size_x, bed_size_z=bed_size_z),
     #         range(1, 400)
     #     )
-    results_list = [compute(layers, material=material, bed_size_x=bed_size_x, bed_size_z=bed_size_z) for layers in range(1, 400)]
-
-    results_df = DataFrame()
-    for results in results_list:
-        results_df = results_df.append(results)
+    results_df = pd.concat([compute(layers, material=material, bed_size_x=bed_size_x, bed_size_z=bed_size_z) for layers in range(1, 400)])
 
     reference = get_results(meta=0, data=material.data, c_values=material.get_parameter_columns()[0])
     plot_results(reference, results_df)

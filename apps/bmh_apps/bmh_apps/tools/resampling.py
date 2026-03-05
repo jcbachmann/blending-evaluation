@@ -18,14 +18,14 @@ def resample(material: Material, rule: str):
 
     # Preparation
     pad = {col: [0.0] for col in df.columns}
-    df = df.append(pd.DataFrame(pad)).sort_values(by=["timestamp"])
+    df = pd.concat([df, pd.DataFrame(pad)]).sort_values(by=["timestamp"])
 
     max_timestamp = df["timestamp"].values[-1]
     resampled_max_timestamp = get_resampled_max_timestamp(df.copy(), rule)
 
     if max_timestamp < resampled_max_timestamp:
         pad["timestamp"][0] = resampled_max_timestamp
-        df = df.append(pd.DataFrame(pad))
+        df = pd.concat([df, pd.DataFrame(pad)])
 
     df["vpt"] = df["volume"] / (df["timestamp"] - df["timestamp"].shift(+1))
     df = df.drop(["volume"], axis=1)

@@ -367,7 +367,7 @@ class MaterialDeposition:
 
         waits = dep_df.copy()
         waits["timestamp"] += dep_df["t_wait"]
-        dep_df = dep_df.append(waits, ignore_index=True)
+        dep_df = pd.concat([dep_df, waits], ignore_index=True)
         dep_df = dep_df.sort_values(["timestamp"])
 
         dep_df = dep_df[["timestamp", "x", "z"]].copy()

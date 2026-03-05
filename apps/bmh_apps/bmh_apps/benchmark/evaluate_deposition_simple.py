@@ -43,25 +43,26 @@ def compute_deposition1(
         # height_only_this_layer = height_including_this_layer - height_before_this_layer
         t_start = layer * time_per_layer
         x = x_min if layer % 2 == 0 else x_max
-        data = data.append(
-            DataFrame({"timestamp": [t_start], "x": [x], "z": [z_center]}),
+        data = pd.concat(
+            [data, DataFrame({"timestamp": [t_start], "x": [x], "z": [z_center]})],
             ignore_index=True,
             sort=False,
         )
         # f = pow(height_including_this_layer / height_only_this_layer, 0.288)
-        # data = data.append(
-        #     DataFrame({'timestamp': [t_start + time_before_start * f], 'x': [x], 'z': [z_center]}),
-        #     ignore_index=True, sort=False
+        # data = pd.concat(
+        #     [data, DataFrame({'timestamp': [t_start + time_before_start * f], 'x': [x], 'z': [z_center]})],
+        #     ignore_index=True,
+        #     sort=False,
         # )
         x = x_max if layer % 2 == 0 else x_min
         # f = pow(height_including_this_layer / height_only_this_layer, 0.7)
-        # data = data.append(
-        #     DataFrame({'timestamp': [t_start + time_per_layer - time_before_end * f], 'x': [x],
-        #                'z': [z_center]}),
-        #     ignore_index=True, sort=False
+        # data = pd.concat(
+        #     [data, DataFrame({'timestamp': [t_start + time_per_layer - time_before_end * f], 'x': [x], 'z': [z_center]})],
+        #     ignore_index=True,
+        #     sort=False,
         # )
-        data = data.append(
-            DataFrame({"timestamp": [t_start + time_per_layer], "x": [x], "z": [z_center]}),
+        data = pd.concat(
+            [data, DataFrame({"timestamp": [t_start + time_per_layer], "x": [x], "z": [z_center]})],
             ignore_index=True,
             sort=False,
         )

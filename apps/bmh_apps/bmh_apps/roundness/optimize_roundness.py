@@ -4,6 +4,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from pandas import DataFrame
 from scipy.optimize import fminbound
 
@@ -28,7 +29,7 @@ class OptEvaluator:
             results,
             columns=["likelihood", "volume", "run_group", "run", "results"],
         )
-        self.df = self.df.append(df_i, ignore_index=True)
+        self.df = pd.concat([self.df, df_i], ignore_index=True)
 
         OptEvaluator.evaluations += 1
 
@@ -115,7 +116,7 @@ def calculate_optimized(args):
 
     for volume in args.volumes:
         _x_opt, df = optimize_single(volume, args)
-        all_df = all_df.append(df, ignore_index=True)
+        all_df = pd.concat([all_df, df], ignore_index=True)
 
     # Visualize results
     visualize(all_df)
