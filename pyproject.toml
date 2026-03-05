@@ -21,6 +21,7 @@ dev = [
     "pybind11-stubgen",
     "ruff",
     "mypy",
+    "pytest",
     "scipy-stubs",
 ]
 
