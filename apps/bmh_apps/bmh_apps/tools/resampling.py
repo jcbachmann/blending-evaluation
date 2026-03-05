@@ -9,7 +9,7 @@ def get_resampled_max_timestamp(df: pd.DataFrame, rule: str) -> float:
 
     df = df.resample(rule, closed="right", label="right").sum()
     df = df.reset_index()
-    return df["timestamp"].values[-1].astype(int) / 10**9
+    return df["timestamp"].values[-1].astype(int)
 
 
 def resample(material: Material, rule: str):
@@ -52,7 +52,7 @@ def resample(material: Material, rule: str):
 
     # Cleanup
     df = df.reset_index()
-    df["timestamp"] = df["timestamp"].astype(int) // 10**9
+    df["timestamp"] = df["timestamp"].astype(int)
     df["volume"] = df["vpt"] * (df["timestamp"] - df["timestamp"].shift(+1))
     df = df.drop(0, axis=0)
     df = df.drop(["vpt"], axis=1)
