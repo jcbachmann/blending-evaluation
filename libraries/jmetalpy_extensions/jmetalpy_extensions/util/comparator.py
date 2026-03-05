@@ -10,7 +10,7 @@ S = TypeVar("S")
 class FastDominanceComparator(Comparator):
     def compare(self, solution1: Solution, solution2: Solution) -> int:
         result = 0
-        for v1, v2 in zip(solution1.objectives, solution2.objectives):
+        for v1, v2 in zip(solution1.objectives, solution2.objectives, strict=False):
             if v1 > v2:
                 if result == -1:
                     return 0

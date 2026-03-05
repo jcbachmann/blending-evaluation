@@ -1,22 +1,24 @@
 #!/usr/bin/env python
 import unittest
 
+import pytest
+
 from ..identifiers import get_identifier, get_identifiers
 
 
 class TestHelpers(unittest.TestCase):
     def test_get_identifier(self):
-        self.assertEqual("foobar", get_identifier("foobar"))
+        assert get_identifier("foobar") == "foobar"
 
     def test_last_empty(self):
-        self.assertEqual("foo", get_identifier("./foo/"))
+        assert get_identifier("./foo/") == "foo"
 
     def test_path(self):
-        self.assertEqual("bar", get_identifier("foo/bar"))
+        assert get_identifier("foo/bar") == "bar"
 
     def test_empty(self):
-        with self.assertRaises(IndexError):
+        with pytest.raises(IndexError):
             get_identifier("")
 
     def test_get_identifiers(self):
-        self.assertEqual(["foobar", "foo", "bar"], get_identifiers(["foobar", "./foo/", "foo/bar"]))
+        assert get_identifiers(["foobar", "./foo/", "foo/bar"]) == ["foobar", "foo", "bar"]

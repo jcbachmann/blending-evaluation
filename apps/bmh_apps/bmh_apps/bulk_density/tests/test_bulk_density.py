@@ -35,12 +35,12 @@ class TestBulkDensity(unittest.TestCase):
         height_map = []
         size = 1.0
         volume = get_height_map_volume(height_map, size)
-        self.assertEqual(volume, 0)
+        assert volume == 0
 
     def test_zero(self):
         size = 1.0
-        self.assertEqual(get_height_map_volume([[0]], size), 0)
-        self.assertEqual(get_height_map_volume([[0, 0], [0, 0]], size), 0)
+        assert get_height_map_volume([[0]], size) == 0
+        assert get_height_map_volume([[0, 0], [0, 0]], size) == 0
 
     def test_corners_up(self):
         size = 1.0

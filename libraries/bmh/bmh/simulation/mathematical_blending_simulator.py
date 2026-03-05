@@ -23,4 +23,4 @@ class MathematicalBlendingSimulator(BlendingSimulator):
             positions=self.positions,
             bed_width=self.buffer_size,
         )
-        return [[p, v, q] for p, v, q in zip([(i + 1) / self.buffer_size * self.bed_size_x for i in range(self.buffer_size)], volumes, qualities)]
+        return [[p, v, q] for p, v, q in zip([(i + 1) / self.buffer_size * self.bed_size_x for i in range(self.buffer_size)], volumes, qualities, strict=False)]

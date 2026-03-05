@@ -18,7 +18,7 @@ def get_fun_figure(results: FunVarResults, selected_points, selected_range, prev
             x=results.df[results.fun_columns[0]],
             y=results.df[results.fun_columns[1]],
             mode="markers",
-            marker=dict(size=5),
+            marker={"size": 5},
             selectedpoints=selected_points,
             customdata=results.df.index,
             visible=previous_visible[0] if len(previous_visible) > 0 else True,
@@ -32,12 +32,12 @@ def get_fun_figure(results: FunVarResults, selected_points, selected_range, prev
             x=efficient_df[results.fun_columns[0]],
             y=efficient_df[results.fun_columns[1]],
             mode="markers",
-            marker=dict(
-                size=8,
-                color="rgba(0, 0, 0, 0)",
-                line_width=1,
-                line_color="red",
-            ),
+            marker={
+                "size": 8,
+                "color": "rgba(0, 0, 0, 0)",
+                "line_width": 1,
+                "line_color": "red",
+            },
             customdata=efficient_df.index,
             visible=previous_visible[1] if len(previous_visible) > 1 else True,
             name="Efficient Front",
@@ -51,24 +51,24 @@ def get_fun_figure(results: FunVarResults, selected_points, selected_range, prev
         xaxis_range=[0, 2],
         yaxis_range=[0, 2],
         height=800,
-        legend=dict(
-            yanchor="top",
-            y=0.99,
-            xanchor="right",
-            x=0.99,
-        ),
+        legend={
+            "yanchor": "top",
+            "y": 0.99,
+            "xanchor": "right",
+            "x": 0.99,
+        },
     )
 
     if selected_range:
         fig.add_shape(
-            dict(
-                type="rect",
-                line=dict(width=1, dash="dot", color="darkgrey"),
-                x0=selected_range["x"][0],
-                x1=selected_range["x"][1],
-                y0=selected_range["y"][0],
-                y1=selected_range["y"][1],
-            )
+            {
+                "type": "rect",
+                "line": {"width": 1, "dash": "dot", "color": "darkgrey"},
+                "x0": selected_range["x"][0],
+                "x1": selected_range["x"][1],
+                "y0": selected_range["y"][0],
+                "y1": selected_range["y"][1],
+            }
         )
 
     return fig
@@ -111,19 +111,19 @@ def main(args: argparse.Namespace):
     )
 
     @app.callback(
-        output=dict(g1=Output("g1", "figure"), g2=Output("g2", "figure")),
-        inputs=dict(selection=Input("g1", "selectedData")),
-        state=dict(previous_figure=State("g1", "figure")),
+        output={"g1": Output("g1", "figure"), "g2": Output("g2", "figure")},
+        inputs={"selection": Input("g1", "selectedData")},
+        state={"previous_figure": State("g1", "figure")},
     )
     def callback(selection, previous_figure):
-        previous_visible = [trace["visible"] if "visible" in trace.keys() else True for trace in previous_figure["data"]] if previous_figure else []
+        previous_visible = [trace.get("visible", True) for trace in previous_figure["data"]] if previous_figure else []
         selected_points = [p["customdata"] for p in selection["points"] if "customdata" in p] if selection else []
         selected_range = selection["range"] if selection and "range" in selection else None
 
-        return dict(
-            g1=get_fun_figure(results, selected_points, selected_range, previous_visible),
-            g2=get_var_figure(results, selected_points),
-        )
+        return {
+            "g1": get_fun_figure(results, selected_points, selected_range, previous_visible),
+            "g2": get_var_figure(results, selected_points),
+        }
 
     app.run_server(debug=True)
 

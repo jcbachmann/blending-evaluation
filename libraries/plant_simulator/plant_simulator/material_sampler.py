@@ -9,7 +9,7 @@ from .material_handler import MaterialHandler
 
 
 def average_sample_group(sample_group: list[list[float]]) -> list[float]:
-    regroup: list[list[float]] = list(map(list, zip(*sample_group)))
+    regroup: list[list[float]] = list(map(list, zip(*sample_group, strict=False)))
 
     average = [np.average(regroup[0])]
     for i in range(1, len(regroup), 2):
@@ -21,7 +21,7 @@ def average_sample_group(sample_group: list[list[float]]) -> list[float]:
 def calculate_stats(start, samples, columns) -> dict[str, float]:
     logger = logging.getLogger(__name__)
     logger.debug("Calculating stats")
-    regroup: list[list[float]] = list(map(list, zip(*samples)))
+    regroup: list[list[float]] = list(map(list, zip(*samples, strict=False)))
 
     data = [
         ("start", start),
@@ -100,7 +100,7 @@ class MaterialSampler:
         # Acquire data
         sample_row = [time]
 
-        for label, material_handler in self.material_handlers:
+        for _label, material_handler in self.material_handlers:
             material_handler_samples = material_handler.sample()
             for tph, quality in material_handler_samples:
                 sample_row.extend([tph, quality])

@@ -109,20 +109,20 @@ def main(args: argparse.Namespace):
         )
 
         layout = go.Layout(
-            legend=dict(
-                orientation="h",
-                x=0,
-                y=1,
-                xanchor="left",
-                yanchor="top",
-            ),
-            margin=dict(l=0, r=0, b=0, t=0),
-            scene=dict(
-                xaxis=dict(range=[0, 2], title=objective_labels[0]),
-                yaxis=dict(range=[0, 2], title=objective_labels[1]),
-                zaxis=dict(range=[0, 2], title=objective_labels[2]),
-                aspectmode="cube",
-            ),
+            legend={
+                "orientation": "h",
+                "x": 0,
+                "y": 1,
+                "xanchor": "left",
+                "yanchor": "top",
+            },
+            margin={"l": 0, "r": 0, "b": 0, "t": 0},
+            scene={
+                "xaxis": {"range": [0, 2], "title": objective_labels[0]},
+                "yaxis": {"range": [0, 2], "title": objective_labels[1]},
+                "zaxis": {"range": [0, 2], "title": objective_labels[2]},
+                "aspectmode": "cube",
+            },
             hovermode="closest",
             uirevision=True,
         )
@@ -134,13 +134,13 @@ def main(args: argparse.Namespace):
             y=reference_df[objective_labels[1]],
             z=reference_df[objective_labels[2]],
             mode="markers",
-            marker=dict(
-                color="black",
-                size=2,
-                symbol="circle",
-                line=dict(color="#236FA4", width=1),
-                opacity=0.8,
-            ),
+            marker={
+                "color": "black",
+                "size": 2,
+                "symbol": "circle",
+                "line": {"color": "#236FA4", "width": 1},
+                "opacity": 0.8,
+            },
             name="Reference front",
         )
         data.append(trace)
@@ -150,16 +150,16 @@ def main(args: argparse.Namespace):
             y=[1],
             z=[1],
             mode="markers",
-            marker=dict(
-                color="red",
-                size=8,
-                symbol="circle",
-                line=dict(
-                    color="#236FA4",
-                    width=1,
-                ),
-                opacity=0.8,
-            ),
+            marker={
+                "color": "red",
+                "size": 8,
+                "symbol": "circle",
+                "line": {
+                    "color": "#236FA4",
+                    "width": 1,
+                },
+                "opacity": 0.8,
+            },
             name="Reference point",
         )
         data.append(trace)
@@ -169,23 +169,22 @@ def main(args: argparse.Namespace):
             y=fun_df[objective_labels[1]],
             z=fun_df[objective_labels[2]],
             mode="markers",
-            marker=dict(
-                color="#236FA4",
-                size=4,
-                symbol="circle",
-                line=dict(
-                    color="#236FA4",
-                    width=1,
-                ),
-                opacity=0.8,
-            ),
+            marker={
+                "color": "#236FA4",
+                "size": 4,
+                "symbol": "circle",
+                "line": {
+                    "color": "#236FA4",
+                    "width": 1,
+                },
+                "opacity": 0.8,
+            },
             name="Front approximation",
         )
         data.append(trace)
 
-        fig = go.Figure(data=data, layout=layout)
+        return go.Figure(data=data, layout=layout)
 
-        return fig
 
     @app.callback(
         Output("quality-indicators", "figure"),
@@ -195,14 +194,14 @@ def main(args: argparse.Namespace):
         quality_indicators_df = pd.read_csv(os.path.join(args.experiment[get_row(active_cell)], "quality_indicators.csv"))
         fig = px.line(quality_indicators_df)
         fig.update_layout(
-            legend=dict(
-                orientation="h",
-                x=0,
-                y=1,
-                xanchor="left",
-                yanchor="top",
-            ),
-            margin=dict(l=0, r=0, b=0, t=0),
+            legend={
+                "orientation": "h",
+                "x": 0,
+                "y": 1,
+                "xanchor": "left",
+                "yanchor": "top",
+            },
+            margin={"l": 0, "r": 0, "b": 0, "t": 0},
             uirevision=True,
         )
         fig.update_yaxes(range=[0, 0.5])

@@ -21,6 +21,7 @@ license = { text = "MIT License" }
 BokehPlotServer = ["bokeh"]
 DaskEvaluator = ["dask"]
 DistributedEvaluator = ["dask", "distributed"]
+dev = ["pytest"]
 
 [build-system]
 requires = ["setuptools>=61.0"]

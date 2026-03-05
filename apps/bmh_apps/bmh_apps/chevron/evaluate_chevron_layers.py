@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import argparse
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,13 +9,15 @@ from bmh.benchmark.material_deposition import Deposition, Material, MaterialDepo
 from bmh.helpers.math import weighted_avg_and_std
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from matplotlib import gridspec
-from matplotlib.axes import Axes
 from matplotlib.ticker import ScalarFormatter
 from pandas import DataFrame
 from seaborn.palettes import color_palette
 
 from bmh_apps.chevron.chevron_path import chevron_path
 from bmh_apps.helpers.material_path_io import read_material
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 
 
 def simulate(args, layers) -> DataFrame:

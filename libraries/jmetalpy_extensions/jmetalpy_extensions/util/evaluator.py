@@ -1,16 +1,13 @@
+import contextlib
 import functools
 from abc import ABC, abstractmethod
 from multiprocessing import Pool
 
-try:
+with contextlib.suppress(ImportError):
     import dask
-except ImportError:
-    pass
 
-try:
+with contextlib.suppress(ImportError):
     from dask.distributed import Client, LocalCluster
-except ImportError:
-    pass
 
 from jmetal.core.problem import Problem
 from jmetal.util.evaluator import Evaluator, S

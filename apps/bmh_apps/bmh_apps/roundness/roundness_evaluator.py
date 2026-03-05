@@ -95,7 +95,7 @@ class RoundnessEvaluator:
     def add_from_heights(self, heights: list[list[float]]):
         # Calculate weighted center
         self.cx = np.average(range(len(heights)), weights=[sum(col) for col in heights])
-        self.cz = np.average(range(len(heights[0])), weights=[sum(row) for row in list(map(list, zip(*heights)))])
+        self.cz = np.average(range(len(heights[0])), weights=[sum(row) for row in list(map(list, zip(*heights, strict=False)))])
 
         self.dist_seg_count = int(math.hypot(self.cx, self.cz) / self.dist_seg_size + 0.5)
 
@@ -117,8 +117,8 @@ class RoundnessEvaluator:
 
         for shape in self.shapes_range:
             if min_shape is not None:
-                min_shape = [min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for entry, min_shape_entry in zip(shape, min_shape)]
-                max_shape = [max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for entry, max_shape_entry in zip(shape, max_shape)]
+                min_shape = [min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for entry, min_shape_entry in zip(shape, min_shape, strict=False)]
+                max_shape = [max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for entry, max_shape_entry in zip(shape, max_shape, strict=False)]
             else:
                 min_shape = [entry[1] / entry[0] if entry[0] > 0 else 0 for entry in shape]
                 max_shape = list(min_shape)
@@ -138,8 +138,8 @@ class RoundnessEvaluator:
 
         for shape in self.shapes_range:
             if min_shape is not None:
-                min_shape = [min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for entry, min_shape_entry in zip(shape, min_shape)]
-                max_shape = [max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for entry, max_shape_entry in zip(shape, max_shape)]
+                min_shape = [min(entry[1] / entry[0], min_shape_entry) if entry[0] > 0 else min_shape_entry for entry, min_shape_entry in zip(shape, min_shape, strict=False)]
+                max_shape = [max(entry[1] / entry[0], max_shape_entry) if entry[0] > 0 else max_shape_entry for entry, max_shape_entry in zip(shape, max_shape, strict=False)]
             else:
                 min_shape = [entry[1] / entry[0] if entry[0] > 0 else 0 for entry in shape]
                 max_shape = list(min_shape)

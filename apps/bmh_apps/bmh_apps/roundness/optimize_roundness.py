@@ -114,7 +114,7 @@ def calculate_optimized(args):
     all_df = DataFrame()
 
     for volume in args.volumes:
-        x_opt, df = optimize_single(volume, args)
+        _x_opt, df = optimize_single(volume, args)
         all_df = all_df.append(df, ignore_index=True)
 
     # Visualize results

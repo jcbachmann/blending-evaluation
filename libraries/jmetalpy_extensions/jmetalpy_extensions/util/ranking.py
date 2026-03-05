@@ -12,7 +12,7 @@ S = TypeVar("S")
 @lru_cache(maxsize=1000000)
 def compare(objectives1: tuple, objectives2: tuple) -> int:
     result = 0
-    for v1, v2 in zip(objectives1, objectives2):
+    for v1, v2 in zip(objectives1, objectives2, strict=False):
         if v1 > v2:
             if result == -1:
                 return 0
@@ -33,7 +33,7 @@ class FastestNonDominatedRanking(Ranking[list[S]]):
     def __init__(self):
         super().__init__()
 
-    def compute_ranking(self, solutions: list[S], k: int = None):
+    def compute_ranking(self, solutions: list[S], k: int | None = None):
         """Compute ranking of solutions.
 
         :param solutions: Solution list.

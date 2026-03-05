@@ -33,8 +33,7 @@ def read_var_file(file_path: str) -> pd.DataFrame:
         raise Exception("Invalid file extension")
     df = pd.read_csv(file_path, sep=" ", header=None, index_col=False)
     # As var files contain a trailing delimiter, we need to remove the empty column
-    df = df.drop(df.columns[-1], axis=1)
-    return df
+    return df.drop(df.columns[-1], axis=1)
 
 
 @dataclass

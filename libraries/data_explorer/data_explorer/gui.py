@@ -145,8 +145,8 @@ class MainWindow(QMainWindow):
         self.table_widget.setRowCount(len(entry_list))
         self.table_widget.setSortingEnabled(True)
 
-        for row, entry in enumerate(entry_list):
-            for col, testlet in enumerate(testlet_list):
+        for row, _entry in enumerate(entry_list):
+            for col, _testlet in enumerate(testlet_list):
                 item = QTableWidgetItem("loading...")
                 item.setBackground(QColor(0xA0, 0xA0, 0xA0))
                 self.table_widget.setItem(row, col, item)

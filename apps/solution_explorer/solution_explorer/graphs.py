@@ -58,8 +58,8 @@ class ObjectivesScatterCanvas(ExpandingFigureCanvas):
             xytext=(20, 20),
             textcoords="offset points",
             color="black",
-            bbox=dict(boxstyle="round4", fc="white", ec="black", lw=0.5, alpha=0.9),
-            arrowprops=dict(arrowstyle="-|>", connectionstyle="arc3,rad=0.3"),
+            bbox={"boxstyle": "round4", "fc": "white", "ec": "black", "lw": 0.5, "alpha": 0.9},
+            arrowprops={"arrowstyle": "-|>", "connectionstyle": "arc3,rad=0.3"},
         )
         self.hover_annotation.set_visible(False)
 
@@ -69,8 +69,8 @@ class ObjectivesScatterCanvas(ExpandingFigureCanvas):
             xytext=(-30, -30),
             textcoords="offset points",
             color="black",
-            bbox=dict(boxstyle="round4", fc="white", ec="black", lw=0.5, alpha=0.9),
-            arrowprops=dict(arrowstyle="simple"),
+            bbox={"boxstyle": "round4", "fc": "white", "ec": "black", "lw": 0.5, "alpha": 0.9},
+            arrowprops={"arrowstyle": "simple"},
         )
         self.permanent_annotation.set_visible(False)
 
@@ -115,7 +115,7 @@ class ObjectivesScatterCanvas(ExpandingFigureCanvas):
     def handle_click(self, event):
         if self.permanent_annotation.get_visible() and event.dblclick:
             if event.inaxes == self.ax:
-                cont, ind = self.sc.contains(event)
+                cont, _ind = self.sc.contains(event)
                 if not cont:
                     self.permanent_annotation.set_visible(False)
                     self.draw_idle()

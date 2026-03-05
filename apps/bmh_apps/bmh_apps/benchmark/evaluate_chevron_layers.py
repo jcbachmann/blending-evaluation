@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import logging
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +11,6 @@ from bmh.helpers.identifiers import get_identifier
 from bmh.helpers.math import weighted_avg_and_std
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from matplotlib import gridspec
-from matplotlib.axes import Axes
 from matplotlib.ticker import ScalarFormatter
 from pandas import DataFrame
 from seaborn.palettes import color_palette
@@ -18,6 +18,9 @@ from seaborn.palettes import color_palette
 from bmh_apps.chevron.chevron_path import chevron_path
 from bmh_apps.helpers.bed_size import get_bed_size
 from bmh_apps.helpers.configure_logging import configure_logging
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
 
 
 def simulate(layers, material: Material, bed_size_x: float, bed_size_z: float, ppm3: float) -> DataFrame:

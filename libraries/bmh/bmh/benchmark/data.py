@@ -121,7 +121,7 @@ class BenchmarkData:
 
     def validate_references(self, references: dict[str, ReferenceMeta]):
         self.logger.debug("Validating references")
-        for _, reference in references.items():
+        for reference in references.values():
             self.logger.debug(f'Validating reference "{reference}"')
             if reference.material not in self.materials:
                 raise ValueError(f'Material "{reference.material}" not found in materials')

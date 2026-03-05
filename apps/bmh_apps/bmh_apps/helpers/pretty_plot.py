@@ -45,7 +45,7 @@ def pretty_line_plot(data, x_col=None, unique_col=None, split_col=None, y_col=No
 
         low = []
         high = []
-        for r, (group, df_r) in enumerate(df_c.groupby(unique_col, sort=False)):
+        for _r, (_group, df_r) in enumerate(df_c.groupby(unique_col, sort=False)):
             a = df_r[y_col].values
             v_low, v_high = st.t.interval(0.9, len(a) - 1, loc=np.mean(a), scale=st.sem(a))
             low.append(v_low)

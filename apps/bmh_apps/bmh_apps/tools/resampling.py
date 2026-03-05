@@ -5,10 +5,10 @@ from bmh.benchmark.material_deposition import Material
 
 def get_resampled_max_timestamp(df: pd.DataFrame, rule: str) -> float:
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-    df.set_index("timestamp", inplace=True)
+    df = df.set_index("timestamp")
 
     df = df.resample(rule, closed="right", label="right").sum()
-    df.reset_index(inplace=True)
+    df = df.reset_index()
     return df["timestamp"].values[-1].astype(int) / 10**9
 
 
@@ -28,10 +28,10 @@ def resample(material: Material, rule: str):
         df = df.append(pd.DataFrame(pad))
 
     df["vpt"] = df["volume"] / (df["timestamp"] - df["timestamp"].shift(+1))
-    df.drop(["volume"], axis=1, inplace=True)
+    df = df.drop(["volume"], axis=1)
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-    df.set_index("timestamp", inplace=True)
+    df = df.set_index("timestamp")
 
     # Actual resampling
 
@@ -51,11 +51,11 @@ def resample(material: Material, rule: str):
         df = df.resample(rule, closed="right", label="right").apply(funcs)
 
     # Cleanup
-    df.reset_index(inplace=True)
+    df = df.reset_index()
     df["timestamp"] = df["timestamp"].astype(int) // 10**9
     df["volume"] = df["vpt"] * (df["timestamp"] - df["timestamp"].shift(+1))
-    df.drop(0, axis=0, inplace=True)
-    df.drop(["vpt"], axis=1, inplace=True)
+    df = df.drop(0, axis=0)
+    df = df.drop(["vpt"], axis=1)
 
     return Material.from_data(
         df,

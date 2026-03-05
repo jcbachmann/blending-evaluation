@@ -72,6 +72,6 @@ class BlendingSimulator:
         data["timestamp"] = data["x"] / reclaim_x_per_s
 
         # reorder columns and remove x position
-        data = data[["timestamp", "volume"] + material_deposition.material.get_parameter_columns()]
+        data = data[["timestamp", "volume", *material_deposition.material.get_parameter_columns()]]
 
         return Material.from_data(data, category="reclaimed")

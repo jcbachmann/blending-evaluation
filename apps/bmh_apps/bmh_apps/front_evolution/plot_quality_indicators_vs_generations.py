@@ -32,7 +32,7 @@ def main(args: argparse.Namespace):
             quality_indicators_df = quality_indicators_df.iloc[::10, :]
 
             assignments = directory.split(",")
-            variables = {key: value for key, value in [assignment.split("=") for assignment in assignments]}
+            variables = dict([assignment.split("=") for assignment in assignments])
             fig.add_trace(
                 go.Scattergl(
                     x=quality_indicators_df.index,
@@ -57,11 +57,11 @@ def main(args: argparse.Namespace):
                 )
 
     fig.update_layout(
-        dict(
-            showlegend=False,
-            xaxis_range=[0, 333333],
-            yaxis_range=[0, 0.6],
-        )
+        {
+            "showlegend": False,
+            "xaxis_range": [0, 333333],
+            "yaxis_range": [0, 0.6],
+        }
     )
     fig.show()
 

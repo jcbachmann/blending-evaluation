@@ -44,10 +44,10 @@ def plot_fun_2d(results: FunVarResults, label: str):
             x=[1],
             y=[1],
             mode="markers",
-            marker=dict(
-                size=20,
-                color="rgba(0, 0, 0, 1)",
-            ),
+            marker={
+                "size": 20,
+                "color": "rgba(0, 0, 0, 1)",
+            },
             name="Reference Point",
         )
     )
@@ -70,11 +70,11 @@ def plot_fun_3d(results: FunVarResults, label: str):
         title=label,
     )
     fig.update_layout(
-        scene=dict(
-            xaxis=dict(range=[0, 1.5]),
-            yaxis=dict(range=[0, 1.5]),
-            zaxis=dict(range=[0, 1.5]),
-        ),
+        scene={
+            "xaxis": {"range": [0, 1.5]},
+            "yaxis": {"range": [0, 1.5]},
+            "zaxis": {"range": [0, 1.5]},
+        },
     )
     fig.add_trace(
         go.Scatter3d(
@@ -82,10 +82,10 @@ def plot_fun_3d(results: FunVarResults, label: str):
             y=[1],
             z=[1],
             mode="markers",
-            marker=dict(
-                size=20,
-                color="rgba(0, 0, 0, 1)",
-            ),
+            marker={
+                "size": 20,
+                "color": "rgba(0, 0, 0, 1)",
+            },
             name="Reference Point",
         )
     )
@@ -116,12 +116,12 @@ def plot_fun_5d(results: FunVarResults):
         color=results.fun_columns[4],
     )
     fig.update_layout(
-        legend=dict(
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0,
-        )
+        legend={
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+        }
     )
     fig.write_html(f"trade-offs-1-{int(time.time())}.html")
     fig.show()
@@ -135,12 +135,12 @@ def plot_fun_5d(results: FunVarResults):
         color=results.fun_columns[1],
     )
     fig.update_layout(
-        legend=dict(
-            yanchor="bottom",
-            y=1.02,
-            xanchor="left",
-            x=0,
-        )
+        legend={
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "left",
+            "x": 0,
+        }
     )
     fig.write_html(f"trade-offs-2-{int(time.time())}.html")
     fig.show()

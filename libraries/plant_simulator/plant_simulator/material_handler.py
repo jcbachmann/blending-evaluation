@@ -149,7 +149,7 @@ class MaterialMux(MaterialHandler):
             np.average(in_qs, weights=np.multiply(in_tphs, weights)) if sum(np.multiply(in_tphs, weights)) > 0 else 0
             for i, weights in enumerate(self.weight_matrix)
         ]
-        self._sample = list(zip(out_tphs, out_qs))
+        self._sample = list(zip(out_tphs, out_qs, strict=False))
         if self.flip:
             self._sample.reverse()
         if random.random() < self.flip_probability:

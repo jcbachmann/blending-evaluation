@@ -84,9 +84,8 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
         density_estimator = CrowdingDistance()
 
         r = RankingAndDensityEstimatorReplacement(ranking, density_estimator, RemovalPolicyType.ONE_SHOT)
-        solutions = r.replace(population, offspring_population)
+        return r.replace(population, offspring_population)
 
-        return solutions
 
     def get_result(self) -> R:
         return self.solutions

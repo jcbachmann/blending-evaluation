@@ -5,18 +5,18 @@ import pandas as pd
 from pandas import DataFrame
 
 
-def read_material(filepath: str, col_timestamp: str = "timestamp", col_volume: str = "volume", cols_p: list[str] = None) -> DataFrame:
+def read_material(filepath: str, col_timestamp: str = "timestamp", col_volume: str = "volume", cols_p: list[str] | None = None) -> DataFrame:
     df = pd.read_csv(filepath, delimiter="\t", index_col=None)
     if cols_p is None:
         # Use all columns except for timestamp and volume
         cols_p = list(df.columns.drop(col_timestamp, col_volume))
-    required_cols = [col_timestamp, col_volume] + cols_p
+    required_cols = [col_timestamp, col_volume, *cols_p]
     if not set(required_cols).issubset(df.columns):
         raise Exception(f"required columns ({required_cols}) not found in material file")
     material = DataFrame()
     material["timestamp"] = df[col_timestamp]
     material["volume"] = df[col_volume]
-    for i, col_p in enumerate(cols_p):
+    for _i, col_p in enumerate(cols_p):
         material[col_p] = df[col_p]
     return material
 

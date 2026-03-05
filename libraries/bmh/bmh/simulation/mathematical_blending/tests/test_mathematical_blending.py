@@ -6,25 +6,25 @@ from ..mathematical_blending import calculate_blended_output
 class TestMathematicalBlending(unittest.TestCase):
     def test_empty(self):
         v, p = calculate_blended_output(0, [], [], [], 1)
-        self.assertEqual(v, [0])
-        self.assertEqual(p, [[0]])
+        assert v == [0]
+        assert p == [[0]]
 
     def test_size(self):
         v, p = calculate_blended_output(0, [], [], [], 4)
-        self.assertEqual(v, [0, 0, 0, 0])
-        self.assertEqual(p, [[0], [0], [0], [0]])
+        assert v == [0, 0, 0, 0]
+        assert p == [[0], [0], [0], [0]]
 
     def test_simple(self):
         v, p = calculate_blended_output(1, [1], [[2]], [1], 4)
-        self.assertEqual(v, [0, 1, 0, 0])
-        self.assertEqual(p, [[0], [2], [0], [0]])
+        assert v == [0, 1, 0, 0]
+        assert p == [[0], [2], [0], [0]]
 
     def test_averaging(self):
         v, p = calculate_blended_output(2, [1, 1], [[2], [4]], [1, 1], 4)
-        self.assertEqual(v, [0, 2, 0, 0])
-        self.assertEqual(p, [[0], [3], [0], [0]])
+        assert v == [0, 2, 0, 0]
+        assert p == [[0], [3], [0], [0]]
 
     def test_multiple(self):
         v, p = calculate_blended_output(2, [1, 1], [[2, 2, 4], [4, 2, 4]], [1, 1], 4)
-        self.assertEqual(v, [0, 2, 0, 0])
-        self.assertEqual(p, [[0, 0, 0], [3, 2, 4], [0, 0, 0], [0, 0, 0]])
+        assert v == [0, 2, 0, 0]
+        assert p == [[0, 0, 0], [3, 2, 4], [0, 0, 0], [0, 0, 0]]

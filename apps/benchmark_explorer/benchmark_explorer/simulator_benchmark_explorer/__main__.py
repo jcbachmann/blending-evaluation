@@ -3,14 +3,17 @@
 import argparse
 import logging
 import os
+from typing import TYPE_CHECKING
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.helpers.identifiers import get_identifier
 from data_explorer import app
-from data_explorer.testlet import Testlet
 
 from benchmark_explorer.simulator_benchmark_explorer import testlets
 from benchmark_explorer.simulator_benchmark_explorer.evaluation import Evaluation
+
+if TYPE_CHECKING:
+    from data_explorer.testlet import Testlet
 
 
 def read_evaluation(evaluation_path: str) -> Evaluation:

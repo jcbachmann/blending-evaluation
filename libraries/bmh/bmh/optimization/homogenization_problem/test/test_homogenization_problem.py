@@ -36,9 +36,9 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
             v_max=v_max,
         )
 
-        self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
-        self.assertEqual(deposition.meta.bed_size_z, bed_size_z)
-        self.assertEqual(deposition.meta.time, max_timestamp)
+        assert deposition.meta.bed_size_x == bed_size_x
+        assert deposition.meta.bed_size_z == bed_size_z
+        assert deposition.meta.time == max_timestamp
 
         reference_data = DataFrame(
             {
@@ -80,9 +80,9 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
             v_max=v_max,
         )
 
-        self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
-        self.assertEqual(deposition.meta.bed_size_z, bed_size_z)
-        self.assertEqual(deposition.meta.time, max_timestamp)
+        assert deposition.meta.bed_size_x == bed_size_x
+        assert deposition.meta.bed_size_z == bed_size_z
+        assert deposition.meta.time == max_timestamp
 
         reference_data = DataFrame(
             {
@@ -131,9 +131,9 @@ class TestVariablesToDepositionGeneric(unittest.TestCase):
             v_max=v_max,
         )
 
-        self.assertEqual(deposition.meta.bed_size_x, bed_size_x)
-        self.assertEqual(deposition.meta.bed_size_z, bed_size_z)
-        self.assertEqual(deposition.meta.time, max_timestamp)
+        assert deposition.meta.bed_size_x == bed_size_x
+        assert deposition.meta.bed_size_z == bed_size_z
+        assert deposition.meta.time == max_timestamp
 
         reference_data = DataFrame(
             {

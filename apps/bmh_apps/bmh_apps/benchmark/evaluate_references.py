@@ -40,7 +40,7 @@ def main(args: argparse.Namespace):
         simulator_meta = benchmark_data.simulators[sim_identifier]
 
         # Processing
-        for _, reference in references.items():
+        for reference in references.values():
             core.process(
                 identifier=f"{reference.identifier}-{str(uuid.uuid4())[:4]}",
                 material_meta=benchmark_data.materials[reference.material],

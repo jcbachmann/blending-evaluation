@@ -7,22 +7,22 @@ from jmetalpy_extensions.util.comparator import FastDominanceComparator
 
 
 def perform_compartor_test(self, t):
-    self.assertEqual(t(), 0)
-    self.assertEqual(t(), -1)
-    self.assertEqual(t(), -1)
-    self.assertEqual(t(), -1)
-    self.assertEqual(t(), -1)
-    self.assertEqual(t(), -1)
-    self.assertEqual(t(), -1)
-    self.assertEqual(t(), 1)
-    self.assertEqual(t(), 1)
-    self.assertEqual(t(), 1)
-    self.assertEqual(t(), 1)
-    self.assertEqual(t(), 1)
-    self.assertEqual(t(), 1)
-    self.assertEqual(t(), 0)
-    self.assertEqual(t(), 0)
-    self.assertEqual(t(), 0)
+    assert t() == 0
+    assert t() == -1
+    assert t() == -1
+    assert t() == -1
+    assert t() == -1
+    assert t() == -1
+    assert t() == -1
+    assert t() == 1
+    assert t() == 1
+    assert t() == 1
+    assert t() == 1
+    assert t() == 1
+    assert t() == 1
+    assert t() == 0
+    assert t() == 0
+    assert t() == 0
 
 
 class TestFastDominanceComparator(TestCase):
@@ -53,4 +53,4 @@ class TestFastDominanceComparator(TestCase):
             s1.objectives = v1
             s2 = Solution(number_of_variables=0, number_of_objectives=len(v2))
             s2.objectives = v2
-            self.assertEqual(dc.compare(s1, s2), fdc.compare(s1, s2))
+            assert dc.compare(s1, s2) == fdc.compare(s1, s2)

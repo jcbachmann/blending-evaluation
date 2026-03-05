@@ -19,7 +19,7 @@ class RandomChoiceInjectorGenerator(Generator):
 
 class MultiGenerator(Generator):
     def __init__(self, weighted_generators: list[tuple[Generator, float]]):
-        self.generators, self.weights = zip(*weighted_generators)
+        self.generators, self.weights = zip(*weighted_generators, strict=False)
 
     def new(self, problem: Problem) -> R:
         return random.choices(self.generators, weights=self.weights)[0].new(problem)

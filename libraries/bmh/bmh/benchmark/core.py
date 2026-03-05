@@ -42,7 +42,7 @@ def compute_sigma(material_meta: MaterialMeta):
     sigmas = {}
 
     for parameter_column in parameter_columns:
-        mean, sigma = math.weighted_avg_and_std(
+        _mean, sigma = math.weighted_avg_and_std(
             values=material.data[parameter_column].values,
             weights=material.data["volume"].values,
         )

@@ -229,7 +229,7 @@ class Deposition:
 
     @staticmethod
     def create_empty_data():
-        return DataFrame(dict([(c, pd.Series(dtype=np.dtype("float"))) for c in Deposition.REQUIRED_COLUMNS]))
+        return DataFrame({c: pd.Series(dtype=np.dtype("float")) for c in Deposition.REQUIRED_COLUMNS})
 
 
 class DepositionMeta:
@@ -368,8 +368,7 @@ class MaterialDeposition:
         waits = dep_df.copy()
         waits["timestamp"] += dep_df["t_wait"]
         dep_df = dep_df.append(waits, ignore_index=True)
-        dep_df.sort_values(["timestamp"], inplace=True)
+        dep_df = dep_df.sort_values(["timestamp"])
 
         dep_df = dep_df[["timestamp", "x", "z"]].copy()
-        dep_df.dropna(inplace=True)
-        return dep_df
+        return dep_df.dropna()

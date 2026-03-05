@@ -32,12 +32,11 @@ def test_cluster_counts(df: pd.DataFrame):
         x=cluster_counts,
         y=silhouette_scores,
         title="Silhouette Score vs. Cluster Count",
-        labels=dict(x="Cluster Count", y="Silhouette Score"),
+        labels={"x": "Cluster Count", "y": "Silhouette Score"},
     )
     fig.show()
 
-    optimal_cluster_count = max(zip(silhouette_scores, cluster_counts))[1]
-    return optimal_cluster_count
+    return max(zip(silhouette_scores, cluster_counts, strict=False))[1]
 
 
 def test_pca(df: pd.DataFrame):
@@ -55,7 +54,7 @@ def test_pca(df: pd.DataFrame):
         x=n_options,
         y=explained_variations,
         title="Cumulative Explained Variation vs. Number of Components",
-        labels=dict(x="Number of Components", y="Cumulative Explained Variation"),
+        labels={"x": "Number of Components", "y": "Cumulative Explained Variation"},
     )
     fig.show()
 
@@ -127,7 +126,7 @@ def plot_clusters(cluster_data, centroids, labels, title: str):
             y=centroids[:, 1],
             mode="markers+text",
             name="Centroids",
-            marker=dict(color="red"),
+            marker={"color": "red"},
             text=list(range(centroids.shape[0])),
             textposition="top center",
         )
@@ -182,7 +181,7 @@ def cluster_in_objective_space(df: pd.DataFrame, results: FunVarResults):
             z=centroids[:, 2],
             mode="markers+text",
             name="Centroids",
-            marker=dict(color="red"),
+            marker={"color": "red"},
             text=list(range(centroids.shape[0])),
             textposition="top center",
         )

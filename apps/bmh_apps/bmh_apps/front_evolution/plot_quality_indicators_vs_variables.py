@@ -29,7 +29,7 @@ def main(args: argparse.Namespace):
                 logging.warning(f"No quality indicators found in {directory}")
                 continue
             assignments = directory.split(",")
-            variables = {key: value for key, value in [assignment.split("=") for assignment in assignments]}
+            variables = dict([assignment.split("=") for assignment in assignments])
             print(float(variables["optimization.variable_count"]))
             fig.add_trace(
                 go.Scattergl(
@@ -37,12 +37,12 @@ def main(args: argparse.Namespace):
                     y=quality_indicators_df["HV"],
                     mode="markers",
                     name=variables["optimization.variable_count"],
-                    marker=dict(
-                        color=sample_colorscale(
+                    marker={
+                        "color": sample_colorscale(
                             "Viridis",
                             [float(variables["optimization.variable_count"]) / 295],
                         )[0],
-                    ),
+                    },
                 )
             )
 
@@ -61,7 +61,7 @@ def main(args: argparse.Namespace):
                     ]
                 )
 
-    fig.update_layout(dict(showlegend=False))
+    fig.update_layout({"showlegend": False})
     fig.show()
 
     final_hv_df = final_hv_df.sort_values(by=["Variables", "Generations"])

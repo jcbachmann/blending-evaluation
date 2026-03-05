@@ -99,7 +99,7 @@ def get_chevron_deposition(x_min: float, x_max: float, max_timestamp: float, v: 
     x_diff = x_max - x_min
     time_per_layer = x_diff / v
     layers = max_timestamp / time_per_layer
-    steps = int(math.ceil(layers)) + 1
+    steps = math.ceil(layers) + 1
 
     def get_chevron():
         last_at_min = False
@@ -159,7 +159,7 @@ def get_chevron_ideal_deposition(variables: list[float], *, x_min: float, x_max:
     def get_positions():
         last_at_min = False
         positions = []
-        for i in range(len(variables)):
+        for _i in range(len(variables)):
             if last_at_min:
                 positions.extend([x_max, x_max])
                 last_at_min = False
@@ -244,7 +244,7 @@ class HomogenizationProblem(FloatProblem):
         v_max: float,
         ppm3: float,
         timestamps: list[float] | None = None,
-        objectives: list[str] = None,
+        objectives: list[str] | None = None,
     ):
         super().__init__()
 

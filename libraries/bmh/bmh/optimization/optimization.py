@@ -29,7 +29,7 @@ from .plot_server.plot_server import PlotServer, PlotServerInterface
 
 
 def solutions_to_fitness_values(solutions: list[S], number_of_objectives: int):
-    return dict([(f"f{i + 1}", [s.objectives[i] for s in solutions]) for i in range(number_of_objectives)])
+    return {f"f{i + 1}": [s.objectives[i] for s in solutions] for i in range(number_of_objectives)}
 
 
 class VerboseHoardingAlgorithmObserver(Observer):
@@ -107,9 +107,8 @@ def get_evaluator(evaluator_str: str | None, *, kwargs: dict[str, Any], evaluato
         try:
             from jmetalpy_extensions.util.evaluator import DistributedEvaluator
 
-            if "scheduler" in kwargs:
-                if "scheduler" in kwargs and kwargs.get("scheduler"):
-                    evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
+            if "scheduler" in kwargs and "scheduler" in kwargs and kwargs.get("scheduler"):
+                evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
             return DistributedEvaluator
         except ImportError:
             logger.error("Please install DistributedEvaluator requirements")
@@ -245,7 +244,7 @@ class DepositionOptimizer(PlotServerInterface):
         parameter_labels: list[str],
         ppm3: float = 1.0,
         objectives: list[str],
-        reference_front_file: str = None,
+        reference_front_file: str | None = None,
         write_fronts: bool = False,
         **kwargs,
     ):
