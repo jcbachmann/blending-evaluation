@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "bokeh",
-    "jmetalpy",
+    "jmetalpy==1.7.0",
     "numpy",
     "pandas",
     "jmetalpy_extensions",
