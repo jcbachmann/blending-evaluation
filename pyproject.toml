@@ -20,7 +20,8 @@ dependencies = [
 dev = [
     "pybind11-stubgen",
     "ruff",
-    "mypy"
+    "mypy",
+    "scipy-stubs",
 ]
 
 [tool.uv]
