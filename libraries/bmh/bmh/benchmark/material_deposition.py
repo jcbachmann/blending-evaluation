@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -55,8 +56,8 @@ class Material:
     Object managing material data
     """
 
-    REQUIRED_COLUMNS = ["timestamp", "volume"]
-    OPTIONAL_COLUMNS = ["x"]
+    REQUIRED_COLUMNS: ClassVar[tuple[str, ...]] = ("timestamp", "volume")
+    OPTIONAL_COLUMNS: ClassVar[tuple[str, ...]] = ("x",)
 
     def __init__(self, *, meta: "MaterialMeta", data: DataFrame):
         self.meta = meta
@@ -70,7 +71,9 @@ class Material:
         return self.data["volume"].sum()
 
     @classmethod
-    def from_data(cls, data: DataFrame, *, identifier=str(uuid.uuid4()), category="from data"):
+    def from_data(cls, data: DataFrame, *, identifier: str | None = None, category: str = "from data"):
+        if identifier is None:
+            identifier = str(uuid.uuid4())
         meta = MaterialMeta(
             identifier,
             path="",
@@ -181,7 +184,7 @@ class Deposition:
     Object managing deposition data
     """
 
-    REQUIRED_COLUMNS = ["timestamp", "x", "z"]
+    REQUIRED_COLUMNS: ClassVar[tuple[str, ...]] = ("timestamp", "x", "z")
 
     def __init__(self, *, meta: "DepositionMeta", data: DataFrame):
         self.meta = meta
@@ -189,7 +192,17 @@ class Deposition:
         check_required_columns(self.data, Deposition.REQUIRED_COLUMNS)
 
     @classmethod
-    def from_data(cls, data: DataFrame, *, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float, reclaim_x_per_s: float):
+    def from_data(
+        cls,
+        data: DataFrame,
+        *,
+        identifier: str | None = None,
+        bed_size_x: float,
+        bed_size_z: float,
+        reclaim_x_per_s: float,
+    ):
+        if identifier is None:
+            identifier = str(uuid.uuid4())
         meta = DepositionMeta(
             identifier,
             path="",
@@ -218,7 +231,9 @@ class Deposition:
         )
 
     @staticmethod
-    def create_empty(*, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float, reclaim_x_per_s: float):
+    def create_empty(*, identifier: str | None = None, bed_size_x: float, bed_size_z: float, reclaim_x_per_s: float):
+        if identifier is None:
+            identifier = str(uuid.uuid4())
         meta = DepositionMeta.create_empty(
             identifier=identifier,
             bed_size_x=bed_size_x,
@@ -302,7 +317,16 @@ class DepositionMeta:
         return meta
 
     @classmethod
-    def create_empty(cls, *, identifier=str(uuid.uuid4()), bed_size_x: float, bed_size_z: float, reclaim_x_per_s: float):
+    def create_empty(
+        cls,
+        *,
+        identifier: str | None = None,
+        bed_size_x: float,
+        bed_size_z: float,
+        reclaim_x_per_s: float,
+    ):
+        if identifier is None:
+            identifier = str(uuid.uuid4())
         meta = cls(
             identifier=identifier,
             path="",
