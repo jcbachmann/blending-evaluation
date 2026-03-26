@@ -81,16 +81,12 @@ class RoundnessEvaluator:
 
         with open(input_file) as csv_file:
             reader = csv.reader(csv_file, delimiter="\t")
-            z_abs = 0
-            for row in reader:
-                x_abs = 0
-                for value in row:
+            for z_abs, row in enumerate(reader):
+                for x_abs, value in enumerate(row):
                     if value != "":
                         v = float(value)
                         if v > 0:
                             self.add(x_abs, z_abs, v)
-                    x_abs += 1
-                z_abs += 1
 
     def add_from_heights(self, heights: list[list[float]]):
         # Calculate weighted center
@@ -102,14 +98,10 @@ class RoundnessEvaluator:
         self.shapes_main = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(3)]
         self.shapes_range = [[[0, 0] for _ in range(self.dist_seg_count)] for _ in range(self.angle_seg_count)]
 
-        z_abs = 0
-        for row in heights:
-            x_abs = 0
-            for v in row:
+        for z_abs, row in enumerate(heights):
+            for x_abs, v in enumerate(row):
                 if v > 0:
                     self.add(x_abs, z_abs, v)
-                x_abs += 1
-            z_abs += 1
 
     def evaluate(self):
         min_shape = None
@@ -144,8 +136,7 @@ class RoundnessEvaluator:
                 min_shape = [entry[1] / entry[0] if entry[0] > 0 else 0 for entry in shape]
                 max_shape = list(min_shape)
 
-        i = 0
-        for shape in self.shapes_main:
+        for i, shape in enumerate(self.shapes_main):
             plt.plot(
                 [x * self.dist_seg_size for x in range(len(shape) + 1)],
                 [entry[1] / entry[0] if entry[0] > 0 else None for entry in shape] + [0],
@@ -154,7 +145,6 @@ class RoundnessEvaluator:
                 color=color_map(c),
                 alpha=0.5,
             )
-            i += 1
 
         plt.fill_between(
             [x * self.dist_seg_size for x in range(len(min_shape))],

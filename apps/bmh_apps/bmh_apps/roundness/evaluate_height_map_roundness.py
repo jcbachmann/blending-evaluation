@@ -6,12 +6,10 @@ from bmh_apps.roundness.roundness_evaluator import RoundnessEvaluator
 
 
 def main(args):
-    i = 0
-    for input_file in args.input_files:
+    for i, input_file in enumerate(args.input_files):
         e = RoundnessEvaluator(args.dist_seg_size, args.angle_seg_count)
         e.add_from_file(input_file)
         e.plot(input_file[:-4], i / (len(args.input_files) - 1) if i > 0 else 0)
-        i += 1
 
     plt.legend()
     plt.show()

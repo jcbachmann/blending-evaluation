@@ -108,10 +108,7 @@ class FunVarResults:
             run_parts = [[part for part in run if part != ""] for run in run_parts]
             run_parts = [[part[1:] if part.startswith("+") else part for part in run] for run in run_parts]
             sample, remaining = run_parts[0], run_parts[1:]
-            redundant = []
-            for part in sample:
-                if all(part in run for run in remaining):
-                    redundant.append(part)
+            redundant = [part for part in sample if all(part in run for run in remaining)]
             run_parts = [[part for part in run if part not in redundant] for run in run_parts]
             all_results.df["run"] = [" ".join(run) for run in run_parts]
             all_results.label = " ".join(redundant)
