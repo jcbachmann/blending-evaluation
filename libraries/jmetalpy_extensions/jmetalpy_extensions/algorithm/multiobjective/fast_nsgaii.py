@@ -86,7 +86,6 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
         r = RankingAndDensityEstimatorReplacement(ranking, density_estimator, RemovalPolicyType.ONE_SHOT)
         return r.replace(population, offspring_population)
 
-
     def get_result(self) -> R:
         return self.solutions
 
