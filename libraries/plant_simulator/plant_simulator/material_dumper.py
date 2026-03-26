@@ -20,7 +20,7 @@ class MaterialDumper(MaterialHandler):
 
         self.reset_random_limit()
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         while True:
             tph, q = next(self.src_gen)
 

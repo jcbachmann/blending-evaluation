@@ -10,7 +10,7 @@ class WriteQualityIndicatorsToFileObserver(Observer):
         with open(self.output_file, "w+") as of:
             of.write(f"{','.join([indicator.get_short_name() for indicator in quality_indicators])}\n")
 
-    def update(self, *args, **kwargs):
+    def update(self, *_args, **kwargs):
         solutions = kwargs["SOLUTIONS"]
         if not solutions:
             return

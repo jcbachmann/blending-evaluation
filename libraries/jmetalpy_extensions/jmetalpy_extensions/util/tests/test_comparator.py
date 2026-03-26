@@ -6,7 +6,7 @@ from jmetal.util.comparator import DominanceComparator
 from jmetalpy_extensions.util.comparator import FastDominanceComparator
 
 
-def perform_compartor_test(self, t):
+def perform_compartor_test(_self, t):
     assert t() == 0
     assert t() == -1
     assert t() == -1

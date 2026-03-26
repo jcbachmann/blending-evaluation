@@ -5,7 +5,7 @@ class DepositionStrategy:
     def __init__(self):
         pass
 
-    def get_pos(self, timestamp: float, stockpile: Stockpile) -> tuple[float, float]:
+    def get_pos(self, _timestamp: float, stockpile: Stockpile) -> tuple[float, float]:
         pass
 
 
@@ -16,7 +16,7 @@ class DepositionStrategyTimeChevron(DepositionStrategy):
         self.layers = layers
         self.by = by
 
-    def get_pos(self, timestamp: float, stockpile: Stockpile) -> tuple[float, float]:
+    def get_pos(self, _timestamp: float, stockpile: Stockpile) -> tuple[float, float]:
         if self.by == "mass":
             p = stockpile.stacked_tons / stockpile.max_tons
             p_layers = p * self.layers
@@ -30,7 +30,7 @@ class DepositionStrategyPile(DepositionStrategy):
     def __init__(self):
         super().__init__()
 
-    def get_pos(self, timestamp: float, stockpile: Stockpile) -> tuple[float, float]:
+    def get_pos(self, _timestamp: float, stockpile: Stockpile) -> tuple[float, float]:
         return 0.5 * stockpile.length, 0.5 * stockpile.depth
 
 

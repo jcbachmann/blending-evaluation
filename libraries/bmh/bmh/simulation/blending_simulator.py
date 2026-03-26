@@ -4,7 +4,7 @@ from ..benchmark.material_deposition import Material, MaterialDeposition
 
 
 class BlendingSimulator:
-    def __init__(self, bed_size_x: float, bed_size_z: float, **kwargs):
+    def __init__(self, bed_size_x: float, bed_size_z: float, **_kwargs):
         """
         Initialize blending simulator interface
         :param bed_size_x: bed size of blending bed in x direction (along the bed, stacker travel direction) in meters

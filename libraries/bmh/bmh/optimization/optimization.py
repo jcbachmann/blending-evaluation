@@ -40,7 +40,7 @@ class VerboseHoardingAlgorithmObserver(Observer):
         self.last_computing_time: float | None = None
         self.logger = logging.getLogger(__name__)
 
-    def update(self, *args, **kwargs):
+    def update(self, *_args, **kwargs):
         evaluations = kwargs["EVALUATIONS"]
         self.population = kwargs["SOLUTIONS"]
         computing_time = kwargs["COMPUTING_TIME"]

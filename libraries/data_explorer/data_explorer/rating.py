@@ -23,10 +23,10 @@ class Rating(Enum):
 
 
 class Rater:
-    def rate(self, value):
+    def rate(self, _value):
         raise Exception("abstract")
 
-    def get_color(self, value):
+    def get_color(self, _value):
         raise Exception("CUSTOM rating requires implementation of Rater.get_color()")
 
 
@@ -75,7 +75,7 @@ class RaterColorScale(Rater):
         if minimum >= maximum:
             raise Exception(f"RaterColorScale requires minimum [{minimum}] < maximum [{maximum}]")
 
-    def rate(self, value):
+    def rate(self, _value):
         return Rating.CUSTOM
 
     def get_color(self, value):

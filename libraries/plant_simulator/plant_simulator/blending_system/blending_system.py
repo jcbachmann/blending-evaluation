@@ -49,7 +49,7 @@ class BlendingSystem(MaterialHandler):
         tons, q = self.reclaimer.reclaim()
         return tons * 3600 / Plant.TIME_INCREMENT, q
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         while True:
             tph, q = self.step_blending_system(*next(self.src_gen))
             self._sample = (tph, q)

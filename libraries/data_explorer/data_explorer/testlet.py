@@ -30,7 +30,7 @@ class Testlet:
             self.logger.error(f"Exception in wrapped_evaluate: {self} {entry} {e} {traceback.format_exc()}")
             return TestletResult(e, str(e), Rating.ERROR)
 
-    def evaluate(self, entry):
+    def evaluate(self, _entry):
         raise RuntimeError(f"{self}.execute() not defined")
 
     def get_result_rater(self) -> Rater | None:

@@ -25,7 +25,7 @@ class SimulatedMine(MaterialSource):
             self.repair_probability = min(self.failure_probability / (1 - availability), 1.0)
         self._sample = (0, 0)
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         while True:
             if self.currently_unavailable:
                 if random.random() < self.repair_probability:

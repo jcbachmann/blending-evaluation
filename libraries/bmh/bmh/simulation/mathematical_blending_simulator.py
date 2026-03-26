@@ -10,7 +10,7 @@ class MathematicalBlendingSimulator(BlendingSimulator):
         self.volumes: list[float] = []
         self.qualities: list[list[float]] = []
 
-    def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:
+    def stack(self, _timestamp: float, x: float, _z: float, volume: float, parameter: list[float]) -> None:
         self.positions.append(max(0, min(int(x / self.bed_size_x * self.buffer_size), self.buffer_size - 1)))
         self.volumes.append(volume)
         self.qualities.append(parameter)

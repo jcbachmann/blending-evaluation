@@ -13,7 +13,7 @@ class RandomChoiceInjectorGenerator(Generator):
     def __init__(self, solutions: list[Solution]):
         self.solutions = solutions
 
-    def new(self, problem: Problem) -> R:
+    def new(self, _problem: Problem) -> R:
         return copy.deepcopy(random.choice(self.solutions))
 
 

@@ -21,7 +21,7 @@ class MaterialHandler(ABC):
         pass
 
     @abstractmethod
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         pass
 
     def unpack_src_gen(self, src):
@@ -48,7 +48,7 @@ class MaterialSource(MaterialHandler):
     def sample(self):
         pass
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         pass
 
 
@@ -61,7 +61,7 @@ class MaterialBuffer(MaterialHandler):
             self.buffer.append((0.0, 0.0))
         self._sample = (0.0, 0.0)
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         while True:
             self.buffer.append(next(self.src_gen))
             tph, q = self.buffer.pop(0)
@@ -80,7 +80,7 @@ class MaterialJoiner(MaterialHandler):
         self.src_gens = self.unpack_src_gen(src_x)
         self._sample = (0.0, 0.0)
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         while True:
             m = [next(src_gen) for src_gen in self.src_gens]
             tph = sum(tph for tph, _ in m)
@@ -196,7 +196,7 @@ class MaterialOut(MaterialHandler):
         # Inconsistently sample input instead of output as there is no output but sampling might be interesting
         self._sample = (tph, q)
 
-    def gen(self, i: int = 0):
+    def gen(self, _i: int = 0):
         return None
 
     def sample(self):

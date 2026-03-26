@@ -134,7 +134,7 @@ class PathDetailCanvas(ExpandingFigureCanvas):
     def __str__(self):
         return f"Path Detail {self.index}"
 
-    def plot_selection(self, index: int, variables: pd.Series, objectives: pd.Series):
+    def plot_selection(self, index: int, variables: pd.Series, _objectives: pd.Series):
         self.index = index
         self.ax.cla()
         self.figure.suptitle(f"Path {index}")
