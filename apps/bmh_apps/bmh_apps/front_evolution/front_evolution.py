@@ -208,7 +208,7 @@ def main(args: argparse.Namespace):
 
         return fig
 
-    app.run_server(debug=True)
+    app.run(debug=True)
 
 
 def get_args():

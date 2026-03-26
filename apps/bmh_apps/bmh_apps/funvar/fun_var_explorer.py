@@ -125,7 +125,7 @@ def main(args: argparse.Namespace):
             "g2": get_var_figure(results, selected_points),
         }
 
-    app.run_server(debug=True)
+    app.run(debug=True)
 
 
 def get_args():
