@@ -50,18 +50,19 @@ class MaterialDumper(MaterialHandler):
             lines = ["\t".join([str(i) for i in row]) for row in self.buffer]
             f.write("\n".join(lines))
 
-        json.dump(
-            {
-                "label": f"{self.label} {rnd_id}",
-                "description": f"Generated material stream from MaterialDumper with label {self.label}",
-                "category": "generated",
-                "time": self.plant.time - self.time_reference,
-                "volume": self.total_volume,
-                "data": "data.csv",
-            },
-            open(os.path.join(file_dir, "meta.json"), "w"),
-            indent=4,
-        )
+        with open(os.path.join(file_dir, "meta.json"), "w") as file:
+            json.dump(
+                {
+                    "label": f"{self.label} {rnd_id}",
+                    "description": f"Generated material stream from MaterialDumper with label {self.label}",
+                    "category": "generated",
+                    "time": self.plant.time - self.time_reference,
+                    "volume": self.total_volume,
+                    "data": "data.csv",
+                },
+                file,
+                indent=4,
+            )
 
     def reset_random_limit(self):
         self.time_limit = self.plant.time + random.uniform(10, 48) * 60 * 60

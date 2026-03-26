@@ -20,7 +20,8 @@ def create_instance_for_each_managed_dir(path: str, instance_type: type, *, recu
                 logger.debug(f'Reading "{instance_type.__name__}" from path "{entry_path}"')
 
                 # Errors which occur during JSON parsing and interpretation should interrupt program execution
-                meta = json.load(open(meta_path))
+                with open(meta_path) as file:
+                    meta = json.load(file)
                 entries[entry] = instance_type(entry, os.path.abspath(entry_path), meta)
             else:
                 if recursive:
@@ -180,11 +181,12 @@ class BenchmarkData:
 
         material_meta_file = os.path.join(path, BenchmarkData.META_JSON)
         self.logger.debug(f'Writing material meta to "{material_meta_file}"')
-        json.dump(
-            material_meta.to_dict(),
-            open(material_meta_file, "w"),
-            indent=4,
-        )
+        with open(material_meta_file, "w") as file:
+            json.dump(
+                material_meta.to_dict(),
+                file,
+                indent=4,
+            )
 
         write_data_file(material_meta.get_material().data, os.path.join(path, BenchmarkData.DATA_CSV))
         prediction = material_meta.get_prediction()
@@ -199,10 +201,11 @@ class BenchmarkData:
 
         deposition_meta_file = os.path.join(path, BenchmarkData.META_JSON)
         self.logger.debug(f'Writing deposition meta to "{deposition_meta_file}"')
-        json.dump(
-            deposition_meta.to_dict(),
-            open(deposition_meta_file, "w"),
-            indent=4,
-        )
+        with open(deposition_meta_file, "w") as file:
+            json.dump(
+                deposition_meta.to_dict(),
+                file,
+                indent=4,
+            )
 
         write_data_file(deposition_meta.get_deposition().data, os.path.join(path, BenchmarkData.DATA_CSV))

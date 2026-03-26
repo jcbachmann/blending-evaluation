@@ -57,6 +57,7 @@ class SimulatorMeta:
 
     def get_params(self) -> dict:
         if self.params_dict is None:
-            self.params_dict = json.load(open(os.path.join(self.path, self.params)))
+            with open(os.path.join(self.path, self.params)) as file:
+                self.params_dict = json.load(file)
 
         return self.params_dict

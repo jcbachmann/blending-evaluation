@@ -88,7 +88,8 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     simulator_file = os.path.join(directory, BenchmarkData.SIMULATOR_JSON)
     logger.debug(f'Writing simulator type and parameters to "{simulator_file}"')
     if not dry_run:
-        json.dump({"simulator": str(simulator_meta)}, open(simulator_file, "w"), indent=4)
+        with open(simulator_file, "w") as file:
+            json.dump({"simulator": str(simulator_meta)}, file, indent=4)
 
     reclaimed_reference = ReferenceMeta(
         identifier,
@@ -102,11 +103,12 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     meta_file = os.path.join(directory, BenchmarkData.META_JSON)
     logger.debug(f'Writing reference meta to "{meta_file}"')
     if not dry_run:
-        json.dump(
-            reclaimed_reference.to_dict(),
-            open(meta_file, "w"),
-            indent=4,
-        )
+        with open(meta_file, "w") as file:
+            json.dump(
+                reclaimed_reference.to_dict(),
+                file,
+                indent=4,
+            )
 
     reclaimed_material_path = os.path.join(directory, BenchmarkData.MATERIAL_DIR)
     reclaimed_material_meta = MaterialMeta(
@@ -130,11 +132,12 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
     reclaimed_material_meta_file = os.path.join(reclaimed_material_path, BenchmarkData.META_JSON)
     logger.debug(f'Writing reclaimed material meta to "{reclaimed_material_meta_file}"')
     if not dry_run:
-        json.dump(
-            reclaimed_material_meta.to_dict(),
-            open(reclaimed_material_meta_file, "w"),
-            indent=4,
-        )
+        with open(reclaimed_material_meta_file, "w") as file:
+            json.dump(
+                reclaimed_material_meta.to_dict(),
+                file,
+                indent=4,
+            )
 
     if not dry_run:
         write_data_file(

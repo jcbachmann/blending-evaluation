@@ -18,14 +18,15 @@ def add_combination(material: str, deposition: str, path: str):
     dir_path = os.path.join(path, BenchmarkData.BENCHMARK_DIR, f"{material} x {deposition}")
     logger.info(f"Destination: {dir_path}")
     os.makedirs(dir_path)
-    json.dump(
-        {
-            "material": material,
-            "deposition": deposition,
-        },
-        open(os.path.join(dir_path, META_JSON), "w"),
-        indent=4,
-    )
+    with open(os.path.join(dir_path, META_JSON), "w") as file:
+        json.dump(
+            {
+                "material": material,
+                "deposition": deposition,
+            },
+            file,
+            indent=4,
+        )
 
 
 def main(args):
