@@ -52,7 +52,7 @@ class BslBlendingSimulator(BlendingSimulator):
         )
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:
-        self.bsl.stack(timestamp, x, z, volume, parameter)
+        self.bsl.stack(timestamp, x, z, volume, parameter)  # noqa: PD013
 
     def reclaim(self) -> list[list[float | list[float]]]:
         raise NotImplementedError()

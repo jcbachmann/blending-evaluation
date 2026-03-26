@@ -28,7 +28,7 @@ class RoundnessEvaluator:
             bed_size_z=pos * 2.0,
             eight=likelihood,
         )
-        simulator.stack(0, pos, pos, volume, [])
+        simulator.stack(0, pos, pos, volume, [])  # noqa: PD013
         heights = simulator.get_heights()
 
         self.add_from_heights(heights)

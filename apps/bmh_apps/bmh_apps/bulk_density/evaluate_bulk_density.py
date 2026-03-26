@@ -93,7 +93,7 @@ def execute_for_bulk_density(
         detailed=detailed,
         bulkdensity=bulkdensity,
     )
-    sim.stack(0, pos, pos, volume, [])
+    sim.stack(0, pos, pos, volume, [])  # noqa: PD013
     return sim.get_heights()
 
 
