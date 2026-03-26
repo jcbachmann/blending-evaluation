@@ -83,6 +83,6 @@ class PlotServer(ABC):
             self.thread.join()
             self.thread = None
 
-    def reset(self) -> None:
+    def reset(self) -> None:  # noqa: B027
         # Optional method for resetting the plot server state
         pass
