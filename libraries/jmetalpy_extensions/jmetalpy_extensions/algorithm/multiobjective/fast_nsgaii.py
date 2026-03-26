@@ -36,7 +36,7 @@ class FastNSGAII(GeneticAlgorithm[S, R]):
         offspring_population_size: int,
         mutation: Mutation,
         crossover: Crossover,
-        selection: Selection = BinaryTournamentSelection(MultiComparator([FastNonDominatedRanking.get_comparator(), CrowdingDistance.get_comparator()])),
+        selection: Selection = BinaryTournamentSelection(MultiComparator([FastNonDominatedRanking.get_comparator(), CrowdingDistance.get_comparator()])),  # noqa: B008
         termination_criterion: TerminationCriterion = store.default_termination_criteria,
         population_generator: Generator = store.default_generator,
         population_evaluator: Evaluator = store.default_evaluator,
