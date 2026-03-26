@@ -85,7 +85,9 @@ class HoardingEvaluatorObserver(EvaluatorObserver):
         self.solutions = []
 
 
-def get_evaluator(evaluator_str: str | None, *, kwargs: dict[str, Any], evaluator_observer: EvaluatorObserver) -> Evaluator[S] | None:
+def get_evaluator(  # noqa: C901
+    evaluator_str: str | None, *, kwargs: dict[str, Any], evaluator_observer: EvaluatorObserver
+) -> Evaluator[S] | None:
     logger = logging.getLogger(__name__)
 
     evaluator_kwargs = {"observer": evaluator_observer}

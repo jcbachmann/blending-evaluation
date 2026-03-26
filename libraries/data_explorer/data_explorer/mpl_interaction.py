@@ -288,7 +288,7 @@ class PanAndZoom(ZoomOnWheel):
 
             self._event = event
 
-    def _zoom_area(self, event):
+    def _zoom_area(self, event):  # noqa: C901
         if event.name == "button_press_event":  # begin drag
             self._event = event
             self._patch = _plt.Rectangle(xy=(event.xdata, event.ydata), width=0, height=0, fill=False, linewidth=1.0, linestyle="solid", color="black")

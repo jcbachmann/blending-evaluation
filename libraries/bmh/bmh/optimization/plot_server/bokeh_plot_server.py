@@ -22,7 +22,7 @@ class BokehPlotServer(PlotServer):
         self.do_reset = False
         self.logger = logging.getLogger(__name__)
 
-    def make_document(self, doc: Document) -> None:
+    def make_document(self, doc: Document) -> None:  # noqa: C901
         doc.title = "Optimization"
 
         all_source = ColumnDataSource({"f1": [], "f2": [], "color": []})

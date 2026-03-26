@@ -33,7 +33,7 @@ class FastestNonDominatedRanking(Ranking[list[S]]):
     def __init__(self):
         super().__init__()
 
-    def compute_ranking(self, solutions: list[S], k: int | None = None):
+    def compute_ranking(self, solutions: list[S], k: int | None = None):  # noqa: C901
         """Compute ranking of solutions.
 
         :param solutions: Solution list.
