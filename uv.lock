@@ -130,7 +130,6 @@ source = { editable = "libraries/bmh" }
 dependencies = [
     { name = "blending-simulator-lib" },
     { name = "bmh-jmetalpy-extensions" },
-    { name = "bokeh" },
     { name = "jmetalpy" },
     { name = "numpy" },
     { name = "pandas" },
@@ -155,7 +154,6 @@ distributedevaluator = [
 requires-dist = [
     { name = "blending-simulator-lib", editable = "libraries/blending_simulator_lib" },
     { name = "bmh-jmetalpy-extensions", editable = "libraries/bmh_jmetalpy_extensions" },
-    { name = "bokeh" },
     { name = "bokeh", marker = "extra == 'bokehplotserver'" },
     { name = "dask", marker = "extra == 'daskevaluator'" },
     { name = "dask", marker = "extra == 'distributedevaluator'" },
