@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "Benchmark Explorer"
 readme = "README.md"
 authors = [
-    { name = "Michael Cipold", email = "michael@cipold.de" }
+    { name = "Michael Cipold", email = "github@cipold.de" }
 ]
 requires-python = ">=3.10"
 dependencies = [
