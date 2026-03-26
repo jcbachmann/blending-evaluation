@@ -185,7 +185,6 @@ def main(args: argparse.Namespace):
 
         return go.Figure(data=data, layout=layout)
 
-
     @app.callback(
         Output("quality-indicators", "figure"),
         Input("runs", "active_cell"),
