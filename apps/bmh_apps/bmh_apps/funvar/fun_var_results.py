@@ -1,3 +1,4 @@
+import ast
 import glob
 import logging
 import os
@@ -19,7 +20,7 @@ def read_fun_columns_file(file_path: str) -> list[str]:
     if not file_path.endswith("OBJ"):
         raise Exception("Invalid file extension")
     with open(file_path) as f:
-        return eval(f.readline())
+        return ast.literal_eval(f.readline())
 
 
 def read_fun_file(file_path: str, columns: list[str]) -> pd.DataFrame:
