@@ -29,9 +29,9 @@ def verify_timestamps(timestamps: list[float], *, number_of_variables: int, max_
         raise ValueError(f"Length of timestamps {len(timestamps)} does not match length of variables {number_of_variables}")
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        if timestamps[0] <= deposition_prefix.data["timestamp"].values[-1]:
+        if timestamps[0] <= deposition_prefix.data["timestamp"].iloc[-1]:
             raise ValueError(
-                f"First timestamp {timestamps[0]} must be greater than last deposition prefix timestamp {deposition_prefix.data['timestamp'].values[-1]}"
+                f"First timestamp {timestamps[0]} must be greater than last deposition prefix timestamp {deposition_prefix.data['timestamp'].iloc[-1]}"
             )
     else:
         if timestamps[0] != 0.0:
@@ -53,7 +53,7 @@ def variables_to_deposition_generic(
     timestamps: list[float] | None = None,
 ) -> Deposition:
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        start_timestamp = deposition_prefix.data["timestamp"].values[-1]
+        start_timestamp = deposition_prefix.data["timestamp"].iloc[-1]
         min_timestamp = start_timestamp + (max_timestamp - start_timestamp) / len(variables)
     else:
         min_timestamp = 0.0
@@ -71,26 +71,26 @@ def variables_to_deposition_generic(
 
     # Check and fix speed always below v_max
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
-        t_last = deposition_prefix.data["timestamp"].values[-1]
-        x_last = deposition_prefix.data["x"].values[-1]
+        t_last = deposition_prefix.data["timestamp"].iloc[-1]
+        x_last = deposition_prefix.data["x"].iloc[-1]
     else:
-        t_last = deposition.data["timestamp"].values[0]
-        x_last = deposition.data["x"].values[0]
+        t_last = deposition.data["timestamp"].iloc[0]
+        x_last = deposition.data["x"].iloc[0]
     for i in deposition.data.index:
-        t = deposition.data.at[i, "timestamp"]
-        x = deposition.data.at[i, "x"]
+        t = deposition.data.loc[i, "timestamp"]
+        x = deposition.data.loc[i, "x"]
         x_diff_max = v_max * (t - t_last)
         x_diff = x - x_last
         if abs(x_diff) > x_diff_max:
             x = x_last + math.copysign(x_diff_max, x_diff)
-        deposition.data.at[i, "x"] = x
+        deposition.data.loc[i, "x"] = x
         t_last = t
         x_last = x
 
     if deposition_prefix and deposition_prefix.data.shape[0] > 0:
         deposition.data = pd.concat([deposition_prefix.data, deposition.data], ignore_index=True, sort=False)
 
-    deposition.meta.time = deposition.data["timestamp"].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].iloc[-1]
 
     return deposition
 
@@ -131,7 +131,7 @@ def get_chevron_deposition(x_min: float, x_max: float, max_timestamp: float, v: 
         ),
     )
 
-    deposition.meta.time = deposition.data["timestamp"].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].iloc[-1]
 
     return deposition
 
@@ -180,7 +180,7 @@ def get_chevron_ideal_deposition(variables: list[float], *, x_min: float, x_max:
         ),
     )
 
-    deposition.meta.time = deposition.data["timestamp"].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].iloc[-1]
 
     return deposition
 
@@ -213,7 +213,7 @@ def get_full_speed_deposition(x_min: float, x_max: float, deposition_meta: Depos
 
     deposition = Deposition(meta=deposition_meta.copy(), data=data)
     deposition.meta.data = deposition
-    deposition.meta.time = deposition.data["timestamp"].values[-1]
+    deposition.meta.time = deposition.data["timestamp"].iloc[-1]
     return deposition
 
 
@@ -261,7 +261,7 @@ class HomogenizationProblem(FloatProblem):
         self.objectives = objectives
 
         # Buffer values
-        self.max_timestamp = material.data["timestamp"].values[-1]
+        self.max_timestamp = material.data["timestamp"].iloc[-1]
 
         # Check timestamps
         if timestamps:

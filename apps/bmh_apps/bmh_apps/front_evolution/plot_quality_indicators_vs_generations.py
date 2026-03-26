@@ -49,7 +49,7 @@ def main(args: argparse.Namespace):
                         pd.DataFrame(
                             {
                                 "Run": [int(variables["+run"]) for _ in generation_samples],
-                                "HV": [quality_indicators_df["HV"].values[g - 1] for g in generation_samples],
+                                "HV": [quality_indicators_df["HV"].iloc[g - 1] for g in generation_samples],
                                 "Generations": generation_samples,
                             }
                         ),

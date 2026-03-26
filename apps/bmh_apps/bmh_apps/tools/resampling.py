@@ -9,7 +9,7 @@ def get_resampled_max_timestamp(df: pd.DataFrame, rule: str) -> float:
 
     df = df.resample(rule, closed="right", label="right").sum()
     df = df.reset_index()
-    return df["timestamp"].values[-1].astype(int)
+    return df["timestamp"].iloc[-1].astype(int)
 
 
 def resample(material: Material, rule: str):
@@ -20,7 +20,7 @@ def resample(material: Material, rule: str):
     pad = {col: [0.0] for col in df.columns}
     df = pd.concat([df, pd.DataFrame(pad)]).sort_values(by=["timestamp"])
 
-    max_timestamp = df["timestamp"].values[-1]
+    max_timestamp = df["timestamp"].iloc[-1]
     resampled_max_timestamp = get_resampled_max_timestamp(df.copy(), rule)
 
     if max_timestamp < resampled_max_timestamp:

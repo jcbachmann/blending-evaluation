@@ -22,11 +22,11 @@ if TYPE_CHECKING:
 
 def simulate(args, layers) -> DataFrame:
     material_data = read_material(args.material)
-    max_timestamp = material_data["timestamp"].values[-1]
+    max_timestamp = material_data["timestamp"].iloc[-1]
     min_pos = args.depth / 2
     max_pos = args.length - args.depth / 2
     path = chevron_path(layers)
-    max_part = path["part"].values[-1]
+    max_part = path["part"].iloc[-1]
 
     deposition_data = DataFrame()
     deposition_data["timestamp"] = max_timestamp * path["part"] / max_part
@@ -125,11 +125,11 @@ def plot_results(df_reference, df_layers):
     )
 
     df_layers = df_layers.sort_values("layers")
-    x = df_layers["layers"].values
+    x = df_layers["layers"].to_numpy()
 
     ax1.fill_between(x, df_layers["lbound"], df_layers["ubound"], facecolor=colors[0], alpha=0.3, label="Min/Max")
     ax1.fill_between(x, df_layers["lstd"], df_layers["ustd"], facecolor=colors[0], alpha=0.5, label="Std")
-    ax1.plot(x, df_layers["mean"].values, color=colors[0], linestyle="-", label="Mean")
+    ax1.plot(x, df_layers["mean"].to_numpy(), color=colors[0], linestyle="-", label="Mean")
 
     ax1.set_xlim(np.min(x), np.max(x))
     ax1.set_ylim(y_min, y_max)

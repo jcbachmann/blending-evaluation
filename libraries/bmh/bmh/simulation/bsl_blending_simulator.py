@@ -67,7 +67,7 @@ class BslBlendingSimulator(BlendingSimulator):
         # stack all data
         self.bsl.stack_list(
             material_deposition.data.to_numpy(),
-            material_deposition.data.columns.values.tolist(),
+            material_deposition.data.columns.to_list(),
         )
 
         # reclaim stacked material
