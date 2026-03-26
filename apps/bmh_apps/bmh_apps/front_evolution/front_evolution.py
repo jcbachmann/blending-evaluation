@@ -190,7 +190,7 @@ def main(args: argparse.Namespace):
         Output("quality-indicators", "figure"),
         Input("runs", "active_cell"),
     )
-    def update_figure(active_cell):
+    def update_quality_indicators(active_cell):
         quality_indicators_df = pd.read_csv(os.path.join(args.experiment[get_row(active_cell)], "quality_indicators.csv"))
         fig = px.line(quality_indicators_df)
         fig.update_layout(
