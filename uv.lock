@@ -17,9 +17,9 @@ members = [
     "blending-simulator-lib",
     "bmh",
     "bmh-apps",
+    "bmh-jmetalpy-extensions",
     "data-explorer",
     "demo-plant-simulator",
-    "jmetalpy-extensions",
     "plant-simulator",
     "solution-explorer",
 ]
@@ -56,9 +56,9 @@ dependencies = [
     { name = "blending-simulator-lib" },
     { name = "bmh" },
     { name = "bmh-apps" },
+    { name = "bmh-jmetalpy-extensions" },
     { name = "data-explorer" },
     { name = "demo-plant-simulator" },
-    { name = "jmetalpy-extensions" },
     { name = "plant-simulator" },
     { name = "solution-explorer" },
 ]
@@ -78,9 +78,9 @@ requires-dist = [
     { name = "blending-simulator-lib", editable = "libraries/blending_simulator_lib" },
     { name = "bmh", editable = "libraries/bmh" },
     { name = "bmh-apps", editable = "apps/bmh_apps" },
+    { name = "bmh-jmetalpy-extensions", editable = "libraries/bmh_jmetalpy_extensions" },
     { name = "data-explorer", editable = "libraries/data_explorer" },
     { name = "demo-plant-simulator", editable = "apps/demo_plant_simulator" },
-    { name = "jmetalpy-extensions", editable = "libraries/jmetalpy_extensions" },
     { name = "plant-simulator", editable = "libraries/plant_simulator" },
     { name = "solution-explorer", editable = "apps/solution_explorer" },
 ]
@@ -129,9 +129,9 @@ version = "0.0.1"
 source = { editable = "libraries/bmh" }
 dependencies = [
     { name = "blending-simulator-lib" },
+    { name = "bmh-jmetalpy-extensions" },
     { name = "bokeh" },
     { name = "jmetalpy" },
-    { name = "jmetalpy-extensions" },
     { name = "numpy" },
     { name = "pandas" },
 ]
@@ -154,13 +154,13 @@ distributedevaluator = [
 [package.metadata]
 requires-dist = [
     { name = "blending-simulator-lib", editable = "libraries/blending_simulator_lib" },
+    { name = "bmh-jmetalpy-extensions", editable = "libraries/bmh_jmetalpy_extensions" },
     { name = "bokeh" },
     { name = "bokeh", marker = "extra == 'bokehplotserver'" },
     { name = "dask", marker = "extra == 'daskevaluator'" },
     { name = "dask", marker = "extra == 'distributedevaluator'" },
     { name = "distributed", marker = "extra == 'distributedevaluator'" },
     { name = "jmetalpy", specifier = "==1.5.5" },
-    { name = "jmetalpy-extensions", editable = "libraries/jmetalpy_extensions" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "pytest", marker = "extra == 'dev'" },
@@ -173,11 +173,11 @@ version = "0.0.1"
 source = { editable = "apps/bmh_apps" }
 dependencies = [
     { name = "bmh" },
+    { name = "bmh-jmetalpy-extensions" },
     { name = "dash" },
     { name = "dash-bootstrap-components" },
     { name = "hydra-core" },
     { name = "jmetalpy" },
-    { name = "jmetalpy-extensions" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "omegaconf" },
@@ -192,11 +192,11 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "bmh", editable = "libraries/bmh" },
+    { name = "bmh-jmetalpy-extensions", editable = "libraries/bmh_jmetalpy_extensions" },
     { name = "dash" },
     { name = "dash-bootstrap-components" },
     { name = "hydra-core" },
     { name = "jmetalpy", specifier = "==1.5.5" },
-    { name = "jmetalpy-extensions", editable = "libraries/jmetalpy_extensions" },
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "omegaconf" },
@@ -206,6 +206,21 @@ requires-dist = [
     { name = "scipy" },
     { name = "seaborn" },
     { name = "tqdm" },
+]
+
+[[package]]
+name = "bmh-jmetalpy-extensions"
+version = "0.0.1"
+source = { editable = "libraries/bmh_jmetalpy_extensions" }
+dependencies = [
+    { name = "dask" },
+    { name = "jmetalpy" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dask" },
+    { name = "jmetalpy", specifier = "==1.5.5" },
 ]
 
 [[package]]
@@ -698,21 +713,6 @@ dependencies = [
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/92/731b647afa389619c0e6ae340f196e14d75f7307b3e867e7db7f91c85d18/jmetalpy-1.5.5.tar.gz", hash = "sha256:03910934cb72c2bab46446851b57b4c7656d61a3e8dbde792eaf486461db4a13", size = 110047, upload-time = "2020-04-09T12:57:22.92Z" }
-
-[[package]]
-name = "jmetalpy-extensions"
-version = "0.0.1"
-source = { editable = "libraries/jmetalpy_extensions" }
-dependencies = [
-    { name = "dask" },
-    { name = "jmetalpy" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "dask" },
-    { name = "jmetalpy", specifier = "==1.5.5" },
-]
 
 [[package]]
 name = "joblib"

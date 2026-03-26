@@ -17,9 +17,9 @@ from jmetal.util.generator import Generator
 from jmetal.util.observer import WriteFrontToFileObserver
 from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file, read_solutions
 from jmetal.util.termination_criterion import StoppingByEvaluations
-from jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
-from jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
-from jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
+from bmh_jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
+from bmh_jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
+from bmh_jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
 
 from ..benchmark.material_deposition import Deposition, DepositionMeta, Material
 from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
@@ -95,7 +95,7 @@ def get_evaluator(  # noqa: C901
     def get_dask_evaluator():
         nonlocal evaluator_kwargs
         try:
-            from jmetalpy_extensions.util.evaluator import DaskEvaluator
+            from bmh_jmetalpy_extensions.util.evaluator import DaskEvaluator
 
             if "scheduler" in kwargs and kwargs.get("scheduler"):
                 evaluator_kwargs["scheduler"] = kwargs.get("scheduler")
@@ -107,7 +107,7 @@ def get_evaluator(  # noqa: C901
     def get_distributed_evaluator():
         nonlocal evaluator_kwargs
         try:
-            from jmetalpy_extensions.util.evaluator import DistributedEvaluator
+            from bmh_jmetalpy_extensions.util.evaluator import DistributedEvaluator
 
             if "scheduler" in kwargs and "scheduler" in kwargs and kwargs.get("scheduler"):
                 evaluator_kwargs["scheduler"] = kwargs.get("scheduler")

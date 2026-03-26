@@ -5,7 +5,7 @@ description = "Bulk Material Homogenization Evaluation Workspace"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "jmetalpy_extensions",
+    "bmh_jmetalpy_extensions",
     "bmh",
     "blending_simulator_lib",
     "plant_simulator",
@@ -27,7 +27,7 @@ dev = [
 
 [tool.uv]
 workspace = { members = [
-    "libraries/jmetalpy_extensions",
+    "libraries/bmh_jmetalpy_extensions",
     "libraries/bmh",
     "libraries/blending_simulator_lib",
     "libraries/plant_simulator",
@@ -39,7 +39,7 @@ workspace = { members = [
 ] }
 
 [tool.uv.sources]
-jmetalpy_extensions = { workspace = true }
+bmh_jmetalpy_extensions = { workspace = true }
 bmh = { workspace = true }
 blending_simulator_lib = { workspace = true }
 plant_simulator = { workspace = true }

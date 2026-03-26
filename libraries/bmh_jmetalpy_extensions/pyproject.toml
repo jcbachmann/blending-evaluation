@@ -1,5 +1,5 @@
 [project]
-name = "jmetalpy_extensions"
+name = "bmh_jmetalpy_extensions"
 version = "0.0.1"
 description = "jMetalPy Extensions"
 readme = "README.md"

@@ -3,7 +3,7 @@ from unittest import TestCase
 from jmetal.core.solution import Solution
 from jmetal.util.comparator import DominanceComparator
 
-from jmetalpy_extensions.util.comparator import FastDominanceComparator
+from bmh_jmetalpy_extensions.util.comparator import FastDominanceComparator
 
 
 def perform_compartor_test(_self, t):

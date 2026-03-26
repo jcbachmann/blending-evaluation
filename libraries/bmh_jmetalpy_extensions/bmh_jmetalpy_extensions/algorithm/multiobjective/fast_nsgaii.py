@@ -13,7 +13,7 @@ from jmetal.util.ranking import FastNonDominatedRanking
 from jmetal.util.replacement import RankingAndDensityEstimatorReplacement, RemovalPolicyType
 from jmetal.util.termination_criterion import TerminationCriterion
 
-from jmetalpy_extensions.util.ranking import FastestNonDominatedRanking
+from bmh_jmetalpy_extensions.util.ranking import FastestNonDominatedRanking
 
 S = TypeVar("S")
 R = TypeVar("R")
