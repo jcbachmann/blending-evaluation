@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import re
+import tempfile
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -96,9 +97,9 @@ def execute_for_bulk_density(
     return sim.get_heights()
 
 
-def load_for_bulk_density(file: str, path: str = "/tmp"):
+def load_for_bulk_density(file: str, path: str | None = None):
     if path is None:
-        path = "/tmp"
+        path = tempfile.gettempdir()
     path += f"/{file}"
     if os.path.isfile(path):
         return pd.read_csv(path, header=None, delimiter="\t", index_col=None)
@@ -169,7 +170,7 @@ if __name__ == "__main__":
     parser.add_argument("--runs", type=int, default=3, help="Runs")
     parser.add_argument("--detailed", action="store_true", help="Use detailed simulation")
     parser.add_argument("--reuse", action="store_true", help="Reuse old calculation data")
-    parser.add_argument("--path", type=str, default="/tmp", help="Output path for intermediate files")
+    parser.add_argument("--path", type=str, default=tempfile.gettempdir(), help="Output path for intermediate files")
     parser.add_argument("--bulkdensity", type=float, default=1.0, help="Bulk density")
 
     main(parser.parse_args())
