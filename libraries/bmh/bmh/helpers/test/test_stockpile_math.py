@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 import unittest
+from typing import ClassVar
 
 import numpy as np
+import pytest
 
 from ..stockpile_math import get_stockpile_height, get_stockpile_slice_volume, get_stockpile_volume
 
@@ -18,7 +20,7 @@ def get_stockpile_volume_from_slices(core_length: float, height: float):
 
 
 class TestStockpileMath(unittest.TestCase):
-    TEST_SET = [
+    TEST_SET: ClassVar[list[dict[str, float]]] = [
         {"height": 12.3, "length": 321.0, "volume": 50512.78536550256, "delta": 1.0},
         {"height": 111.1, "length": 3.2, "volume": 1475552.3506640848, "delta": 30.0},
         {"height": 12.3, "length": 131231.0, "volume": 19855886.685365506, "delta": 400.0},
@@ -29,23 +31,17 @@ class TestStockpileMath(unittest.TestCase):
 
     def test_get_stockpile_volume(self):
         for entry in TestStockpileMath.TEST_SET:
-            self.assertAlmostEqual(
-                get_stockpile_volume(
-                    height=entry["height"],
-                    core_length=entry["length"],
-                ),
-                entry["volume"],
-            )
+            assert get_stockpile_volume(
+                height=entry["height"],
+                core_length=entry["length"],
+            ) == pytest.approx(entry["volume"])
 
     def test_get_stockpile_height(self):
         for entry in TestStockpileMath.TEST_SET:
-            self.assertAlmostEqual(
-                get_stockpile_height(
-                    volume=entry["volume"],
-                    core_length=entry["length"],
-                ),
-                entry["height"],
-            )
+            assert get_stockpile_height(
+                volume=entry["volume"],
+                core_length=entry["length"],
+            ) == pytest.approx(entry["height"])
 
     def test_array_get_stockpile_volume(self):
         height = np.array([12.3, 111.1])
@@ -61,11 +57,7 @@ class TestStockpileMath(unittest.TestCase):
 
     def test_get_stockpile_slice_volume(self):
         for entry in TestStockpileMath.TEST_SET:
-            self.assertAlmostEqual(
-                get_stockpile_volume_from_slices(
-                    core_length=entry["length"],
-                    height=entry["height"],
-                ),
-                entry["volume"],
-                delta=entry["delta"],
-            )
+            assert get_stockpile_volume_from_slices(
+                core_length=entry["length"],
+                height=entry["height"],
+            ) == pytest.approx(entry["volume"], abs=entry["delta"])
