@@ -50,7 +50,7 @@ wheels = [
 
 [[package]]
 name = "benchmark-explorer"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "apps/benchmark_explorer" }
 dependencies = [
     { name = "bmh" },
@@ -67,7 +67,7 @@ requires-dist = [
 
 [[package]]
 name = "blending-evaluation"
-version = "2026.1"
+version = "2026.1.1"
 source = { virtual = "." }
 dependencies = [
     { name = "benchmark-explorer" },
@@ -120,7 +120,7 @@ dev = [
 
 [[package]]
 name = "blending-simulator-lib"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "libraries/blending_simulator_lib" }
 dependencies = [
     { name = "numpy" },
@@ -149,7 +149,7 @@ wheels = [
 
 [[package]]
 name = "bmh"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "libraries/bmh" }
 dependencies = [
     { name = "blending-simulator-lib" },
@@ -191,7 +191,7 @@ provides-extras = ["bokehplotserver", "daskevaluator", "distributedevaluator", "
 
 [[package]]
 name = "bmh-apps"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "apps/bmh_apps" }
 dependencies = [
     { name = "bmh" },
@@ -232,7 +232,7 @@ requires-dist = [
 
 [[package]]
 name = "bmh-jmetalpy-extensions"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "libraries/bmh_jmetalpy_extensions" }
 dependencies = [
     { name = "dask" },
@@ -654,7 +654,7 @@ wheels = [
 
 [[package]]
 name = "data-explorer"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "libraries/data_explorer" }
 dependencies = [
     { name = "matplotlib" },
@@ -703,7 +703,7 @@ wheels = [
 
 [[package]]
 name = "demo-plant-simulator"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "apps/demo_plant_simulator" }
 dependencies = [
     { name = "graphviz" },
@@ -1721,7 +1721,7 @@ wheels = [
 
 [[package]]
 name = "plant-simulator"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "libraries/plant_simulator" }
 dependencies = [
     { name = "bmh" },
@@ -2257,7 +2257,7 @@ wheels = [
 
 [[package]]
 name = "solution-explorer"
-version = "2026.1"
+version = "2026.1.1"
 source = { editable = "apps/solution_explorer" }
 dependencies = [
     { name = "data-explorer" },
