@@ -29,14 +29,19 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install dependencies
-        run: uv sync --locked --all-extras --dev
-
       - name: Build packages for PyPI
         run: |
           uv build --package bmh
           uv build --package bmh_jmetalpy_extensions
-          uv build --package blending_simulator_lib
+          uv build --package blending_simulator_lib --sdist
+
+      - name: Build manylinux wheels for blending_simulator_lib
+        uses: pypa/cibuildwheel@v2.21.3
+        env:
+          CIBW_BUILD: "cp312-manylinux_x86_64"
+          CIBW_OUTPUT_DIR: dist  # Ensure they land where uv publish looks
+        with:
+          package-dir: libraries/blending_simulator_lib
 
       - name: Publish to PyPI
         run: uv publish
