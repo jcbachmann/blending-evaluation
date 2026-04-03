@@ -1,6 +1,3 @@
-import os
-
-
 def get_identifier(path: str) -> str:
     """
     Split by slashes and get last non-empty entry
