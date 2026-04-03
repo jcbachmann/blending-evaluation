@@ -23,6 +23,8 @@ dev = [
     "mypy",
     "pytest",
     "scipy-stubs",
+    "ipykernel",
+    "matplotlib"
 ]
 
 [tool.uv]

@@ -73,3 +73,10 @@ def get_stockpile_slice_volume_norm(x: float | np.ndarray, core_length: float, h
 
 def get_stockpile_slice_volume(x: float | np.ndarray, core_length: float, height: float, x_min: float, x_diff: float | np.ndarray):
     return get_stockpile_slice_volume_norm(x - x_min + height, core_length, height, x_diff)
+
+
+def get_ideal_stockpile_volumes(x: np.ndarray, volume: float, x_min: float, x_max: float) -> np.ndarray:
+    core_length = x_max - x_min
+    height = get_stockpile_height(volume=volume, core_length=core_length)
+    x_diff = np.diff(x, prepend=x[0])
+    return get_stockpile_slice_volume(x=x, core_length=core_length, height=height, x_min=x_min, x_diff=x_diff)
