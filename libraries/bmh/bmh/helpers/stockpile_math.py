@@ -37,42 +37,39 @@ def get_stockpile_height(volume, core_length):
     return height.real
 
 
-def get_stockpile_slice_core_area(x: float, core_length: float, height: float):
+def get_stockpile_slice_core_area(x: float | np.ndarray, core_length: float, height: float):
     def clamp0h(v):
-        return max(0.0, min(v, height))
+        return np.clip(v, 0.0, height)
 
     return sqrt(2.0) * (clamp0h(x) ** 2.0 - clamp0h(x - core_length) ** 2.0)
 
 
-def get_stockpile_slice_half_cones_area(x: float, core_length: float, height: float):
+def get_stockpile_slice_half_cones_area(x: float | np.ndarray, core_length: float, height: float):
     def clamp0h(v):
-        return max(0.0, min(v, height))
+        return np.clip(v, 0.0, height)
 
     def clamp02h(v):
-        return max(0.0, min(v, 2.0 * height))
+        return np.clip(v, 0.0, 2.0 * height)
 
-    def a(s: float):
-        return sqrt(2.0) * 2.0 / 3.0 * sqrt(clamp02h(s) * clamp02h(2.0 * height - s) ** 3.0)
+    def a(s: float | np.ndarray):
+        return sqrt(2.0) * 2.0 / 3.0 * np.sqrt(clamp02h(s) * clamp02h(2.0 * height - s) ** 3.0)
 
-    def f(s: float):
-        if s < 2.0 * height:
-            div = (height - clamp0h(s)) / (2.0 * height - s)
-        else:
-            div = 0.0
-        return pow((1.0 - 2.0 * div), 3.0 / 2.0)
+    def f(s: float | np.ndarray):
+        div = np.where(s < 2.0 * height, (height - clamp0h(s)) / (2.0 * height - s), 0.0)
+        return (1.0 - 2.0 * div) ** 1.5
 
     return a(x) * (1.0 - f(x)) + a(x - core_length) * f(x - core_length)
 
 
-def get_stockpile_slice_area(x: float, core_length: float, height: float):
+def get_stockpile_slice_area(x: float | np.ndarray, core_length: float, height: float):
     core_area = get_stockpile_slice_core_area(x, core_length, height)
     half_cones_area = get_stockpile_slice_half_cones_area(x, core_length, height)
     return core_area + half_cones_area
 
 
-def get_stockpile_slice_volume_norm(x: float, core_length: float, height: float, x_diff: float):
+def get_stockpile_slice_volume_norm(x: float | np.ndarray, core_length: float, height: float, x_diff: float | np.ndarray):
     return get_stockpile_slice_area(x, core_length, height) / sqrt(2.0) * x_diff
 
 
-def get_stockpile_slice_volume(x: float, core_length: float, height: float, x_min: float, x_diff: float):
+def get_stockpile_slice_volume(x: float | np.ndarray, core_length: float, height: float, x_min: float, x_diff: float | np.ndarray):
     return get_stockpile_slice_volume_norm(x - x_min + height, core_length, height, x_diff)
