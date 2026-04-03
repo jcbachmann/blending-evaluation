@@ -1,6 +1,6 @@
 [project]
 name = "solution_explorer"
-version = "2026.1.2.dev0"
+version = "2026.1.2"
 description = "Solution Explorer"
 readme = "README.md"
 authors = [
