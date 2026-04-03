@@ -7,7 +7,9 @@ def get_identifier(path: str) -> str:
     :param path: path from which the identifier is derived
     :return: identifier - last entry in path
     """
-    return [entry for entry in path.split(os.path.sep) if entry][-1]
+    # Replace all \ with / to be platform agnostic
+    normalized_path = path.replace("\\", "/")
+    return [entry for entry in normalized_path.split("/") if entry][-1]
 
 
 def get_identifiers(paths: list[str]) -> list[str]:

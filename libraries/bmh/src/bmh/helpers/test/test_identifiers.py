@@ -22,3 +22,9 @@ class TestHelpers(unittest.TestCase):
 
     def test_get_identifiers(self):
         assert get_identifiers(["foobar", "./foo/", "foo/bar"]) == ["foobar", "foo", "bar"]
+
+    def test_windows_path(self):
+        assert get_identifier("foo\\bar") == "bar"
+
+    def test_mixed_path(self):
+        assert get_identifier("foo/bar\\baz") == "baz"
