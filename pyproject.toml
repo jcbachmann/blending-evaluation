@@ -22,6 +22,7 @@ dev = [
     "ruff",
     "mypy",
     "pytest",
+    "pytest-cov",
     "scipy-stubs",
     "ipykernel",
     "matplotlib"
