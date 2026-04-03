@@ -1,8 +1,11 @@
-# Blending Simulator Lib for Python
+# Blending Simulator Lib (blending_simulator_lib)
 
-This package wraps and tests the Blending Simulator code written in C++.
+[![PyPI version](https://img.shields.io/pypi/v/blending_simulator_lib.svg)](https://pypi.org/project/blending_simulator_lib/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Stubs
+Simulation library for Bulk Material Homogenization, implemented in C++.
+
+## Development
 
 After making changes to the module, you need to regenerate the stubs. To regenerate the stubs, execute this command from
 the package directory:

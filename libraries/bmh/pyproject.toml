@@ -1,7 +1,8 @@
 [project]
 name = "bmh"
-version = "0.0.1"
-description = "Bulk Material Homogenization"
+version = "2026.1.0.dev0"
+description = "Library for Bulk Material Homogenization simulation and optimization"
+keywords = ["bulk-material", "homogenization", "simulation", "optimization", "bmh", "jmetalpy"]
 readme = "README.md"
 authors = [
     { name = "Michael Cipold", email = "github@cipold.de" }
@@ -9,12 +10,22 @@ authors = [
 requires-python = ">=3.10"
 dependencies = [
     "jmetalpy==1.5.5",
-    "numpy",
-    "pandas",
-    "bmh_jmetalpy_extensions",
-    "blending_simulator_lib",
+    "numpy>=1.20.0",
+    "pandas>=1.3.0",
+    "bmh_jmetalpy_extensions~=2026.1.0.dev0",
+    "blending_simulator_lib~=2026.1.0.dev0",
 ]
-license = { text = "MIT License" }
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/jcbachmann/blending-evaluation"
+Repository = "https://github.com/jcbachmann/blending-evaluation"
 
 [project.optional-dependencies]
 BokehPlotServer = ["bokeh"]
