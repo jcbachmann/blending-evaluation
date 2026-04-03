@@ -3,6 +3,9 @@ import os
 from typing import Any
 
 import numpy as np
+from bmh_jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
+from bmh_jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
+from bmh_jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
 from jmetal.algorithm.multiobjective.nsgaii import NSGAII
 from jmetal.core.algorithm import Algorithm
 from jmetal.core.observer import Observer
@@ -17,9 +20,6 @@ from jmetal.util.generator import Generator
 from jmetal.util.observer import WriteFrontToFileObserver
 from jmetal.util.solution import get_non_dominated_solutions, print_function_values_to_file, print_variables_to_file, read_solutions
 from jmetal.util.termination_criterion import StoppingByEvaluations
-from bmh_jmetalpy_extensions.algorithm.multiobjective.fast_nsgaii import FastNSGAII
-from bmh_jmetalpy_extensions.util.evaluator import EvaluatorObserver, MultiprocessEvaluator
-from bmh_jmetalpy_extensions.util.observer import WriteQualityIndicatorsToFileObserver
 
 from ..benchmark.material_deposition import Deposition, DepositionMeta, Material
 from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
