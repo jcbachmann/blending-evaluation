@@ -1,6 +1,6 @@
 [project]
 name = "bmh_jmetalpy_extensions"
-version = "2026.1.2"
+version = "2026.1.3.dev0"
 description = "jMetalPy Extensions for Bulk Material Homogenization"
 keywords = ["jmetalpy", "optimization", "metaheuristics", "extensions", "bmh", "dask"]
 readme = "README.md"

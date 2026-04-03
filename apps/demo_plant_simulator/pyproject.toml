@@ -1,6 +1,6 @@
 [project]
 name = "demo_plant_simulator"
-version = "2026.1.2"
+version = "2026.1.3.dev0"
 description = "Demo Plant Simulator"
 readme = "README.md"
 authors = [

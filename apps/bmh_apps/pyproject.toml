@@ -1,6 +1,6 @@
 [project]
 name = "bmh_apps"
-version = "2026.1.2"
+version = "2026.1.3.dev0"
 description = "BMH Apps"
 readme = "README.md"
 authors = [
