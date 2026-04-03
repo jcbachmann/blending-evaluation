@@ -34,8 +34,13 @@ target_link_libraries(
     _blending_simulator_lib PRIVATE
     BlendingSimulator::Lib
     BlendingSimulator::FastLib
-    BlendingSimulator::DetailedLib
     pybind11::pybind11
 )
+
+if(BUILD_DETAILED_SIMULATOR)
+    # Disabled for Apple
+    target_link_libraries(_blending_simulator_lib PRIVATE BlendingSimulator::DetailedLib)
+    target_compile_definitions(_blending_simulator_lib PRIVATE BUILD_DETAILED_SIMULATOR)
+endif()
 
 install(TARGETS _blending_simulator_lib DESTINATION ${SKBUILD_PROJECT_NAME})

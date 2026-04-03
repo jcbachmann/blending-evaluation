@@ -42,3 +42,13 @@ cmake.args = [
     "-DBUILD_FAST_SIMULATOR=ON",
     "-DBUILD_DETAILED_SIMULATOR=ON"
 ]
+
+[[tool.scikit-build.overrides]]
+if.platform-system = "^darwin"
+cmake.args = [
+    "-DBUILD_VISUALIZER=OFF",
+    "-DBUILD_TESTS=OFF",
+    "-DBUILD_CLI=OFF",
+    "-DBUILD_FAST_SIMULATOR=ON",
+    "-DBUILD_DETAILED_SIMULATOR=OFF"
+]
