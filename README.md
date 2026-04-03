@@ -1,8 +1,8 @@
 # Blending Evaluation
 
-[![Build](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml/badge.svg?job=build)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
-[![Lint](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml/badge.svg?job=lint)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
-[![Test](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml/badge.svg?job=test)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/jcbachmann/blending-evaluation/ci.yml?job=build&label=Build)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
+[![Lint](https://img.shields.io/github/actions/workflow/status/jcbachmann/blending-evaluation/ci.yml?job=lint&label=Lint)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
+[![Test](https://img.shields.io/github/actions/workflow/status/jcbachmann/blending-evaluation/ci.yml?job=test&label=Test)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/jcbachmann/blending-evaluation/graph/badge.svg)](https://codecov.io/gh/jcbachmann/blending-evaluation)
 
 A collection of Python libraries and apps for simulation, optimization and evaluation of bulk material homogenization (bmh).
