@@ -4,6 +4,8 @@
 [![Lint](https://img.shields.io/github/actions/workflow/status/jcbachmann/blending-evaluation/ci.yml?job=lint&label=Lint)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
 [![Test](https://img.shields.io/github/actions/workflow/status/jcbachmann/blending-evaluation/ci.yml?job=test&label=Test)](https://github.com/jcbachmann/blending-evaluation/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/jcbachmann/blending-evaluation/graph/badge.svg)](https://codecov.io/gh/jcbachmann/blending-evaluation)
+[![PyPI version](https://img.shields.io/pypi/v/bmh)](https://pypi.org/project/bmh/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A collection of Python libraries and apps for simulation, optimization and evaluation of bulk material homogenization (bmh).
 
