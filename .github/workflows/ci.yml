@@ -33,8 +33,11 @@ jobs:
         run: uv run ruff check .
 
   build:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-latest]
     permissions:
       contents: read
 
@@ -58,8 +61,11 @@ jobs:
         run: uv build --all
 
   test:
-    name: Test (Pytest)
-    runs-on: ubuntu-latest
+    name: Test on ${{ matrix.os }} (Pytest)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-latest]
     permissions:
       contents: read
 
