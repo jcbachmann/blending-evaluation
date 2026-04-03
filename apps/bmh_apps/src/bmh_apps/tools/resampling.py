@@ -9,7 +9,7 @@ def get_resampled_max_timestamp(df: pd.DataFrame, rule: str) -> float:
 
     df = df.resample(rule, closed="right", label="right").sum()
     df = df.reset_index()
-    return df["timestamp"].iloc[-1].astype(int)
+    return df["timestamp"].iloc[-1].timestamp()
 
 
 def resample(material: Material, rule: str):
