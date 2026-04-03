@@ -28,7 +28,8 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel --output-dir dist libraries/blending_simulator_lib
         env:
-          CIBW_BUILD: "cp312-manylinux_x86_64"
+          CIBW_BUILD: "cp312-*"
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_OUTPUT_DIR: dist
 
       - name: Upload wheels
