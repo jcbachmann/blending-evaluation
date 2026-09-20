@@ -9,8 +9,10 @@ import pytest
 tf = pytest.importorskip("tensorflow")
 
 from bmh_ml import train_lstm_model  # noqa: E402
-from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH, MODEL_F1_NAME, MODEL_F2_NAME, SCALER_FILE, get_model_file  # noqa: E402
+from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH, MODEL_F1_NAME, MODEL_F2_NAME, get_model_file, get_scaler_file  # noqa: E402
 from bmh_ml.training_data import load_training_data  # noqa: E402
+
+MODEL_SET = "test_set"
 
 
 def write_training_data(directory, rows: int = 40):
@@ -26,12 +28,12 @@ def write_training_data(directory, rows: int = 40):
     data.to_csv(directory / "data" / "training_data.csv", index=False)
 
 
-def train(epochs: int = 1):
-    train_lstm_model.main(argparse.Namespace(verbose=False, epochs=epochs))
+def train(model_set: str = MODEL_SET, training_data: str = "data/training_data.csv"):
+    train_lstm_model.main(argparse.Namespace(verbose=False, epochs=1, training_data=training_data, model_set=model_set))
 
 
-def load_models():
-    return tf.keras.models.load_model(get_model_file(MODEL_F1_NAME)), tf.keras.models.load_model(get_model_file(MODEL_F2_NAME))
+def load_models(model_set: str = MODEL_SET):
+    return tf.keras.models.load_model(get_model_file(MODEL_F1_NAME, model_set)), tf.keras.models.load_model(get_model_file(MODEL_F2_NAME, model_set))
 
 
 def test_training_writes_scaler_and_models(tmp_path, monkeypatch):
@@ -43,7 +45,7 @@ def test_training_writes_scaler_and_models(tmp_path, monkeypatch):
     model_f1, model_f2 = load_models()
     assert model_f1.input_shape == (None, 1, MATERIAL_LENGTH + DEPOSITION_LENGTH)
     assert model_f2.input_shape == (None, 1, DEPOSITION_LENGTH)  # F2 only depends on the deposition
-    with open(SCALER_FILE, "rb") as f:
+    with open(get_scaler_file(MODEL_SET), "rb") as f:
         assert pickle.load(f).n_features_in_ == MATERIAL_LENGTH + DEPOSITION_LENGTH  # noqa: S301 - written by the training just above
 
 
@@ -73,3 +75,33 @@ def test_training_refuses_corrupt_training_data(tmp_path, monkeypatch):
 
     with pytest.raises(ValueError, match="incomplete rows"):
         train()
+
+
+def test_models_are_stored_under_the_given_model_set_and_sets_are_kept_apart(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    write_training_data(tmp_path)
+
+    train("first_set")
+    first_files = {path: path.read_bytes() for path in (tmp_path / "data").glob("*_first_set.*")}
+    train("second_set")
+
+    assert len(first_files) == 3  # scaler and two models
+    assert {path: path.read_bytes() for path in first_files} == first_files  # training the second set did not change the first one
+    assert len(list((tmp_path / "data").glob("*_second_set.*"))) == 3
+
+
+def test_a_training_data_file_can_be_selected(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    write_training_data(tmp_path)
+    (tmp_path / "data" / "training_data.csv").rename(tmp_path / "data" / "other.csv")
+
+    train(training_data="data/other.csv")
+
+    assert (tmp_path / get_scaler_file(MODEL_SET)).exists()
+
+
+def test_the_model_set_has_to_be_named(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["train_lstm_model"])
+
+    with pytest.raises(SystemExit):
+        train_lstm_model.get_args()
