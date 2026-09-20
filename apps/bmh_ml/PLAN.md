@@ -176,7 +176,7 @@ time and what dominated it when a milestone is done.
 - [x] M1.2 dataset builder, manifest and hash, frozen test sets T1, T2, T3, T5, and the noise-ceiling tool (replaces the ad hoc numbers)
 - [x] M1.3 model interface and baselines: mean, ridge, LightGBM, MLP, reproduction of the existing model
 - [x] M1.4 evaluation suite (metrics, plots), MLflow logging, `train` and `evaluate` commands
-- [ ] M1.5 `report` (leaderboard), `ui`, documentation in the README
+- [x] M1.5 `report` (leaderboard), `ui`, documentation in the README
 - **Acceptance:** from a clean checkout, three documented commands train the baselines and show them in the UI and in the leaderboard,
   with noise ceilings next to every number; a second run reproduces the metrics; CI is green.
 
@@ -245,3 +245,4 @@ Ordered by expected value. "H" is the hypothesis, to be confirmed or rejected by
 | 2026-09-20 | M1.1 store location and tracking dependencies; M1.2 seeded generators, dataset store with manifest and content hash, frozen bundles, `build_bundle` command with the test sets T1, T2, T2s, T3, T5 and the noise ceiling table. Checked on the real data (small S1 bundle, about 50 s for 5,800 labeled inputs, noise levels as measured in M0). |
 | 2026-09-20 | M1.3 model interface (`fit`, `predict`, `save`, `load`, one estimator per objective, F2 on the deposition only) with the mean, ridge, LightGBM, Keras MLP and the reproduction of the first LSTM (`legacy_lstm`); models are looked up by name and imported lazily. |
 | 2026-09-20 | M1.4 metrics (errors, tail, ranking, negative rate, noise-normalized), evaluation on the bundle sets, throughput, plots, MLflow logging (params, dataset ids, code version, metrics, model, predictions), `train` and `evaluate_run` commands. Found and fixed on real data: LightGBM with all 16 threads was 10 to 40 times slower than with 8. First numbers on a 2,000 row S1 bundle: the operating-region set T2 already shows R2 below 0 for F2 for every model, as the plan predicted. |
+| 2026-09-20 | M1.5 `report` (leaderboard with noise ceilings, markdown and HTML), `ui`, README. Checked with the real MLflow UI: health and API answer, the runs are listed. Open for the M1 acceptance: the run on full-size bundles. |

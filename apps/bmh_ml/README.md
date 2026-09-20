@@ -70,7 +70,7 @@ in parallel by one process pool for all runs. `train_lstm_model` takes `--epochs
 
 The training data is checked when it is loaded: a truncated last row (e.g. from an interrupted or size limited write) is ignored with a warning, other incomplete rows are an error, and a warning is logged if the file has fewer rows than `training_data_params.json` says were generated.
 
-## Datasets for the training and evaluation pipeline
+## Training and evaluation pipeline
 
 The pipeline (see [PLAN.md](PLAN.md)) keeps its data, its runs and its models in a **store** outside of the working directory: `~/bmh-ml-store`, or the directory in the environment variable `BMH_ML_STORE`.
 
@@ -86,6 +86,21 @@ uv run --package bmh_ml python -m bmh_ml.build_bundle --name S1-v1 --scope S1 \
 * Test sets: `T1` random inputs, `T2` the solutions found by the optimization on the simulation (`--fronts`), `T2s` those found on the surrogate (`--surrogate-fronts`), `T3` unseen materials (S2), `T5` extreme depositions. Validation and test sets are labeled with the mean of several simulations of every input (`--val-repeats`, `--test-repeats`), so that the noise of the simulator does not hide differences between models.
 * The command prints the **noise ceiling** of every set: the standard deviation of the simulator noise and the highest R2 that any model can reach.
 * Every dataset is stored under its content hash together with its manifest (seed, settings, source files, code version). The simulator is random itself, so generating a bundle again gives the same inputs but slightly different labels.
+
+### Training and comparing models
+
+```shell
+uv run --package bmh_ml python -m bmh_ml.train --bundle S1-v1 --model lightgbm --param num_leaves=31 learning_rate=0.1 --run-name lgbm-small
+uv run --package bmh_ml python -m bmh_ml.report --experiment S1-fixed-material          # leaderboard, add --html for a file
+uv run --package bmh_ml python -m bmh_ml.ui                                             # MLflow UI on http://localhost:5000
+uv run --package bmh_ml python -m bmh_ml.evaluate_run --run-id <id> --bundle S1-v2      # a stored model on the test sets of another bundle
+```
+
+* Models: `mean` (the baseline every model must beat), `ridge`, `lightgbm`, `mlp` (Keras) and `legacy_lstm` (the LSTM of the first experiments, as reference). The parameters of a model are its `--param key=value` pairs, the defaults are in `bmh_ml/models`. F2 is predicted from the deposition only, as it does not depend on the material (`deposition_only_f2=false` changes this).
+* `train` trains on the training data of the bundle, stops early on the validation data, and evaluates on the validation data and **every** test set of the bundle. One run in the UI contains: the parameters, the dataset ids, the code version (`+dirty` if there were uncommitted changes) and a hash of `uv.lock`, the metrics of all sets, the training time and the prediction throughput, and as artifacts the model, its predictions and plots.
+* Metrics are named `<set>/<objective>/<metric>`, for example `T2/F2/nrmse`. `nrmse` is the rmse divided by the noise of one simulation, so 1 means as accurate as the simulator is repeatable. Because the test labels are averages over 16 simulations, even a perfect model has an `nrmse` of 0.25. Others: `rmse`, `mae`, `bias`, `r2` (with the ceiling `r2_ceiling`), `tail_rmse` and `tail_bias` (best 10 % of the solutions), `spearman` and `pairwise_accuracy` (is the order of solutions right), `negative_rate` (impossible negative predictions).
+* Models are chosen on the validation data. The test sets are for reporting; do not tune on them, or use a new bundle.
+* The store is a SQLite database and a directory of files, the runs are kept until they are deleted in the UI. Copy the store directory to keep or move them.
 
 ## Improving the models
 
