@@ -127,6 +127,8 @@ class FunVarResults:
                 file_count += 1
                 fun_var_results = FunVarResults.from_file(file, fun_only)
                 all_results.merge(fun_var_results)
+        if all_results.df is None:
+            raise ValueError(f"No results (OBJ and FUN files) found for: {', '.join(file_paths)}")
         logging.info(f"Read {len(all_results.df)} rows from {file_count} files")
 
         if len(all_results.df["file_path"]) > 0:
