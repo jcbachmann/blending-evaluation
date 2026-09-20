@@ -15,6 +15,7 @@ dependencies = [
     "jmetalpy==1.5.5",
     "bmh_jmetalpy_extensions",
     "matplotlib",
+    "moocore>=0.2.0",
     "numpy",
     "omegaconf",
     "pandas",
@@ -30,6 +31,7 @@ license = { text = "MIT License" }
 [project.scripts]
 plot_fun = "bmh_apps.funvar.plot_fun:main"
 export_fun = "bmh_apps.funvar.export_fun:main"
+plot_eaf = "bmh_apps.funvar.plot_eaf:main"
 
 [build-system]
 requires = ["uv_build>=0.11.3,<0.12"]
