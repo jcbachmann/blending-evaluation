@@ -24,3 +24,8 @@ uv run --package bmh_ml python -m bmh_ml.plot_optimization_results 'output/simul
 ```
 
 `transform_optimization_results` exports images with Plotly's `kaleido`, which needs a Chrome installation.
+
+The optimization scripts run a Latin hypercube design of algorithm settings: `--runs` (default 30), `--evaluations` (default 20000 and 100000) and `--population-sizes` (default 50, 100 and 200). A quick test is possible with `--runs 4 --evaluations 400 1000 --population-sizes 10 20 40`. The simulation is evaluated in parallel by one process pool for all runs. `train_lstm_model` takes `--epochs` (default 100).
+
+The training data is checked when it is loaded: a truncated last row (e.g. from an interrupted or size limited write) is ignored with a warning, other incomplete rows are an error, and a warning is logged if the file has fewer rows than `training_data_params.json` says were generated.
+
