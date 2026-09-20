@@ -70,3 +70,18 @@ def test_from_files_treats_experiments_as_runs_and_shared_parts_as_label(tmp_pat
     assert set(results.df["run"]) == {"E1234abcd", "Eabcd"}
     assert set(results.df["parameters"]) == {""}
     assert results.label == "precondition=True run=0"
+
+
+def test_from_files_without_matching_results_raises(tmp_path, monkeypatch):
+    monkeypatch.setenv("BMH_EXPERIMENTS_PATH", str(tmp_path))
+
+    with pytest.raises(ValueError, match=r"No results \(OBJ and FUN files\) found for: .*missing"):
+        FunVarResults.from_files([f"{tmp_path}/missing/*/"], fun_only=True)
+
+
+def test_from_files_names_the_resolved_path_of_an_experiment_without_runs(tmp_path, monkeypatch):
+    monkeypatch.setenv("BMH_EXPERIMENTS_PATH", str(tmp_path))
+    (tmp_path / f"EXPERIMENT-1234abcd{UUID_TAIL}").mkdir()
+
+    with pytest.raises(ValueError, match=r"EXPERIMENT-1234abcd.*/\*/"):
+        FunVarResults.from_files(["E1234abcd"], fun_only=True)
