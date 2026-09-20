@@ -2,22 +2,15 @@ import argparse
 import json
 import logging
 import os
-import pickle
 from collections.abc import Callable, Iterable
 
 import numpy as np
-import pandas as pd
 import plotly.graph_objects as go
-import tensorflow as tf
 
+from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, MATERIAL_LENGTH, TOTAL_VOLUME
 from bmh_ml.simulation import evaluate_sim
-
-# Constants aligned with optimize_model.py and optimize_simulation.py
-MATERIAL_LENGTH: int = 50
-DEPOSITION_LENGTH: int = 20
-BED_SIZE_X: int = 59
-BED_SIZE_Z: int = 20
-TOTAL_VOLUME: int = 2500
+from bmh_ml.surrogate import Surrogate
+from bmh_ml.training_data import load_fixed_material_variables
 
 
 def get_recomputed_cache_path(original_path: str, suffix: str) -> str:
@@ -52,15 +45,11 @@ def compute_with_simulation(dep_batch: np.ndarray, material_variables) -> np.nda
     return np.array(results, dtype=float)
 
 
-def compute_with_lstm(dep_batch: np.ndarray, material_variables, scaler, lstm_model_f1, lstm_model_f2) -> np.ndarray:
+def compute_with_lstm(dep_batch: np.ndarray, material_variables, surrogate: Surrogate) -> np.ndarray:
     # Build full input vectors: material (fixed) + deposition
     n = dep_batch.shape[0]
     full_x = np.hstack([np.tile(material_variables, (n, 1)), dep_batch.astype(float)])  # shape (n, 70)
-    x_scaled = scaler.transform(full_x)
-    x_lstm = x_scaled.reshape((x_scaled.shape[0], 1, x_scaled.shape[1]))
-    f1 = lstm_model_f1.predict(x_lstm, verbose=0).flatten()
-    f2 = lstm_model_f2.predict(x_lstm[:, :, MATERIAL_LENGTH:], verbose=0).flatten()  # F2 only depends on the deposition
-    return np.column_stack([f1, f2]).astype(float)
+    return surrogate.predict(full_x).astype(float)
 
 
 def plot_before_after(
@@ -237,16 +226,13 @@ def recompute_simulation_results_with_lstm(material_variables: np.ndarray) -> No
         return
 
     logging.info("Loading scaler and LSTM models")
-    with open("data/scaler.pkl", "rb") as f:
-        scaler = pickle.load(f)  # noqa: S301 - written by train_lstm_model.py
-    lstm_model_f1 = tf.keras.models.load_model("data/lstm_model_f1_random_training_data.keras")
-    lstm_model_f2 = tf.keras.models.load_model("data/lstm_model_f2_random_training_data.keras")
+    surrogate = Surrogate.load()
 
     for path in iter_json_files(sim_dir):
         try:
             # variables here are deposition-only (20)
             variables, objectives = load_result_file(path, DEPOSITION_LENGTH)
-            recomputed = recompute_cached(path, "lstm", variables, lambda dep: compute_with_lstm(dep, material_variables, scaler, lstm_model_f1, lstm_model_f2))
+            recomputed = recompute_cached(path, "lstm", variables, lambda dep: compute_with_lstm(dep, material_variables, surrogate))
             save_comparison_plots(path, objectives, recomputed, "lstm", "SIM original vs LSTM recomputed")
         except Exception as e:
             logging.exception(f"Failed to process {path}: {e}")
@@ -257,9 +243,7 @@ def main(args: argparse.Namespace):
 
     # Load fixed material variables (same as used during optimization)
     logging.info("Loading training data to obtain fixed material variables")
-    training_data = pd.read_csv("data/training_data.csv")
-    example_row = training_data.iloc[0]
-    material_variables = example_row.iloc[2 : 2 + MATERIAL_LENGTH].to_numpy().astype(float)
+    material_variables = load_fixed_material_variables()
 
     recompute_lstm_results_with_simulation(material_variables)
     recompute_simulation_results_with_lstm(material_variables)

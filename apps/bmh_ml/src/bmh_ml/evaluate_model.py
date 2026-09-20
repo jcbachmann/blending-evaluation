@@ -1,38 +1,15 @@
 import argparse
 import logging
-import pickle
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import tensorflow as tf
-from sklearn.preprocessing import StandardScaler
 
+from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, MATERIAL_LENGTH, MATERIAL_MAX, MATERIAL_MIN, TOTAL_VOLUME, X_MAX, X_MIN
 from bmh_ml.simulation import evaluate_sim
+from bmh_ml.surrogate import Surrogate
 from bmh_ml.variables import generate_deposition_variables, generate_material_variables
-
-MATERIAL_LENGTH: int = 50  # Length of material variables array
-DEPOSITION_LENGTH: int = 20  # Length of deposition variables array
-BED_SIZE_X: int = 59  # Bed size in X dimension
-BED_SIZE_Z: int = 20  # Bed size in Z dimension
-MATERIAL_MIN = 5
-MATERIAL_MAX = 10
-TOTAL_VOLUME = 2500
-
-
-def evaluate_lstm_model(
-    scaler: StandardScaler,
-    model_f1: tf.keras.Model,
-    model_f2: tf.keras.Model,
-    x: np.ndarray,
-) -> tuple[float, float]:
-    x_reshaped = x.reshape(1, -1)
-    x_scaled = scaler.transform(x_reshaped)
-    x_lstm = x_scaled.reshape((1, 1, x_scaled.shape[1]))
-    f1 = float(model_f1.predict(x_lstm, verbose=0).flatten()[0])
-    f2 = float(model_f2.predict(x_lstm[:, :, MATERIAL_LENGTH:], verbose=0).flatten()[0])  # F2 only depends on the deposition
-    return f1, f2
 
 
 def plot_linked_f1_f2(
@@ -90,14 +67,7 @@ def plot_linked_f1_f2(
 def main(args: argparse.Namespace):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    x_min = 0.5 * BED_SIZE_Z
-    x_max = BED_SIZE_X - x_min
-
-    lstm_model_f1 = tf.keras.models.load_model("data/lstm_model_f1_random_training_data.keras")
-    lstm_model_f2 = tf.keras.models.load_model("data/lstm_model_f2_random_training_data.keras")
-
-    with open("data/scaler.pkl", "rb") as f:
-        scaler = pickle.load(f)  # noqa: S301 - written by train_lstm_model.py
+    surrogate = Surrogate.load()
 
     f1_predicted = []
     f2_predicted = []
@@ -110,7 +80,7 @@ def main(args: argparse.Namespace):
             material_min=MATERIAL_MIN,
             material_max=MATERIAL_MAX,
         )
-        deposition_variables = generate_deposition_variables(deposition_length=DEPOSITION_LENGTH, x_min=x_min, x_max=x_max)
+        deposition_variables = generate_deposition_variables(deposition_length=DEPOSITION_LENGTH, x_min=X_MIN, x_max=X_MAX)
         f1_expected, f2_expected = evaluate_sim(
             material_variables=material_variables,
             deposition_variables=deposition_variables,
@@ -118,12 +88,7 @@ def main(args: argparse.Namespace):
             bed_size_z=BED_SIZE_Z,
             total_volume=TOTAL_VOLUME,
         )
-        f1, f2 = evaluate_lstm_model(
-            scaler=scaler,
-            model_f1=lstm_model_f1,
-            model_f2=lstm_model_f2,
-            x=np.concatenate([material_variables, deposition_variables]),
-        )
+        f1, f2 = surrogate.predict(np.concatenate([material_variables, deposition_variables]).reshape(1, -1))[0]
         f1_predicted.append(f1)
         f2_predicted.append(f2)
         f1_expected_values.append(f1_expected)
