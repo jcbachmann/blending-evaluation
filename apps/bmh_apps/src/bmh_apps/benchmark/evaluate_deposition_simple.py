@@ -5,14 +5,14 @@ import math
 from datetime import datetime
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import Deposition, DepositionMeta, MaterialDeposition, MaterialMeta
 from bmh.benchmark.simulator_meta import SimulatorMeta
 from bmh.helpers.identifiers import get_identifier
-from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
+from bmh.helpers.reclaimed_material_evaluator import get_ideal_reclaimed_material
+from bmh.helpers.stockpile_math import get_stockpile_height
 from pandas import DataFrame
 
 from bmh_apps.helpers.configure_logging import configure_logging
@@ -160,20 +160,6 @@ def process_material(identifier: str, material_meta: MaterialMeta, deposition_me
     return reclaimed_material.meta
 
 
-def get_ideal_reclaimed_material(reclaimed_meta: MaterialMeta, x_min: float, x_max: float) -> MaterialMeta:
-    ideal = reclaimed_meta.data.copy()
-    for p in ideal.get_parameter_columns():
-        avg = np.average(ideal.data[p], weights=ideal.data["volume"])
-        ideal.data[p] = avg
-    height = get_stockpile_height(ideal.data["volume"].sum(), x_max - x_min)
-    ideal.data["x_diff"] = (ideal.data["x"] - ideal.data["x"].shift(1)).fillna(0.0)
-    ideal.data["volume"] = ideal.data.apply(
-        lambda row: get_stockpile_slice_volume(row["x"], x_max - x_min, height, x_min, row["x_diff"]),
-        axis=1,
-    )
-    return ideal.meta
-
-
 def main(args: argparse.Namespace):
     # Setup logging
     configure_logging(args.verbose)
@@ -243,10 +229,10 @@ def main(args: argparse.Namespace):
             deposition_meta=deposition_meta,
             simulator_meta=simulator_meta,
         )
-        ideal_meta = get_ideal_reclaimed_material(reclaimed_meta, x_min, x_max)
+        ideal = get_ideal_reclaimed_material(reclaimed_meta.data, x_min, x_max)
 
         ax.plot(reclaimed_meta.data.data["x"], reclaimed_meta.data.data["volume"], color="red", marker="", linestyle="-")
-        ax.plot(ideal_meta.data.data["x"], ideal_meta.data.data["volume"], color="green", marker="", linestyle="-")
+        ax.plot(ideal.data["x"], ideal.data["volume"], color="green", marker="", linestyle="-")
 
     plt.show()
 

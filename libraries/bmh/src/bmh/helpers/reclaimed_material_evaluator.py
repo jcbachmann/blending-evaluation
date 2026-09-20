@@ -1,6 +1,23 @@
+import numpy as np
+
 from ..benchmark.material_deposition import Material
 from .math import stdev, weighted_avg_and_std
-from .stockpile_math import get_stockpile_height, get_stockpile_slice_volume
+from .stockpile_math import get_ideal_stockpile_volumes
+
+
+def get_ideal_reclaimed_material(reclaimed: Material, x_min: float, x_max: float) -> Material:
+    """
+    Ideal version of a reclaimed material: all parameters at their volume weighted average and the volume curve of an ideal stockpile
+    :param reclaimed: reclaimed material with an x column
+    :param x_min: first reclaim position of the stockpile core
+    :param x_max: last reclaim position of the stockpile core
+    :return: copy of the reclaimed material, the reclaimed material itself is not modified
+    """
+    ideal = reclaimed.copy()
+    for parameter in reclaimed.get_parameter_columns():
+        ideal.data[parameter] = np.average(reclaimed.data[parameter], weights=reclaimed.data["volume"])
+    ideal.data["volume"] = get_ideal_stockpile_volumes(reclaimed.data["x"].to_numpy(), reclaimed.data["volume"].sum(), x_min, x_max)
+    return ideal
 
 
 class ReclaimedMaterialEvaluator:
@@ -15,21 +32,9 @@ class ReclaimedMaterialEvaluator:
 
     def get_volume_stdev(self) -> float:
         if self._volume_stdev is None:
-            ideal_df = self.reclaimed.data.copy()
-            ideal_height = get_stockpile_height(volume=ideal_df["volume"].sum(), core_length=self.x_max - self.x_min)
-            ideal_df["x_diff"] = (ideal_df["x"] - ideal_df["x"].shift(1)).fillna(0.0)
-            ideal_df["volume"] = ideal_df.apply(
-                lambda row: get_stockpile_slice_volume(
-                    x=row["x"],
-                    core_length=self.x_max - self.x_min,
-                    height=ideal_height,
-                    x_min=self.x_min,
-                    x_diff=row["x_diff"],
-                ),
-                axis=1,
-            )
-
-            self._volume_stdev = stdev((ideal_df["volume"] - self.reclaimed.data["volume"]).values)
+            data = self.reclaimed.data
+            ideal_volumes = get_ideal_stockpile_volumes(data["x"].to_numpy(), data["volume"].sum(), self.x_min, self.x_max)
+            self._volume_stdev = stdev(ideal_volumes - data["volume"].to_numpy())
 
         return self._volume_stdev
 
