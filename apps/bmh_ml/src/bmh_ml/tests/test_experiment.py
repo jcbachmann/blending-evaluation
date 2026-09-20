@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from collections import Counter
 
 import pytest
@@ -53,7 +54,10 @@ def test_run_experiments_writes_one_file_per_run(tmp_path, monkeypatch):
     paths = run_experiments(problem, "test_model", make_args())
 
     design = get_design(3, [40, 80], [10, 20])
-    assert paths == [f"output/test_model/instance_{instance:02d}_run_{run:02d}_pop{population}.json" for run, (_, population, instance) in enumerate(design)]
+    assert paths == [
+        os.path.join("output", "test_model", f"instance_{instance:02d}_run_{run:02d}_pop{population}.json")
+        for run, (_, population, instance) in enumerate(design)
+    ]
     for run, ((evaluations, population, instance), path) in enumerate(zip(design, paths, strict=True)):
         result = json.loads((tmp_path / path).read_text())
         assert list(result) == ["model", "objectives", "variables", "parameters"]
