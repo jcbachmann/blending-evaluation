@@ -19,6 +19,7 @@ dependencies = [
     "omegaconf",
     "pandas",
     "plotly",
+    "pyperclip",
     "scipy",
     "scikit-learn",
     "seaborn",
