@@ -77,7 +77,7 @@ Made now, with the reason. Say so if one of them should be different; most are c
 | Experiment tracking and comparison UI | **MLflow** (local, SQLite backend, file artifacts) | Runs, parameters, metrics, artifacts and a comparison UI without an account; works with any framework; has a model registry. Verified here: installs on Python 3.12, the UI server starts. Weights & Biases is the most polished but is built around a cloud account (a self-hosted server exists but is heavier); TensorBoard shows and overlays curves but has no table of runs with parameters, artifacts and a model registry; Aim is a capable tracker with a smaller ecosystem and no registry; DVC focuses on data and pipeline versioning. |
 | Where the store lives | `~/bmh-ml-store`, overridable by `BMH_ML_STORE` | Models, predictions and datasets grow to gigabytes; they must not sit in the synced folder. |
 | Model frameworks | Keras 3 (already installed), scikit-learn, LightGBM. PyTorch only if an approach needs it. | The pipeline talks to models through one small interface, so a framework is an implementation detail and can be added later. |
-| Configuration | Hydra structured configs | Already used for the optimizer scripts here; config groups for dataset, model and training. |
+| Configuration | OmegaConf configs (YAML files, typed schema, command line overrides), without the Hydra application runner | OmegaConf comes with Hydra, which is already used for the optimizer scripts here. The runner changes the working directory and creates output folders, which fights with a pipeline that has its own store and is harder to test. |
 | Hyperparameter search | Optuna used directly, every trial a nested MLflow run | More control than a sweeper plugin, and the results end up in the same UI. |
 | Labels | single simulations for training, **repeat-averaged (16x) for validation and test** | Training data is cheap, but noisy test labels would hide the differences between good models. |
 | Test sets | **frozen and versioned**, model selection only on validation data | Otherwise many attempts overfit the test set unnoticed. |
@@ -162,7 +162,9 @@ itself tested. Unit tests use tiny synthetic data. CI must stay green (section 0
 
 ## 5. Roadmap
 
-Durations are rough and assume the decisions above.
+Durations are **human-equivalent working days**, the effort a person would need to write, run and debug this. They are not my wall-clock time:
+that is set by compute (data generation, training runs, sweeps) and by your review and decisions, not by writing code. I report real elapsed
+time and what dominated it when a milestone is done.
 
 ### M0 - facts, plan, tooling check (today) - done when this file is committed
 - [x] measure noise, operating region, hardware, speed
