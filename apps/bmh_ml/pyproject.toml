@@ -19,6 +19,8 @@ dependencies = [
     "plotly",
     "tensorflow",
     "kaleido>=1.0.0",
+    "mlflow>=3.0",
+    "lightgbm>=4.0",
 ]
 license = { text = "MIT License" }
 
