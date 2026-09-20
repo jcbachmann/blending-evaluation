@@ -70,6 +70,23 @@ in parallel by one process pool for all runs. `train_lstm_model` takes `--epochs
 
 The training data is checked when it is loaded: a truncated last row (e.g. from an interrupted or size limited write) is ignored with a warning, other incomplete rows are an error, and a warning is logged if the file has fewer rows than `training_data_params.json` says were generated.
 
+## Datasets for the training and evaluation pipeline
+
+The pipeline (see [PLAN.md](PLAN.md)) keeps its data, its runs and its models in a **store** outside of the working directory: `~/bmh-ml-store`, or the directory in the environment variable `BMH_ML_STORE`.
+
+`build_bundle` generates the datasets that belong together, labels them with the simulator and stores them:
+
+```shell
+uv run --package bmh_ml python -m bmh_ml.build_bundle --name S1-v1 --scope S1 \
+    --material-from csv:data/training_data.csv --fronts output/simulation --surrogate-fronts output/lstm_model
+```
+
+* A **bundle** contains the training data, the validation data and the frozen test sets. It cannot be overwritten, so results that refer to a bundle stay comparable. Choose a new name for new data, and use `--tests-from <bundle>` to try other training data on the same test sets.
+* The **scope** `S1` is one fixed material (the models use the 20 deposition inputs), `S2` is any material (70 inputs).
+* Test sets: `T1` random inputs, `T2` the solutions found by the optimization on the simulation (`--fronts`), `T2s` those found on the surrogate (`--surrogate-fronts`), `T3` unseen materials (S2), `T5` extreme depositions. Validation and test sets are labeled with the mean of several simulations of every input (`--val-repeats`, `--test-repeats`), so that the noise of the simulator does not hide differences between models.
+* The command prints the **noise ceiling** of every set: the standard deviation of the simulator noise and the highest R2 that any model can reach.
+* Every dataset is stored under its content hash together with its manifest (seed, settings, source files, code version). The simulator is random itself, so generating a bundle again gives the same inputs but slightly different labels.
+
 ## Improving the models
 
 The plan for a training and evaluation pipeline with experiment tracking, and for finding the best models for F1 and F2, is in [PLAN.md](PLAN.md).

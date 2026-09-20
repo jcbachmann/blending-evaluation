@@ -32,7 +32,7 @@ optimize) and **S2 general material** (input: material curve of 50 values and de
 
 ## 2. Facts (measured on 2026-09-20, this machine)
 
-An ad hoc script produced these numbers; milestone M1.2 replaces it by a tested tool. Treat them as the starting point, not as final.
+An ad hoc script produced these numbers; `python -m bmh_ml.build_bundle` now prints the same table for every bundle (M1.2). Treat the numbers here as the starting point, not as final.
 
 **The simulator is noisy, which caps every model.** The same input simulated 30 times:
 
@@ -172,8 +172,8 @@ time and what dominated it when a milestone is done.
 - [x] write this plan
 
 ### M1 - training and evaluation pipeline (about 2 days)
-- [ ] M1.1 module structure, optional dependencies, config skeleton, CI-safe tests
-- [ ] M1.2 dataset builder, manifest and hash, frozen test sets T1, T2, T3, T5, and the noise-ceiling tool (replaces the ad hoc numbers)
+- [x] M1.1 module structure, optional dependencies, CI-safe tests (the config skeleton moved to M1.4, where the configs are used)
+- [x] M1.2 dataset builder, manifest and hash, frozen test sets T1, T2, T3, T5, and the noise-ceiling tool (replaces the ad hoc numbers)
 - [ ] M1.3 model interface and baselines: mean, ridge, LightGBM, MLP, reproduction of the existing model
 - [ ] M1.4 evaluation suite (metrics, plots), MLflow logging, `train` and `evaluate` commands
 - [ ] M1.5 `report` (leaderboard), `ui`, documentation in the README
@@ -242,3 +242,4 @@ Ordered by expected value. "H" is the hypothesis, to be confirmed or rejected by
 | Date | What |
 |---|---|
 | 2026-09-20 | M0: measurements, MLflow check, plan written |
+| 2026-09-20 | M1.1 store location and tracking dependencies; M1.2 seeded generators, dataset store with manifest and content hash, frozen bundles, `build_bundle` command with the test sets T1, T2, T2s, T3, T5 and the noise ceiling table. Checked on the real data (small S1 bundle, about 50 s for 5,800 labeled inputs, noise levels as measured in M0). |
