@@ -98,7 +98,7 @@ def test_equalize_run_counts_keeps_the_first_runs_of_the_larger_group():
     points_a, sets_a = make_front_runs(0.0, 6, seed=1)
     points_b, sets_b = make_front_runs(0.2, 4, seed=2)
 
-    trimmed_a, trimmed_sets_a, trimmed_b, trimmed_sets_b = plot_eaf.equalize_run_counts(points_a, sets_a, points_b, sets_b)
+    (trimmed_a, trimmed_sets_a), (trimmed_b, trimmed_sets_b) = plot_eaf.equalize_run_counts(points_a, sets_a, points_b, sets_b)
 
     assert set(trimmed_sets_a) == set(trimmed_sets_b) == {1, 2, 3, 4}
     assert np.array_equal(trimmed_a, points_a[sets_a <= 4])

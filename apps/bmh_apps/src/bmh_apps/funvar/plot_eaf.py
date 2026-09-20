@@ -90,10 +90,12 @@ def keep_first_runs(points: np.ndarray, sets: np.ndarray, runs: int) -> tuple[np
     return points[keep], sets[keep]
 
 
-def equalize_run_counts(points_a: np.ndarray, sets_a: np.ndarray, points_b: np.ndarray, sets_b: np.ndarray) -> tuple[np.ndarray, ...]:
+def equalize_run_counts(
+    points_a: np.ndarray, sets_a: np.ndarray, points_b: np.ndarray, sets_b: np.ndarray
+) -> tuple[tuple[np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]:
     """The difference of attainment counts is only comparable for the same number of runs, so keep the first runs (by path) of both groups."""
     runs = int(min(sets_a.max(), sets_b.max()))
-    return (*keep_first_runs(points_a, sets_a, runs), *keep_first_runs(points_b, sets_b, runs))
+    return keep_first_runs(points_a, sets_a, runs), keep_first_runs(points_b, sets_b, runs)
 
 
 def to_levels(differences: np.ndarray, runs: int, intervals: int) -> np.ndarray:
@@ -362,7 +364,7 @@ def main(args: argparse.Namespace | None = None):
     (group_a, (points_a, sets_a)), (group_b, (points_b, sets_b)) = points_and_sets.items()
     if sets_a.max() != sets_b.max():
         logging.warning(f"The EAF difference needs the same number of runs, using the first {min(sets_a.max(), sets_b.max())} runs (by path) of both groups")
-    points_a, sets_a, points_b, sets_b = equalize_run_counts(points_a, sets_a, points_b, sets_b)
+    (points_a, sets_a), (points_b, sets_b) = equalize_run_counts(points_a, sets_a, points_b, sets_b)
     rectangles = clip_rectangles(compute_eaf_difference(points_a, sets_a, points_b, sets_b, args.intervals), ranges)
     fig = plot_eaf_difference(
         rectangles,
