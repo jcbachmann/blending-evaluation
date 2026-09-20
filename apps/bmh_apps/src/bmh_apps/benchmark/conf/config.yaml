@@ -3,7 +3,7 @@ defaults:
   - _self_
   - override hydra/launcher: joblib
 
-benchmark_path: ???
+benchmark_path: ${oc.env:BMH_BENCHMARK_PATH}
 material_identifier: ???
 optimization:
   objectives: ???
@@ -23,6 +23,11 @@ reference_front_file:
 hydra:
   job:
     chdir: true
+    config:
+      override_dirname:
+        # A path would create nested directories and the directory name is parsed by the funvar tools
+        exclude_keys:
+          - benchmark_path
   launcher:
     n_jobs: 8
   sweep:
