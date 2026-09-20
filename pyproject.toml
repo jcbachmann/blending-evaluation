@@ -36,6 +36,7 @@ workspace = { members = [
     "libraries/plant_simulator",
     "libraries/data_explorer",
     "apps/bmh_apps",
+    "apps/bmh_ml",
     "apps/benchmark_explorer",
     "apps/solution_explorer",
     "apps/demo_plant_simulator"
@@ -54,6 +55,7 @@ blending_simulator_lib = { workspace = true }
 plant_simulator = { workspace = true }
 data_explorer = { workspace = true }
 bmh_apps = { workspace = true }
+bmh_ml = { workspace = true }
 benchmark_explorer = { workspace = true }
 solution_explorer = { workspace = true }
 demo_plant_simulator = { workspace = true }

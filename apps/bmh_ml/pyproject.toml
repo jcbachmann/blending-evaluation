@@ -1,0 +1,27 @@
+[project]
+name = "bmh_ml"
+version = "2026.1.3.dev0"
+description = "Machine learning experiments"
+readme = "README.md"
+authors = [
+    { name = "Michael Cipold", email = "github@cipold.de" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "bmh",
+    "pqdm",
+    "pyDOE3",
+    "pymoo",
+    "scipy",
+    "scikit-learn",
+    "numpy",
+    "pandas",
+    "plotly",
+    "tensorflow",
+    "kaleido>=1.0.0",
+]
+license = { text = "MIT License" }
+
+[build-system]
+requires = ["uv_build>=0.11.3,<0.12"]
+build-backend = "uv_build"
