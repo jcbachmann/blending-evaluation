@@ -1,35 +1,8 @@
-import math
-
 import numpy as np
 import pandas as pd
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
-from bmh.helpers.math import stdev
-from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
+from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
-
-
-def weighted_std(values, weights):
-    average = np.average(values, weights=weights)
-    variance = np.average((values - average) ** 2, weights=weights)
-    return math.sqrt(variance)
-
-
-def get_volume_stdev(reclaimed: Material, x_max: float, x_min: float) -> float:
-    ideal_df = reclaimed.data.copy()
-    ideal_height = get_stockpile_height(volume=ideal_df["volume"].sum(), core_length=x_max - x_min)
-    ideal_df["x_diff"] = (ideal_df["x"] - ideal_df["x"].shift(1)).fillna(0.0)
-    ideal_df["volume"] = ideal_df.apply(
-        lambda row: get_stockpile_slice_volume(
-            x=row["x"],
-            core_length=x_max - x_min,
-            height=ideal_height,
-            x_min=x_min,
-            x_diff=row["x_diff"],
-        ),
-        axis=1,
-    )
-
-    return stdev((ideal_df["volume"] - reclaimed.data["volume"]).values)
 
 
 def generate_material(
@@ -93,14 +66,8 @@ def evaluate_sim(
     sim = BslBlendingSimulator(bed_size_x=bed_size_x, bed_size_z=bed_size_z)
     reclaimed_material = sim.stack_reclaim(material_deposition)
 
-    f1 = weighted_std(
-        values=reclaimed_material.data["quality"],
-        weights=reclaimed_material.data["volume"],
-    )
-    f2 = get_volume_stdev(
-        reclaimed=reclaimed_material,
-        x_min=x_min,
-        x_max=x_max,
-    )
+    evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=x_min, x_max=x_max)
+    f1 = evaluator.get_single_parameter_stdev("quality")
+    f2 = evaluator.get_volume_stdev()
 
     return f1, f2
