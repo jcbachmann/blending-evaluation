@@ -41,6 +41,11 @@ workspace = { members = [
     "apps/solution_explorer",
     "apps/demo_plant_simulator"
 ] }
+# tensorflow 2.16.2 (last release with Intel macOS wheels) caps protobuf<5, but protobuf<5.29.6 is affected by CVE-2026-0994
+override-dependencies = [
+    "protobuf>=5.29.6,<6; sys_platform == 'darwin' and platform_machine == 'x86_64'",
+    "protobuf>=6.33.5; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+]
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
