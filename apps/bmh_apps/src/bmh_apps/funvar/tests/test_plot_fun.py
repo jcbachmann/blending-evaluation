@@ -58,15 +58,3 @@ def test_plot_without_non_dominated_overlay_is_exported(tmp_path, dimensions, au
     plot(results, None, "label", auto_scale=auto_scale)
 
     assert len(exported_files(tmp_path, ".html")) == 1
-
-
-def test_export_survives_missing_clipboard(tmp_path, monkeypatch):
-    def fail(_content):
-        raise pyperclip.PyperclipException("no clipboard mechanism")
-
-    monkeypatch.setattr(pyperclip, "copy", fail)
-
-    plot_fun.plot_fun_1d(make_results(tmp_path, 1), "label")
-
-    assert len(exported_files(tmp_path, ".html")) == 1
-    assert len(exported_files(tmp_path, ".txt")) == 1

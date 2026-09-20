@@ -20,9 +20,9 @@ import pandas as pd
 import plotly.colors as pc
 import plotly.graph_objects as go
 
+from bmh_apps.funvar.figure_export import export_fig
 from bmh_apps.funvar.fun_var_results import FunVarResults
 from bmh_apps.funvar.objective_resolver import prettify_objective
-from bmh_apps.funvar.plot_fun import export_fig
 
 # Categorical colors in their fixed, validated order. The color of a group is its position, never cycled.
 CATEGORICAL_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
