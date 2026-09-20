@@ -1,5 +1,6 @@
 """Models without a neural network: the mean, a linear model and gradient boosting."""
 
+import os
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -72,7 +73,7 @@ class LightGBMModel(PerObjectiveModel):
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "early_stopping_rounds": 50,
-        "n_jobs": -1,
+        "n_jobs": 8,  # all 16 threads of the development machine were 10 to 40 times slower than 8, so the default is not "all"
     }
 
     def fit_objective(self, x_train, y_train, x_val, y_val, seed):
@@ -87,14 +88,15 @@ class LightGBMModel(PerObjectiveModel):
             subsample=params["subsample"],
             subsample_freq=1,
             colsample_bytree=params["colsample_bytree"],
-            n_jobs=params["n_jobs"],
+            n_jobs=min(params["n_jobs"], os.cpu_count() or 1),
             random_state=seed,
             verbose=-1,
         )
         regressor.fit(
             x_train,
             y_train,
-            eval_set=[(x_val, y_val)],
+            eval_X=x_val,
+            eval_y=y_val,
             callbacks=[lightgbm.early_stopping(params["early_stopping_rounds"], verbose=False)],
         )
         return regressor.booster_, {"trees": float(regressor.booster_.num_trees())}
