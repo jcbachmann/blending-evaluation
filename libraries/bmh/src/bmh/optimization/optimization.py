@@ -22,7 +22,7 @@ from jmetal.util.solution import get_non_dominated_solutions, print_function_val
 from jmetal.util.termination_criterion import StoppingByEvaluations
 
 from ..benchmark.material_deposition import Deposition, DepositionMeta, Material
-from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
+from ..helpers.reclaimed_material_evaluator import get_ideal_reclaimed_material
 from .homogenization_problem.homogenization_problem import HomogenizationProblem, process_material_deposition
 from .optimization_result import OptimizationResult
 from .plot_server.plot_server import PlotServer, PlotServerInterface
@@ -433,17 +433,7 @@ class DepositionOptimizer(PlotServerInterface):
 
     def get_ideal_reclaimed_material(self) -> Material:
         _, material, _ = self.problem.get_reference_relative()
-        ideal = material.copy()
-        for p in material.get_parameter_columns():
-            avg = np.average(ideal.data[p], weights=ideal.data["volume"])
-            ideal.data[p] = avg
-        height = get_stockpile_height(ideal.data["volume"].sum(), self.x_max - self.x_min)
-        ideal.data["x_diff"] = (ideal.data["x"] - ideal.data["x"].shift(1)).fillna(0.0)
-        ideal.data["volume"] = ideal.data.apply(
-            lambda row: get_stockpile_slice_volume(row["x"], self.x_max - self.x_min, height, self.x_min, row["x_diff"]),
-            axis=1,
-        )
-        return ideal
+        return get_ideal_reclaimed_material(material, self.x_min, self.x_max)
 
     def get_final_results(self) -> list[OptimizationResult]:
         self.logger.debug("Collecting final results")
