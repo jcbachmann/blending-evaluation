@@ -174,7 +174,7 @@ time and what dominated it when a milestone is done.
 ### M1 - training and evaluation pipeline (about 2 days)
 - [x] M1.1 module structure, optional dependencies, CI-safe tests (the config skeleton moved to M1.4, where the configs are used)
 - [x] M1.2 dataset builder, manifest and hash, frozen test sets T1, T2, T3, T5, and the noise-ceiling tool (replaces the ad hoc numbers)
-- [ ] M1.3 model interface and baselines: mean, ridge, LightGBM, MLP, reproduction of the existing model
+- [x] M1.3 model interface and baselines: mean, ridge, LightGBM, MLP, reproduction of the existing model
 - [ ] M1.4 evaluation suite (metrics, plots), MLflow logging, `train` and `evaluate` commands
 - [ ] M1.5 `report` (leaderboard), `ui`, documentation in the README
 - **Acceptance:** from a clean checkout, three documented commands train the baselines and show them in the UI and in the leaderboard,
@@ -243,3 +243,4 @@ Ordered by expected value. "H" is the hypothesis, to be confirmed or rejected by
 |---|---|
 | 2026-09-20 | M0: measurements, MLflow check, plan written |
 | 2026-09-20 | M1.1 store location and tracking dependencies; M1.2 seeded generators, dataset store with manifest and content hash, frozen bundles, `build_bundle` command with the test sets T1, T2, T2s, T3, T5 and the noise ceiling table. Checked on the real data (small S1 bundle, about 50 s for 5,800 labeled inputs, noise levels as measured in M0). |
+| 2026-09-20 | M1.3 model interface (`fit`, `predict`, `save`, `load`, one estimator per objective, F2 on the deposition only) with the mean, ridge, LightGBM, Keras MLP and the reproduction of the first LSTM (`legacy_lstm`); models are looked up by name and imported lazily. |
