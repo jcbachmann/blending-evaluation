@@ -6,6 +6,16 @@ import os
 import pandas as pd
 from pqdm.processes import pqdm
 
+from bmh_ml.settings import (
+    BED_SIZE_X,
+    BED_SIZE_Z,
+    DEPOSITION_LENGTH,
+    MATERIAL_LENGTH,
+    MATERIAL_MAX,
+    MATERIAL_MIN,
+    TOTAL_VOLUME,
+    TRAINING_DATA_FILE,
+)
 from bmh_ml.simulation import evaluate_sim
 from bmh_ml.variables import generate_deposition_variables, generate_material_variables
 
@@ -65,17 +75,17 @@ def generate(args):
 
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output_file", type=str, default="data/training_data.csv")
+    parser.add_argument("--output_file", type=str, default=TRAINING_DATA_FILE)
     parser.add_argument("--n_jobs", type=int, default=16)
     parser.add_argument("--materials", type=int, default=5000)
     parser.add_argument("--depositions_per_material", type=int, default=50)
-    parser.add_argument("--deposition_length", type=int, default=20)
-    parser.add_argument("--material_length", type=int, default=50)
-    parser.add_argument("--bed_size_x", type=float, default=59)
-    parser.add_argument("--bed_size_z", type=float, default=20)
-    parser.add_argument("--total_volume", type=float, default=2500)
-    parser.add_argument("--material_min", type=float, default=5)
-    parser.add_argument("--material_max", type=float, default=10)
+    parser.add_argument("--deposition_length", type=int, default=DEPOSITION_LENGTH)
+    parser.add_argument("--material_length", type=int, default=MATERIAL_LENGTH)
+    parser.add_argument("--bed_size_x", type=float, default=BED_SIZE_X)
+    parser.add_argument("--bed_size_z", type=float, default=BED_SIZE_Z)
+    parser.add_argument("--total_volume", type=float, default=TOTAL_VOLUME)
+    parser.add_argument("--material_min", type=float, default=MATERIAL_MIN)
+    parser.add_argument("--material_max", type=float, default=MATERIAL_MAX)
     return parser.parse_args()
 
 
