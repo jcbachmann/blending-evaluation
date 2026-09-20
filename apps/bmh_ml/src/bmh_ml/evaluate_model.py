@@ -7,7 +7,18 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from bmh_ml.metrics import get_accuracy
-from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, MATERIAL_LENGTH, MATERIAL_MAX, MATERIAL_MIN, TOTAL_VOLUME, X_MAX, X_MIN
+from bmh_ml.settings import (
+    BED_SIZE_X,
+    BED_SIZE_Z,
+    DEPOSITION_LENGTH,
+    MATERIAL_LENGTH,
+    MATERIAL_MAX,
+    MATERIAL_MIN,
+    TOTAL_VOLUME,
+    X_MAX,
+    X_MIN,
+    add_model_set_argument,
+)
 from bmh_ml.simulation import evaluate_sim
 from bmh_ml.surrogate import Surrogate
 from bmh_ml.variables import generate_deposition_variables, generate_material_variables
@@ -68,7 +79,8 @@ def plot_linked_f1_f2(
 def main(args: argparse.Namespace):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    surrogate = Surrogate.load()
+    logging.info(f"Evaluating model set '{args.model_set}'")
+    surrogate = Surrogate.load(args.model_set)
 
     f1_predicted = []
     f2_predicted = []
@@ -133,6 +145,7 @@ def main(args: argparse.Namespace):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
+    add_model_set_argument(parser)
     return parser.parse_args()
 
 

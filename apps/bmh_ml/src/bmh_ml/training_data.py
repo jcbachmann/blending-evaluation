@@ -44,5 +44,6 @@ def load_training_data(training_data_file: str = TRAINING_DATA_FILE) -> pd.DataF
 
 def load_fixed_material_variables(training_data_file: str = TRAINING_DATA_FILE) -> np.ndarray:
     """The material variables of the first training data row, used as the fixed material of the optimization and its evaluation."""
-    first_row = pd.read_csv(training_data_file, nrows=1)
+    # Read the exact values, they are stored with the results and compared with the material of other results
+    first_row = pd.read_csv(training_data_file, nrows=1, float_precision="round_trip")
     return first_row.iloc[0, 2 : 2 + MATERIAL_LENGTH].to_numpy(dtype=float)

@@ -62,15 +62,17 @@ def test_main_uses_a_single_pool_for_all_runs(tmp_path, monkeypatch):
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(optimize_simulation, "Pool", CountingPool)
-    monkeypatch.setattr(optimize_simulation, "load_fixed_material_variables", lambda: MATERIAL)
+    monkeypatch.setattr(optimize_simulation, "load_fixed_material_variables", lambda _training_data_file: MATERIAL)
 
-    optimize_simulation.main(argparse.Namespace(verbose=False, runs=2, evaluations=[20], population_sizes=[10]))
+    optimize_simulation.main(argparse.Namespace(verbose=False, runs=2, evaluations=[20], population_sizes=[10], training_data="data/training_data.csv"))
 
     assert len(pools) == 1
     assert pools[0].starmap_calls >= 4  # two runs with two generations each
     results = sorted((tmp_path / "output" / "simulation").glob("*.json"))
     assert len(results) == 2
-    assert json.loads(results[0].read_text())["model"] == "simulation"
+    result = json.loads(results[0].read_text())
+    assert result["model"] == "simulation"
+    assert result["material_variables"] == MATERIAL.tolist()  # the results say which material they are for
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="worker processes are spawned on other platforms and are not needed to test the problem")

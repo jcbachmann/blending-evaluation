@@ -83,3 +83,13 @@ def test_fixed_material_variables_only_need_the_first_row(tmp_path):
     path.write_text(path.read_text() + "this,is,not,a,valid,row\n")
 
     assert load_fixed_material_variables(str(path)).tolist() == data.iloc[0][[f"m{i + 1}" for i in range(MATERIAL_LENGTH)]].tolist()
+
+
+def test_fixed_material_variables_are_exactly_the_values_of_the_file(tmp_path):
+    # The default float parser of pandas is off by one ULP for some digits
+    path = tmp_path / "training_data.csv"
+    header = ",".join(COLUMNS)
+    values = ["0.12345678901234567", "0.5", *["6.0612244897959187"] * MATERIAL_LENGTH, *["20.0"] * DEPOSITION_LENGTH]
+    path.write_text(header + "\n" + ",".join(values) + "\n")
+
+    assert load_fixed_material_variables(str(path)).tolist() == [float("6.0612244897959187")] * MATERIAL_LENGTH
