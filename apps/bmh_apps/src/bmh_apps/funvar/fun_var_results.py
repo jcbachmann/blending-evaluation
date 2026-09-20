@@ -30,7 +30,8 @@ def read_fun_columns_file(file_path: str) -> list[str]:
 def read_fun_file(file_path: str, columns: list[str]) -> pd.DataFrame:
     if not file_path.endswith("FUN"):
         raise Exception("Invalid file extension")
-    return pd.read_csv(file_path, sep=" ", header=None, index_col=False, names=columns)
+    # The default float parser can be off by one ULP, which changes dominance comparisons and exported fronts
+    return pd.read_csv(file_path, sep=" ", header=None, index_col=False, names=columns, float_precision="round_trip")
 
 
 def read_var_file(file_path: str) -> pd.DataFrame:
