@@ -69,3 +69,7 @@ The optimization scripts accept `--runs 4 --evaluations 400 1000 --population-si
 in parallel by one process pool for all runs. `train_lstm_model` takes `--epochs` (default 100).
 
 The training data is checked when it is loaded: a truncated last row (e.g. from an interrupted or size limited write) is ignored with a warning, other incomplete rows are an error, and a warning is logged if the file has fewer rows than `training_data_params.json` says were generated.
+
+## Improving the models
+
+The plan for a training and evaluation pipeline with experiment tracking, and for finding the best models for F1 and F2, is in [PLAN.md](PLAN.md).

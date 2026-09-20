@@ -1,0 +1,242 @@
+# Plan: find the best models for F1 and F2
+
+Status file for a multi-day effort. **If you resume this work (a new session, or after a break): read sections 0, 5 and 9 first.**
+Results themselves are never kept in this file, they live in the experiment tracking store (section 4.5); this file holds the plan, the
+decisions and short conclusions.
+
+## 0. How to resume
+
+1. Read section 9 (progress log) and the first unchecked milestone in section 5.
+2. `git log --oneline -20` shows what was done since. The repository and the tracking store are the memory, not the chat.
+3. Before declaring anything done, run the same checks as CI: `uv sync --locked --all-extras --dev`, `uv run pytest`, `uv run ruff check .`
+   (a lesson of this project: tests that only pass in a developer environment broke `master` once).
+
+## 1. Goal and success criteria
+
+**Goal:** models that predict the two objectives of the blending simulator, F1 (homogenization, standard deviation of the reclaimed
+quality) and F2 (deviation of the reclaimed volume from the ideal stockpile), as well as reasonably possible, and a pipeline that
+makes every attempt persisted and comparable without manual bookkeeping.
+
+"As well as possible" is not one number. A model is judged on four things, reported side by side, and the final choice is made
+with you on that table:
+
+| Aspect | Question | Measured by |
+|---|---|---|
+| Accuracy where it matters | Is the model right in the region the optimizer visits, not just on average? | error on the *operating region* test set, relative to the simulator's own noise |
+| Usefulness for optimization | Does optimizing the model give solutions that are good *in the simulator*? | transfer test: optimize the model, re-simulate the front, compare with the simulator-optimized front |
+| Robustness | Does it avoid impossible or exploitable predictions? | share of negative predictions, bias in the tail of good solutions, stress test set |
+| Cost | Is it worth having a model at all? | inference throughput compared with the simulator (section 2) |
+
+**Two scopes**, tracked as separate tasks: **S1 fixed material** (input: the 20 deposition positions; this is what your experiments
+optimize) and **S2 general material** (input: material curve of 50 values and deposition; what the current trainer does).
+
+## 2. Facts (measured on 2026-09-20, this machine)
+
+An ad hoc script produced these numbers; milestone M1.2 replaces it by a tested tool. Treat them as the starting point, not as final.
+
+**The simulator is noisy, which caps every model.** The same input simulated 30 times:
+
+| Region | F1 noise sd | F1 spread sd | best possible R2 (F1) | F2 noise sd | F2 spread sd | best possible R2 (F2) |
+|---|---|---|---|---|---|---|
+| fixed material, random depositions | 0.0080 | 0.152 | 0.997 | 0.137 | 3.81 | 0.999 |
+| fixed material, **optimized** depositions | 0.0093 | 0.035 | **0.929** | 0.249 | 3.51 | 0.995 |
+| random material and deposition | 0.0071 | 0.208 | 0.999 | 0.145 | 4.46 | 0.999 |
+
+So a model cannot be better than these ceilings, and in the region that matters, F1 differences below about 0.01 are noise. Test labels
+should be averaged over repeated simulations, and errors are best read in units of the noise sd.
+
+**The training data does not cover the region the optimizer works in.** Fixed material, simulator values:
+
+| | F1 | F2 |
+|---|---|---|
+| random depositions (5 / 50 / 95 %) | 0.295 / 0.483 / 0.762 | 16.9 / 24.1 / 31.9 |
+| your optimized fronts (min / median / max) | 0.051 / 0.126 / 0.466 | 2.9 / 4.4 / 24.3 |
+
+96 % of the optimized solutions are below the 1st percentile of random data in F1, 96 % in F2, and **100 % in at least one**. The
+surrogate optimizations you ran predict **negative F2 (impossible) for 77 % of their 2,450 front solutions**: the model extrapolates
+exactly where it is used and the optimizer exploits its errors.
+
+**The "LSTM" is a dense network.** Every sample is a sequence of length 1 (`reshape((n, 1, 70))`), so the LSTM sees one time step and
+does no sequence modeling.
+
+**A surrogate is currently not faster than the simulator.** One optimization run with 100,000 evaluations took 106 s on the LSTM
+surrogate and 49 s on the simulator (16 cores). The simulator needs about 2 ms per evaluation. The surrogate has to earn its place by
+batched inference speed, by being smooth and denoised, or by being differentiable, which is why cost is part of the criteria.
+
+**Data is cheap.** 250,000 rows are generated in about 2 minutes (16 cores). The bottleneck is not the amount of data but where it is
+sampled and which model is used.
+
+**Hardware:** 16 CPU cores, 38 GB RAM, no GPU. Everything below must be reasonable on the CPU.
+
+## 3. Decisions
+
+Made now, with the reason. Say so if one of them should be different; most are cheap to change early and expensive late.
+
+| Decision | Choice | Why, and what else was considered |
+|---|---|---|
+| Experiment tracking and comparison UI | **MLflow** (local, SQLite backend, file artifacts) | Runs, parameters, metrics, artifacts and a comparison UI without an account; works with any framework; has a model registry. Verified here: installs on Python 3.12, the UI server starts. Weights & Biases is the most polished but is built around a cloud account (a self-hosted server exists but is heavier); TensorBoard shows and overlays curves but has no table of runs with parameters, artifacts and a model registry; Aim is a capable tracker with a smaller ecosystem and no registry; DVC focuses on data and pipeline versioning. |
+| Where the store lives | `~/bmh-ml-store`, overridable by `BMH_ML_STORE` | Models, predictions and datasets grow to gigabytes; they must not sit in the synced folder. |
+| Model frameworks | Keras 3 (already installed), scikit-learn, LightGBM. PyTorch only if an approach needs it. | The pipeline talks to models through one small interface, so a framework is an implementation detail and can be added later. |
+| Configuration | Hydra structured configs | Already used for the optimizer scripts here; config groups for dataset, model and training. |
+| Hyperparameter search | Optuna used directly, every trial a nested MLflow run | More control than a sweeper plugin, and the results end up in the same UI. |
+| Labels | single simulations for training, **repeat-averaged (16x) for validation and test** | Training data is cheap, but noisy test labels would hide the differences between good models. |
+| Test sets | **frozen and versioned**, model selection only on validation data | Otherwise many attempts overfit the test set unnoticed. |
+| Dependencies and CI | heavy packages only in `bmh_ml`, tests behind `importorskip`; pure logic (metrics, splits, config) tested in CI | CI installs only the dev group; it must stay green on all four operating systems. |
+
+**Decisions for you.** I proceed with the default if you say nothing:
+
+1. **Scope priority.** Default: track S1 and S2, treat S1 as primary for the transfer test because your experiments use one material.
+2. **What "best" means.** Default: no single score yet. I report the four aspects of section 1 and we choose the shortlist criterion together
+   once the first baselines are in.
+3. **Store location** `~/bmh-ml-store`, as above.
+4. **New dependencies:** `mlflow`, `lightgbm`, `optuna` (later maybe `torch`). All are large, none is needed by the rest of the repository.
+5. **Compute:** CPU only. If you have a GPU machine, some architectures in section 6 become cheaper.
+
+## 4. Architecture of the pipeline
+
+### 4.1 Layout (new modules in `bmh_ml`)
+
+```
+bmh_ml/
+  datasets/     builders (random, operating region, structured, materials), manifest, splits, frozen test sets
+  models/       one interface (fit, predict, save, load) and the model families
+  evaluation/   metrics, noise ceiling, plots, transfer test, report
+  tracking/     MLflow conventions: experiments, run naming, logging of config, data, git state, artifacts
+  conf/         Hydra configs: dataset, model, training, sweep
+  cli           train, evaluate, sweep, report, ui
+```
+
+### 4.2 Datasets and test sets
+
+A dataset is generated from a **manifest** (generator, parameters, seed, simulator settings, code version) and stored with a content
+hash in `<store>/datasets/<id>/`. The manifest makes it reproducible and every run records the dataset id.
+
+Frozen test sets (each with denoised labels and its noise ceiling):
+
+| Set | Content | Purpose |
+|---|---|---|
+| **T1** in distribution | random depositions (S1: the fixed material, S2: random materials) | the number people usually report |
+| **T2** operating region | solutions of simulator-optimized fronts of runs never used for training | **the set that decides**: where the optimizer works |
+| **T3** unseen materials | new random materials | generalization of S2 |
+| **T4** realistic materials | scenario materials of the benchmark, resampled to 50 values | later; realism check |
+| **T5** stress | extreme depositions (edges, constant positions, jumps) | robustness, exploitable errors |
+
+Training data families (backlog B1, B3): random, **operating region** (from optimizer runs, refined in a loop), structured deposition
+families (ramps, sawtooth, chevron-like, smooth random paths) and perturbations around good solutions.
+
+### 4.3 Model interface and families
+
+`fit(train, validation, config)`, `predict(x)`, `save`, `load`, plus `describe()` (parameters, size). Families: mean predictor and ridge
+(sanity floor), LightGBM, MLP, the existing model as a reproduction baseline, then whatever the backlog produces. Outputs are always
+positive (F1, F2 cannot be negative): see B2.
+
+### 4.4 Evaluation protocol
+
+For each model, each test set and each objective:
+
+* **Accuracy:** RMSE, MAE, R2, and the same **relative to the noise ceiling** (RMSE divided by the noise sd, so 1 means perfect
+  up to noise). This normalized RMSE is my proposal for the primary accuracy metric.
+* **Tail metrics:** the same on the best 10 % of the true values (what the optimizer looks for), and the bias there (optimism).
+* **Ranking:** Spearman correlation and pairwise ordering accuracy, within the operating region.
+* **Robustness:** share of negative or out-of-range predictions on all sets.
+* **Cost:** throughput at batch sizes 100 (one optimizer generation) and 10,000, model size, training time.
+* **Transfer test (shortlisted models only, a few minutes each):** NSGA-III on the model with a fixed budget and seeds, re-simulate the
+  final front with denoised labels, compare with the simulator-optimized reference front (hypervolume ratio and IGD+).
+
+All predictions are stored as artifacts, so new metrics can be computed for old runs without retraining.
+
+### 4.5 Tracking conventions
+
+* One MLflow **experiment per scope** (`S1-fixed-material`, `S2-general-material`), one **run per training**, sweeps as nested runs.
+* Logged per run: full config, dataset ids, git commit and dirty flag, hash of `uv.lock`, seeds, hardware, all metrics namespaced
+  `<set>/<objective>/<metric>` (for example `T2/F1/nrmse`), learning curves per epoch, model, predictions, plots, wall time.
+* **Model registry** with aliases such as `champion-S1`; the scripts of this repository will load models from an alias
+  (milestone M4). The existing *model sets* stay supported.
+* `python -m bmh_ml.ui` starts the UI on the store. `python -m bmh_ml.report` writes a leaderboard (markdown and HTML) from the store,
+  so the comparison never needs manual bookkeeping.
+
+### 4.6 Reproducibility and testing
+
+Seeds everywhere, dataset ids and code versions in every run; a re-run of a run reproduces its metrics within a tolerance that is
+itself tested. Unit tests use tiny synthetic data. CI must stay green (section 0).
+
+## 5. Roadmap
+
+Durations are rough and assume the decisions above.
+
+### M0 - facts, plan, tooling check (today) - done when this file is committed
+- [x] measure noise, operating region, hardware, speed
+- [x] validate that MLflow works here (SQLite store, UI, API)
+- [x] write this plan
+
+### M1 - training and evaluation pipeline (about 2 days)
+- [ ] M1.1 module structure, optional dependencies, config skeleton, CI-safe tests
+- [ ] M1.2 dataset builder, manifest and hash, frozen test sets T1, T2, T3, T5, and the noise-ceiling tool (replaces the ad hoc numbers)
+- [ ] M1.3 model interface and baselines: mean, ridge, LightGBM, MLP, reproduction of the existing model
+- [ ] M1.4 evaluation suite (metrics, plots), MLflow logging, `train` and `evaluate` commands
+- [ ] M1.5 `report` (leaderboard), `ui`, documentation in the README
+- **Acceptance:** from a clean checkout, three documented commands train the baselines and show them in the UI and in the leaderboard,
+  with noise ceilings next to every number; a second run reproduces the metrics; CI is green.
+
+### M2 - the data and the deployment check (about 1 to 2 days)
+- [ ] operating-region data and the refinement loop (optimize the model, simulate, add the results, retrain)
+- [ ] transfer test as a pipeline stage
+- [ ] Optuna sweeps as nested runs
+- **Acceptance:** the effect of the training distribution on T2 is measured and documented; the transfer test runs end to end.
+
+### M3 - modeling iterations (about 3 to 5 days, open ended)
+Work through the backlog (section 6) in order of expected value. Every experiment: a hypothesis, the runs in MLflow, and a short entry in
+`FINDINGS.md` (what was tried, the numbers, what we learned). Check in with you at the end of each backlog item that changed the picture.
+- **Stop rule for an idea:** it either beats the current champion on T2 relative to the noise ceiling, or it is documented as tried.
+
+### M4 - champions into the repository (about 1 day)
+- [ ] registry aliases `champion-S1`, `champion-S2`; the scripts load models from an alias
+- [ ] fast batched inference for the optimizer; end-to-end check with the real optimization scripts
+
+### M5 - report and cleanup (about 1 day)
+- [ ] final comparison table (accuracy, transfer, robustness, cost) and the recommendation
+- [ ] remove what is obsolete (old trainer paths), update documentation
+
+## 6. Experiment backlog
+
+Ordered by expected value. "H" is the hypothesis, to be confirmed or rejected by numbers.
+
+| # | Idea | H and how to test |
+|---|---|---|
+| B1 | **Operating-region training data** by the refinement loop | H: the largest single gain, because today the model extrapolates in exactly the region of use (77 % negative F2). Compare T2 error with random-only data of the same size. |
+| B2 | **Positive outputs and log scale**, loss weighted to the good region | H: F2 spans 3 to 24 and F1 0.05 to 0.5, so relative errors matter; fixes impossible predictions by construction. |
+| B3 | **Structured deposition data** (ramps, sawtooth, smooth paths) and features that describe the pile (deposited volume per bed section) | H: cheaper coverage of good regions than pure random sampling; F2 is a geometric property of the deposition. |
+| B4 | **Structure of F1.** Quality is a passive additive quantity, so the reclaimed quality should be a linear mixing of the material, controlled by the deposition (F1 = spread of `W(deposition) x material`). A network that predicts `W` from the deposition and computes F1 analytically | H: far better generalization across materials (S2). First test linearity with the simulator at high particle density, where noise is small. |
+| B5 | **Architectures:** wider or deeper MLPs, residual, 1D convolution and GRU over the real sequences (material and deposition are ordered), attention; deep ensembles | H: proper sequence models beat the length-1 "LSTM"; ensembles give uncertainty against exploitation. |
+| B6 | **Boosting (LightGBM) and Gaussian processes** for S1 (20 dimensions) | H: strong on small, well-placed data; a GP gives uncertainty and can be extremely accurate with a few thousand points. |
+| B7 | **Predict the reclaimed profile** (volume and quality per slice) and compute F1 and F2 analytically from it | H: much richer supervision than two numbers. Needs the generator to store profiles. |
+| B8 | **Data and noise:** learning curves over the data size, repeated labels, heteroscedastic loss | H: shows what more data buys and whether label noise limits training. |
+| B9 | **Inference speed:** vectorized numpy or torch models, export formats | H: batched inference can be much faster than a Keras `predict` per generation, which decides whether a surrogate is worth using. |
+| B10 | **Gradient-based optimization** through a differentiable model | H: a smooth surrogate allows methods the noisy simulator cannot. |
+| B11 | **Uncertainty guards** (penalize ensemble disagreement in the optimizer) | H: removes exploitation of model errors. |
+| B12 | **Multi-fidelity** (cheap noisy simulations at low particle density as extra data) | H: more data per second of compute; only if B8 says data is the limit. |
+
+## 7. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Overfitting the test sets through many attempts | frozen test sets, selection on validation data only, one final untouched set for the last report |
+| Reading noise as signal | noise ceiling next to every metric, denoised labels, differences smaller than the noise are not conclusions |
+| The surrogate is not worth it (section 2, speed) | cost is a criterion from the start; B9 tests early whether batched inference changes this |
+| Heavy dependencies break CI or the other packages | optional dependencies, `importorskip`, CI-equivalent check before every push |
+| The store grows without bound | it lives outside the synced folder; the report shows the size; old runs can be archived |
+| Time sinks in sweeps | budgets per sweep, the stop rule of M3 |
+
+## 8. Working agreements
+
+* Every result exists in the tracking store or in the repository; nothing lives only in a chat message.
+* Small commits with one topic each, message style as in the history. I do not push, you do.
+* I verify with the CI-equivalent commands and on real data before I say something works, and I say what I did not verify.
+* I decide small things and record them here; I ask about anything that changes the meaning of "best" or costs you time or money.
+* Long runs run in the background with a log; a run that changes a conclusion is reported when it finishes.
+
+## 9. Progress log
+
+| Date | What |
+|---|---|
+| 2026-09-20 | M0: measurements, MLflow check, plan written |
