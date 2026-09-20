@@ -2,6 +2,7 @@ import ast
 import glob
 import logging
 import os
+import posixpath
 import re
 from dataclasses import dataclass
 
@@ -30,7 +31,8 @@ def read_fun_columns_file(file_path: str) -> list[str]:
 def read_fun_file(file_path: str, columns: list[str]) -> pd.DataFrame:
     if not file_path.endswith("FUN"):
         raise Exception("Invalid file extension")
-    return pd.read_csv(file_path, sep=" ", header=None, index_col=False, names=columns)
+    # The default float parser can be off by one ULP, which changes dominance comparisons and exported fronts
+    return pd.read_csv(file_path, sep=" ", header=None, index_col=False, names=columns, float_precision="round_trip")
 
 
 def read_var_file(file_path: str) -> pd.DataFrame:
@@ -61,6 +63,19 @@ def is_parameter(entry: str) -> bool:
     if re.compile(r"E[0-9a-f]{1,8}").fullmatch(entry) is not None:
         return False
     return re.compile(r"run=[0-9]+").fullmatch(entry) is None
+
+
+def get_run_parts(file_paths: list[str]) -> list[list[str]]:
+    """Parts of the file paths that are not shared by all of them."""
+    # Windows paths use backslashes and os.path.commonpath would return them for forward slashes too, so compare plain strings
+    file_paths = [file_path.replace(os.sep, "/") for file_path in file_paths]
+    # Ignore the common part of the file paths
+    common_path = posixpath.commonpath(file_paths)
+    file_paths = [file_path.replace(common_path, "") for file_path in file_paths]
+    # Split remaining path into parts
+    run_parts = [list(re.split(r"[/,]", file_path)) for file_path in file_paths]
+    # Remove empty parts
+    return [[part for part in run if part != ""] for run in run_parts]
 
 
 @dataclass
@@ -132,14 +147,7 @@ class FunVarResults:
         logging.info(f"Read {len(all_results.df)} rows from {file_count} files")
 
         if len(all_results.df["file_path"]) > 0:
-            file_paths = all_results.df["file_path"].to_list()
-            # Ignore the common part of the file paths
-            common_path = os.path.commonpath(file_paths)
-            file_paths = [file_path.replace(common_path, "") for file_path in file_paths]
-            # Split remaining path into parts
-            run_parts = [list(re.split(r"[/,]", file_path)) for file_path in file_paths]
-            # Remove empty parts
-            run_parts = [[part for part in run if part != ""] for run in run_parts]
+            run_parts = get_run_parts(all_results.df["file_path"].to_list())
 
             # Remove leading + signs
             run_parts = [[cleanup_part(part) for part in run] for run in run_parts]
