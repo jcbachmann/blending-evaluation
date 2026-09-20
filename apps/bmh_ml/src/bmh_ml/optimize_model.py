@@ -5,7 +5,7 @@ import numpy as np
 from pymoo.core.problem import Problem
 
 from bmh_ml.experiment import add_experiment_arguments, run_experiments
-from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH, X_MAX, X_MIN
+from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH, X_MAX, X_MIN, add_model_set_argument
 from bmh_ml.surrogate import Surrogate
 from bmh_ml.training_data import load_fixed_material_variables
 
@@ -30,14 +30,17 @@ class HomogenizationProblemMl(Problem):
 def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     add_experiment_arguments(parser)
+    add_model_set_argument(parser)
     return parser.parse_args()
 
 
 def main(args: argparse.Namespace):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    problem = HomogenizationProblemMl(surrogate=Surrogate.load(), material_variables=load_fixed_material_variables())
-    run_experiments(problem, "lstm_model", args)
+    material_variables = load_fixed_material_variables(args.training_data)
+    logging.info(f"Optimizing with model set '{args.model_set}' for the material of the first row of {args.training_data}")
+    problem = HomogenizationProblemMl(surrogate=Surrogate.load(args.model_set), material_variables=material_variables)
+    run_experiments(problem, "lstm_model", args, material_variables, extra_parameters={"model_set": args.model_set})
 
 
 if __name__ == "__main__":

@@ -44,12 +44,13 @@ def get_args() -> argparse.Namespace:
 def main(args: argparse.Namespace):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    material_variables = load_fixed_material_variables()
+    material_variables = load_fixed_material_variables(args.training_data)
+    logging.info(f"Optimizing for the material of the first row of {args.training_data}")
 
     # Starting the worker processes takes longer than evaluating a generation, so one pool is used for all generations and runs
     with Pool() as pool:
         problem = HomogenizationProblemSimulation(material_variables=material_variables, pool=pool)
-        run_experiments(problem, "simulation", args)
+        run_experiments(problem, "simulation", args, material_variables)
 
 
 if __name__ == "__main__":
