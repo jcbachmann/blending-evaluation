@@ -25,7 +25,10 @@ dev = [
     "pytest-cov",
     "scipy-stubs",
     "ipykernel",
-    "matplotlib"
+    "matplotlib",
+    # Tests of bmh_ml, which is not installed by default as it needs TensorFlow. The tests requiring TensorFlow are skipped without it.
+    "pymoo",
+    "pyDOE3"
 ]
 
 [tool.uv]
