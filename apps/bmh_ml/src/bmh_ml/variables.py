@@ -2,8 +2,8 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 
 
-def generate_material_variables(material_length: int, material_min: float, material_max: float) -> list[float]:
-    rng = np.random.default_rng()
+def generate_material_variables(material_length: int, material_min: float, material_max: float, rng: np.random.Generator | None = None) -> list[float]:
+    rng = np.random.default_rng() if rng is None else rng
     start = float(rng.uniform(material_min, material_max))
     step_size = 1
     walk = [start]
@@ -14,6 +14,6 @@ def generate_material_variables(material_length: int, material_min: float, mater
     return gaussian_filter(np.array(walk), sigma=0.75).tolist()
 
 
-def generate_deposition_variables(deposition_length, x_min, x_max):
-    rng = np.random.default_rng()
+def generate_deposition_variables(deposition_length, x_min, x_max, rng: np.random.Generator | None = None):
+    rng = np.random.default_rng() if rng is None else rng
     return rng.uniform(x_min, x_max, deposition_length)
