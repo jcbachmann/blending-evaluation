@@ -2,15 +2,17 @@
 
 Machine learning experiments for the blending simulator: an LSTM surrogate model of the simulator objectives (F1 homogenization, F2 reclaim volume deviation), compared with optimization on the real simulator.
 
-Installing this package pulls in TensorFlow, so it is not part of the default workspace install:
+Installing this package pulls in TensorFlow, so it is not part of the default workspace install. To install all workspace packages including this one:
 
 ```shell
-uv sync --package bmh_ml
+uv sync --all-packages
 ```
+
+`uv sync --package bmh_ml` would remove the other packages from the environment. The commands below use `uv run --package bmh_ml`, which installs what the scripts need when they are started.
 
 ## Usage
 
-The scripts read and write `data/` and `output/` relative to the working directory (both are git-ignored), so run all of them from the same directory. The typical order is:
+The scripts read and write `data/` and `output/` relative to the working directory (both are git-ignored), so run all of them from the same directory. Any directory works, for example one outside of the repository: `uv run --project <path of the repository> --package bmh_ml python -m bmh_ml.<script>`. The typical order is:
 
 ```shell
 uv run --package bmh_ml python -m bmh_ml.generate_training_data          # data/training_data.csv
