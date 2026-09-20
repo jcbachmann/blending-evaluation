@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 
 import pytest
 
-from bmh_apps.funvar.fun_var_results import FunVarResults, cleanup_part, get_filename_without_extension, is_parameter
+from bmh_apps.funvar.fun_var_results import FunVarResults, cleanup_part, get_filename_without_extension, get_run_parts, is_parameter, read_fun_file
 
 UUID_TAIL = "-0000-0000-0000-000000000000"
 
@@ -36,6 +37,19 @@ def test_get_filename_without_extension(tmp_path):
     assert get_filename_without_extension(f"{tmp_path}/") == f"{tmp_path}/"
     with pytest.raises(Exception, match="Invalid file extension"):
         get_filename_without_extension("some/path/results.txt")
+
+
+def test_get_run_parts_drops_the_common_path():
+    assert get_run_parts(["/data/x/a=1,+run=0/", "/data/x/a=1,+run=1/"]) == [["a=1", "+run=0"], ["a=1", "+run=1"]]
+
+
+def test_get_run_parts_handles_windows_paths(monkeypatch):
+    # On Windows glob returns backslashes, a directory gets the trailing slash added by get_filename_without_extension
+    monkeypatch.setattr(os, "sep", "\\")
+
+    run_parts = get_run_parts(["C:\\Temp\\x\\a=1,+run=0\\/", "C:\\Temp\\x\\a=1,+run=1\\/"])
+
+    assert run_parts == [["a=1", "+run=0"], ["a=1", "+run=1"]]
 
 
 def make_run(root: Path, experiment: str, run_dir: str):
@@ -85,3 +99,14 @@ def test_from_files_names_the_resolved_path_of_an_experiment_without_runs(tmp_pa
 
     with pytest.raises(ValueError, match=r"EXPERIMENT-1234abcd.*/\*/"):
         FunVarResults.from_files(["E1234abcd"], fun_only=True)
+
+
+def test_read_fun_file_parses_floats_exactly(tmp_path):
+    # The default pandas float parser turns 0.12345678901234567 into 0.1234567890123456, which is one ULP off
+    fun_file = tmp_path / "FUN"
+    fun_file.write_text("0.12345678901234567 0.98765432109876543 \n")
+
+    fun_df = read_fun_file(str(fun_file), ["F1", "F2"])
+
+    assert fun_df["F1"].iloc[0] == float("0.12345678901234567")
+    assert fun_df["F2"].iloc[0] == float("0.98765432109876543")
