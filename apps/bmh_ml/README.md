@@ -7,3 +7,20 @@ Installing this package pulls in TensorFlow, so it is not part of the default wo
 ```shell
 uv sync --package bmh_ml
 ```
+
+## Usage
+
+The scripts read and write `data/` and `output/` relative to the working directory (both are git-ignored), so run all of them from the same directory. The typical order is:
+
+```shell
+uv run --package bmh_ml python -m bmh_ml.generate_training_data          # data/training_data.csv
+uv run --package bmh_ml python -m bmh_ml.plot_training_data              # optional: F1/F2 scatter of the training data
+uv run --package bmh_ml python -m bmh_ml.train_lstm_model                # data/scaler.pkl, data/lstm_model_f{1,2}_random_training_data.keras
+uv run --package bmh_ml python -m bmh_ml.evaluate_model                  # LSTM predictions vs. simulator
+uv run --package bmh_ml python -m bmh_ml.optimize_model                  # NSGA-III on the LSTM, writes output/lstm_model/
+uv run --package bmh_ml python -m bmh_ml.optimize_simulation             # NSGA-III on the simulator, writes output/simulation/
+uv run --package bmh_ml python -m bmh_ml.transform_optimization_results  # recompute each result with the other model and plot
+uv run --package bmh_ml python -m bmh_ml.plot_optimization_results 'output/simulation/*.json'
+```
+
+`transform_optimization_results` exports images with Plotly's `kaleido`, which needs a Chrome installation.
