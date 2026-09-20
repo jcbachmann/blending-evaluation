@@ -19,5 +19,5 @@ Scripts that need machine specific locations read them from environment variable
 plot_eaf E1234abcd E5678cdef
 ```
 
-It exports two plots: the best, median and worst attainment surface of each group and, for exactly two groups, the EAF difference. Use `--drop-columns` to reduce more than two objectives to two, `--compare A B` to select two of several groups (the group names are the parameters, e.g. `precondition=true`) and `--intervals` to change the resolution of the difference. If the groups have different numbers of runs, the first runs (by path) of both groups are compared.
+It exports two plots: the best, median and worst attainment surface of each group and, for exactly two groups, the EAF difference. Use `--drop-columns` to reduce more than two objectives to two, `--compare A B` to select two of several groups (the group names are the parameters, e.g. `precondition=true`) `--intervals` to change the resolution of the difference and `--labels` to give the groups readable names in the legend, e.g. `--labels random preconditioned` (in the order of the legend, that is the order of `--compare` or otherwise alphabetical). If the groups have different numbers of runs, the first runs (by path) of both groups are compared.
 

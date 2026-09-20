@@ -61,6 +61,15 @@ def select_groups(groups: dict[str, pd.DataFrame], compare: list[str] | None) ->
     return groups
 
 
+def rename_groups(groups: dict[str, pd.DataFrame], labels: list[str]) -> dict[str, pd.DataFrame]:
+    """Display names for the groups, in the order of the groups."""
+    if len(labels) != len(groups):
+        raise ValueError(f"--labels needs one label per group, got {len(labels)} labels for {len(groups)} groups: {list(groups)}")
+    if len(set(labels)) != len(labels):
+        raise ValueError(f"--labels must be unique, got {labels}")
+    return dict(zip(labels, groups.values(), strict=True))
+
+
 def get_points_and_sets(group: pd.DataFrame, fun_columns: list[str]) -> tuple[np.ndarray, np.ndarray]:
     """Objective values of all runs of a group together with the number of the run (set) of each point."""
     return group[fun_columns].to_numpy(dtype=float), pd.factorize(group["file_path"], sort=True)[0] + 1
@@ -301,6 +310,14 @@ def get_args() -> argparse.Namespace:
         default=None,
         help="The two groups (parameter combinations) to compare, required for more than two groups",
     )
+    parser.add_argument(
+        "--labels",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="LABEL",
+        help="Display names of the groups in the order of the legend (order of --compare, otherwise alphabetical)",
+    )
     parser.add_argument("--intervals", type=int, default=5, help="Number of intervals the difference of the attainment is divided into")
     parser.add_argument("--auto-scale", action="store_true", default=False, help="Automatically scale axis ranges")
     return parser.parse_args()
@@ -324,6 +341,9 @@ def main(args: argparse.Namespace | None = None):
 
     all_groups = get_groups(results.df)
     groups = select_groups(all_groups, args.compare)
+    if args.labels:
+        logging.info(f"Labels: {dict(zip(groups, args.labels, strict=False))}")
+        groups = rename_groups(groups, args.labels)
     for name, group in groups.items():
         logging.info(f"Group '{name}': {group['file_path'].nunique()} runs, {len(group)} solutions")
 

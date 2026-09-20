@@ -356,3 +356,39 @@ def test_main_compares_two_experiments_given_by_id(monkeypatch, tmp_path, shown_
     surfaces_fig, difference_fig = shown_figures
     assert [trace.name for trace in surfaces_fig.data if trace.showlegend][:2] == ["precondition=false", "precondition=true"]
     assert "precondition=false vs. precondition=true" in difference_fig.layout.title.text
+
+
+def test_rename_groups():
+    groups = plot_eaf.get_groups(group_df(["a=1", "b=2"]))
+
+    renamed = plot_eaf.rename_groups(groups, ["first", "second"])
+
+    assert list(renamed) == ["first", "second"]
+    assert renamed["first"] is groups["a=1"]
+    with pytest.raises(ValueError, match="one label per group, got 1 labels for 2 groups"):
+        plot_eaf.rename_groups(groups, ["only"])
+    with pytest.raises(ValueError, match="must be unique"):
+        plot_eaf.rename_groups(groups, ["same", "same"])
+
+
+def test_main_labels_are_used_for_legend_title_and_hover(monkeypatch, two_groups, shown_figures):
+    run_main(monkeypatch, two_groups, "--labels", "random", "preconditioned")
+
+    surfaces_fig, difference_fig = shown_figures
+    # Groups are sorted by their parameters, "precondition=false" is the random one
+    assert [trace.name for trace in surfaces_fig.data if trace.showlegend] == ["random", "preconditioned"]
+    assert "random vs. preconditioned" in difference_fig.layout.title.text
+    assert any("preconditioned attains" in trace.text for trace in difference_fig.data if trace.fill == "toself")
+
+
+def test_main_labels_follow_the_order_of_compare(monkeypatch, two_groups, shown_figures):
+    run_main(monkeypatch, two_groups, "--compare", "precondition=true", "precondition=false", "--labels", "preconditioned", "random")
+
+    surfaces_fig, _ = shown_figures
+    assert [trace.name for trace in surfaces_fig.data if trace.showlegend] == ["preconditioned", "random"]
+    assert surfaces_fig.data[0].line.color == plot_eaf.CATEGORICAL_COLORS[0]  # the first group in the order of --compare keeps the first color
+
+
+def test_main_labels_need_one_label_per_group(monkeypatch, two_groups):
+    with pytest.raises(ValueError, match="one label per group"):
+        run_main(monkeypatch, two_groups, "--labels", "random")
