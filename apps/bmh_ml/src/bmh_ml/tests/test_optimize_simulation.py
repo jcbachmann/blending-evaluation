@@ -1,7 +1,9 @@
 import argparse
 import json
+import sys
 
 import numpy as np
+import pytest
 
 from bmh_ml import optimize_simulation
 from bmh_ml.optimize_simulation import HomogenizationProblemSimulation
@@ -71,6 +73,7 @@ def test_main_uses_a_single_pool_for_all_runs(tmp_path, monkeypatch):
     assert json.loads(results[0].read_text())["model"] == "simulation"
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="worker processes are spawned on other platforms and are not needed to test the problem")
 def test_real_process_pool_evaluates_solutions():
     from multiprocessing import Pool
 
