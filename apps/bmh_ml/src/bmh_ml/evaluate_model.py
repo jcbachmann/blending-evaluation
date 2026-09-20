@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+from bmh_ml.metrics import get_accuracy
 from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, MATERIAL_LENGTH, MATERIAL_MAX, MATERIAL_MIN, TOTAL_VOLUME, X_MAX, X_MIN
 from bmh_ml.simulation import evaluate_sim
 from bmh_ml.surrogate import Surrogate
@@ -93,6 +94,10 @@ def main(args: argparse.Namespace):
         f2_predicted.append(f2)
         f1_expected_values.append(f1_expected)
         f2_expected_values.append(f2_expected)
+
+    for objective, expected, predicted in (("F1", f1_expected_values, f1_predicted), ("F2", f2_expected_values, f2_predicted)):
+        accuracy = get_accuracy(expected, predicted)
+        logging.info(f"{objective}: R2 {accuracy['r2']:.3f}, mean absolute error {accuracy['mean_absolute_error']:.4f}")
 
     df_f1 = pd.DataFrame({"Expected": f1_expected_values, "Predicted": f1_predicted})
     df_f2 = pd.DataFrame({"Expected": f2_expected_values, "Predicted": f2_predicted})
