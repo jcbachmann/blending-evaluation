@@ -25,6 +25,7 @@ dependencies = [
     "scikit-learn",
     "seaborn",
     "tqdm",
+    "hydra-joblib-launcher>=1.2.0",
 ]
 license = { text = "MIT License" }
 
