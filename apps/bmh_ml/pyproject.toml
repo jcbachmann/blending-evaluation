@@ -21,6 +21,8 @@ dependencies = [
     "kaleido>=1.0.0",
     "mlflow>=3.0",
     "lightgbm>=4.7",
+    "matplotlib",
+    "pyyaml",
 ]
 license = { text = "MIT License" }
 
