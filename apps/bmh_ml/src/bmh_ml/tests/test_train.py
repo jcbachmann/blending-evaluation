@@ -164,7 +164,9 @@ def test_the_transfer_test_is_logged_with_the_training_or_later():
     assert "transfer/solutions.npz" in {artifact.path for artifact in mlflow.MlflowClient().list_artifacts(result.run_id, "transfer")}
 
     later = run_training("B1", "ridge", {}, with_plots=False)
+    end_time = mlflow.get_run(later.run_id).info.end_time
     transfer_run(later.run_id, config, with_plots=False)
     assert "transfer/hv_ratio" in mlflow.get_run(later.run_id).data.metrics
+    assert mlflow.get_run(later.run_id).info.end_time == end_time  # the finished run is not reopened
     with pytest.raises(ValueError, match="T2"):
         transfer_run(later.run_id, TransferConfig(), with_plots=False)

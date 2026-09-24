@@ -50,15 +50,30 @@ def run_link(experiment_id: str, run_id: str, text: str | None = None) -> str:
 
 
 def merge_description(existing: str | None, generated: str) -> str:
-    """The generated text between the markers, replacing an earlier generated text, and the rest of the existing description kept."""
-    block = f"{BEGIN}\n{generated.strip()}\n{END}"
+    """The generated text, replacing an earlier generated text, and the rest of the existing description kept.
+
+    The first line of the generated text is a summary, it comes before the begin marker so that the description column of the runs table
+    shows it; the rest sits between the markers.
+    """
+    summary, _, body = generated.strip().partition("\n")
+    block = f"{summary}\n{BEGIN}\n{body.strip()}\n{END}"
     if not existing:
         return block
     if BEGIN in existing and END in existing:
-        before, _, rest = existing.partition(BEGIN)
-        _, _, after = rest.partition(END)
-        return f"{before}{block}{after}"
+        begin = existing.index(BEGIN)
+        start = existing.rfind("\n", 0, max(begin - 1, 0)) + 1  # the summary line before the marker belongs to the generated text
+        end = existing.index(END, begin) + len(END)
+        return f"{existing[:start]}{block}{existing[end:]}"
     return f"{existing.rstrip()}\n\n{block}"
+
+
+def get_summary(metrics: dict) -> str:
+    """The results that tell attempts apart, for the first line of a description."""
+    parts = []
+    for name, label in (("transfer/hv_ratio", "transfer hv"), ("valop/F2/nrmse", "valop F2 nrmse"), ("T2/F2/r2", "T2 F2 R2"), ("val/F1/nrmse", "val F1 nrmse")):
+        if name in metrics:
+            parts.append(f"{label} {format_number(metrics[name])}")
+    return "; ".join(parts)
 
 
 def format_number(value: float | None, digits: int = 3) -> str:
@@ -182,10 +197,25 @@ def describe_transfer(metrics: dict, params: dict) -> list[str]:
     ]
 
 
+def get_training_title(run) -> str:
+    params, tags = run.data.params, run.data.tags
+    kind = get_kind(params, tags)
+    subject = f"{params.get('model')} on {params.get('bundle')}, seed {params.get('seed')}"
+    if kind == "refine-round":
+        return f"Refinement {tags['refine']} round {tags['round']}: {subject}"
+    if kind == "refine-control":
+        return f"Control of refinement {tags['refine']}: {subject}"
+    if kind == "sweep-trial":
+        return f"Sweep {tags['sweep']} trial {tags['trial']}: {subject}"
+    return subject
+
+
 def describe_training(run, parent_link: str) -> str:
     params, tags, metrics = run.data.params, run.data.tags, run.data.metrics
     kind = get_kind(params, tags)
-    lines = describe_purpose(kind, run, parent_link)
+    summary = get_summary(metrics)
+    lines = [get_training_title(run) + (f" | {summary}" if summary else "")]
+    lines += describe_purpose(kind, run, parent_link)
     lines += describe_data(params)
     model_params = {key: value for key, value in sorted(params.items()) if key not in INFRASTRUCTURE_PARAMS and not key.endswith("_dataset") and "." not in key}
     lines += ["", "**Parameters:** " + ", ".join(f"{key}={value}" for key, value in model_params.items())]
@@ -222,8 +252,12 @@ def describe_refine(client, run) -> str:
     experiment_id = run.info.experiment_id
     setup = {key.removeprefix("refine."): value for key, value in params.items() if key.startswith("refine.")}
     model_params = {key: value for key, value in params.items() if not key.startswith("refine.")}
+    final = client.get_run(tags["final_run"]).data.metrics if tags.get("final_run") else {}
+    summary = get_summary(final)
     lines = [
-        f"**Refinement loop {setup.get('name')}**: training data in the region the optimizer works in. Each round optimizes the current model "
+        f"Refinement loop {setup.get('name')}: {setup.get('model')}, {setup.get('rounds')} rounds from {setup.get('base')}"
+        + (f" | final round: {summary}" if summary else ""),
+        f"Training data in the region the optimizer works in. Each round optimizes the current model "
         f"({setup.get('optimizations')} NSGA-III runs, population {setup.get('population_size')}, {setup.get('evaluations')} evaluations), "
         f"simulates the solutions found and {setup.get('perturbations')} perturbations of each (sd {setup.get('perturbation_sd')}), adds them "
         f"to the training data and trains the model again. Base bundle **{setup.get('base')}**, model **{setup.get('model')}**, "
@@ -280,8 +314,11 @@ def describe_sweep(client, run) -> str:
     params, tags = run.data.params, run.data.tags
     experiment_id = run.info.experiment_id
     fixed = {key.removeprefix("sweep.fixed."): value for key, value in params.items() if key.startswith("sweep.fixed.")}
+    best = run.data.metrics.get("sweep/best_objective")
     lines = [
-        f"**Hyperparameter sweep {tags.get('sweep')}** of the **{params.get('sweep.model')}** model on bundle **{params.get('sweep.bundle')}** with "
+        f"Sweep {tags.get('sweep')}: {params.get('sweep.model')} on {params.get('sweep.bundle')}"
+        + (f" | best objective {format_number(best, 4)}" if best is not None else ""),
+        f"Hyperparameter sweep {tags.get('sweep')} of the **{params.get('sweep.model')}** model on bundle **{params.get('sweep.bundle')}** with "
         f"Optuna (TPE), {params.get('sweep.trials')} trials in this call, {params.get('sweep.workers', '1')} at a time. Objective (minimized): the mean of "
         f"`{params.get('sweep.objective')}`, validation sets only.",
         "",

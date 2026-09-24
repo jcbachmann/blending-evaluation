@@ -2,14 +2,15 @@ from bmh_ml.tracking.annotate import BEGIN, END, format_number, get_kind, merge_
 
 
 def test_the_generated_description_replaces_the_earlier_one_and_keeps_text_written_by_hand():
-    first = merge_description(None, "generated 1")
-    assert first == f"{BEGIN}\ngenerated 1\n{END}"
+    first = merge_description(None, "summary 1\nbody 1")
+    assert first == f"summary 1\n{BEGIN}\nbody 1\n{END}"
 
     edited = f"My note above.\n\n{first}\n\nMy note below."
-    second = merge_description(edited, "generated 2")
+    second = merge_description(edited, "summary 2\nbody 2")
 
-    assert second == f"My note above.\n\n{BEGIN}\ngenerated 2\n{END}\n\nMy note below."
-    assert merge_description("Only my note.", "generated") == f"Only my note.\n\n{BEGIN}\ngenerated\n{END}"
+    assert second == f"My note above.\n\nsummary 2\n{BEGIN}\nbody 2\n{END}\n\nMy note below."
+    assert merge_description(second, "summary 2\nbody 2") == second
+    assert merge_description("Only my note.", "summary\nbody") == f"Only my note.\n\nsummary\n{BEGIN}\nbody\n{END}"
 
 
 def test_the_kind_of_a_run_follows_from_its_params_and_tags():
