@@ -14,6 +14,8 @@ from bmh_ml.settings import DEPOSITION_LENGTH
 
 OBJECTIVES = ("F1", "F2")
 MODEL_FILE = "model.json"
+MIN_CORES_FOR_PARALLEL_OBJECTIVES = 4
+MIN_ROWS_FOR_PARALLEL_OBJECTIVES = 10_000  # below, starting the processes takes longer than the fit
 
 
 class Model(ABC):
@@ -84,17 +86,39 @@ class PerObjectiveModel(Model):
     def load_objective(self, path: Path) -> Any: ...
 
     def fit(self, x_train, y_train, x_val, y_val, seed):
-        self.estimators, info = [], {}
-        for i, objective in enumerate(OBJECTIVES):
-            deposition_only = self.params["deposition_only_f2"]
-            estimator, objective_info = self.fit_objective(
+        """Fits the estimators of F1 and F2. They are independent, so with enough data they are fitted at the same time in two processes
+        with half of the cores each: a single fit does not keep all cores busy (measured: an MLP used about a third of them)."""
+        import tempfile
+
+        from bmh_ml.parallel import get_cpu_count, run_parallel
+
+        deposition_only = self.params["deposition_only_f2"]
+        arguments = [
+            (
+                type(self),
+                self.params,
+                objective,
                 get_objective_inputs(x_train, i, deposition_only),
                 y_train[:, i],
                 get_objective_inputs(x_val, i, deposition_only),
                 y_val[:, i],
                 seed,
             )
-            self.estimators.append(estimator)
+            for i, objective in enumerate(OBJECTIVES)
+        ]
+        in_parallel = get_cpu_count() >= MIN_CORES_FOR_PARALLEL_OBJECTIVES and len(x_train) >= MIN_ROWS_FOR_PARALLEL_OBJECTIVES
+        info = {}
+        with tempfile.TemporaryDirectory() as directory:
+            if in_parallel:
+                results = run_parallel(fit_objective_in_directory, [(*item, Path(directory)) for item in arguments], workers=len(OBJECTIVES))
+                self.estimators = [self.load_objective(Path(directory) / objective) for objective in OBJECTIVES]
+            else:
+                results, self.estimators = [], []
+                for item in arguments:
+                    estimator, objective_info = self.fit_objective(*item[3:])  # the data of the objective
+                    self.estimators.append(estimator)
+                    results.append(objective_info)
+        for objective, objective_info in zip(OBJECTIVES, results, strict=True):
             info.update({f"{objective}/{key}": value for key, value in objective_info.items()})
         return info
 
@@ -110,3 +134,11 @@ class PerObjectiveModel(Model):
 
     def load_files(self, directory):
         self.estimators = [self.load_objective(directory / objective) for objective in OBJECTIVES]
+
+
+def fit_objective_in_directory(model_class, params, objective, x_train, y_train, x_val, y_val, seed, directory: Path) -> dict[str, float]:
+    """Fits the estimator of one objective in a worker process and stores it in `directory/<objective>`, returns the training numbers."""
+    model = model_class(**params)
+    estimator, info = model.fit_objective(x_train, y_train, x_val, y_val, seed)
+    model.save_objective(estimator, directory / objective)
+    return info
