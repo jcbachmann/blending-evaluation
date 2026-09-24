@@ -207,7 +207,10 @@ def test_the_legacy_model_trains_all_epochs_on_unscaled_labels():
 
 
 def test_small_and_large_batches_give_the_same_prediction(data, monkeypatch):
-    keras_models = pytest.importorskip("bmh_ml.models.keras_models")
+    pytest.importorskip("keras")
+    pytest.importorskip("tensorflow")
+    from bmh_ml.models import keras_models
+
     (x, y), (x_val, y_val), (x_test, _) = data
     model = create_model("mlp", width=16, depth=1, epochs=2)
     model.fit(x, y, x_val, y_val, seed=0)
