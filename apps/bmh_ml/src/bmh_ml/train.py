@@ -79,27 +79,10 @@ def run_training(
     x_train, x_val = train.features(bundle.scope), validation.features(bundle.scope)
     model = create_model(model_name, **params)
 
-    logging.info(f"Training {model_name} on {bundle_name} ({len(train)} rows, scope {bundle.scope})")
-    start = time.perf_counter()
-    info = model.fit(x_train, train.y, x_val, validation.y, seed)
-    fit_seconds = time.perf_counter() - start
-    logging.info(f"Trained in {fit_seconds:.1f} s")
+    if transfer and transfer.reference_set not in evaluation:
+        raise ValueError(f"The transfer test needs the set {transfer.reference_set}, bundle {bundle.name} has {sorted(evaluation)}")
 
-    results = evaluate_datasets(model, evaluation, bundle.scope)
-    metrics = {
-        **get_set_metrics(results),
-        **{f"train/{key}": value for key, value in info.items()},
-        "train/seconds": fit_seconds,
-        "train/rows": float(len(train)),
-        **measure_throughput(model, x_val),
-    }
-    transfer_result = None
-    if transfer:
-        if transfer.reference_set not in evaluation:
-            raise ValueError(f"The transfer test needs the set {transfer.reference_set}, bundle {bundle.name} has {sorted(evaluation)}")
-        transfer_result = run_transfer_test(model, bundle.scope, evaluation[transfer.reference_set], transfer)
-        metrics.update({f"transfer/{name}": value for name, value in transfer_result.metrics.items()})
-
+    # The run starts before the training, so its duration is the real one and a failed training shows as a failed run
     mlflow = configure_mlflow()
     with mlflow.start_run(
         experiment_id=get_experiment_id(get_experiment_name(bundle.scope)), run_name=run_name, nested=nested, parent_run_id=parent_run_id
@@ -130,6 +113,25 @@ def run_training(
             }
         )
         log_dataset_inputs(bundle, train, evaluation)
+
+        logging.info(f"Training {model_name} on {bundle_name} ({len(train)} rows, scope {bundle.scope})")
+        start = time.perf_counter()
+        info = model.fit(x_train, train.y, x_val, validation.y, seed)
+        fit_seconds = time.perf_counter() - start
+        logging.info(f"Trained in {fit_seconds:.1f} s")
+
+        results = evaluate_datasets(model, evaluation, bundle.scope)
+        metrics = {
+            **get_set_metrics(results),
+            **{f"train/{key}": value for key, value in info.items()},
+            "train/seconds": fit_seconds,
+            "train/rows": float(len(train)),
+            **measure_throughput(model, x_val),
+        }
+        transfer_result = None
+        if transfer:
+            transfer_result = run_transfer_test(model, bundle.scope, evaluation[transfer.reference_set], transfer)
+            metrics.update({f"transfer/{name}": value for name, value in transfer_result.metrics.items()})
         mlflow.log_metrics(get_finite_metrics(metrics))
         with tempfile.TemporaryDirectory() as directory:
             model.save(Path(directory) / "model")
