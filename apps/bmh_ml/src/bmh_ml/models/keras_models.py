@@ -57,7 +57,12 @@ class KerasModel(PerObjectiveModel):
 
     def predict_objective(self, estimator, x):
         model, x_scaler, y_mean, y_std = estimator
-        prediction = model.predict(self.reshape(x_scaler.transform(x)), batch_size=PREDICT_BATCH_SIZE, verbose=0)
+        x = self.reshape(x_scaler.transform(x))
+        if len(x) <= PREDICT_BATCH_SIZE:
+            # `predict` sets up a data pipeline on every call, which made a batch of 100 (one generation of an optimizer) about 25 times slower
+            prediction = np.asarray(model(x, training=False))
+        else:
+            prediction = model.predict(x, batch_size=PREDICT_BATCH_SIZE, verbose=0)
         return prediction.reshape(-1) * y_std + y_mean
 
     def save_objective(self, estimator, path: Path):

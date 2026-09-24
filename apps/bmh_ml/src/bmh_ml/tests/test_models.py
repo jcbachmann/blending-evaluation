@@ -204,3 +204,15 @@ def test_the_legacy_model_trains_all_epochs_on_unscaled_labels():
     assert model_class.defaults["patience"] == 0
     assert model_class.defaults["scale_targets"] is False
     assert model_class.defaults["batch_size"] == 32
+
+
+def test_small_and_large_batches_give_the_same_prediction(data, monkeypatch):
+    keras_models = pytest.importorskip("bmh_ml.models.keras_models")
+    (x, y), (x_val, y_val), (x_test, _) = data
+    model = create_model("mlp", width=16, depth=1, epochs=2)
+    model.fit(x, y, x_val, y_val, seed=0)
+
+    direct = model.predict(x_test)
+    monkeypatch.setattr(keras_models, "PREDICT_BATCH_SIZE", 8)  # larger inputs than this go through `predict` in batches
+
+    assert np.allclose(model.predict(x_test), direct, atol=1e-5)
