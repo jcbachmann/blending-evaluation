@@ -14,7 +14,7 @@ from bmh_ml.datasets.generators import (
 )
 from bmh_ml.datasets.manifest import SCOPE_FIXED_MATERIAL, SCOPE_GENERAL_MATERIAL, SCOPES
 from bmh_ml.datasets.simulate import build_dataset
-from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, save_bundle, save_dataset
+from bmh_ml.datasets.store import Bundle, bundle_exists, get_evaluation_sets, load_bundle, load_dataset, save_bundle, save_dataset
 from bmh_ml.evaluation.noise import format_noise_table, get_noise_summary
 from bmh_ml.settings import DEPOSITION_LENGTH, TRAINING_DATA_FILE
 
@@ -77,7 +77,7 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
         other = load_bundle(args.tests_from)
         if other.scope != scope:
             raise ValueError(f"Bundle {other.name} has scope {other.scope}, not {scope}")
-        return finish(args, Bundle(args.name, scope, train, other.val, other.tests, {"tests_from": other.name}))
+        return finish(args, Bundle(args.name, scope, train, other.val, other.tests, {"tests_from": other.name}, val_extra=other.val_extra))
 
     val_material, val_deposition = build_inputs(scope, args.val_size, rngs["val"], fixed_material)
     val = build("val", "random", val_material, val_deposition, args.val_repeats)
@@ -114,7 +114,7 @@ def finish(args: argparse.Namespace, bundle: Bundle) -> Bundle:
 
 def show_noise(bundle: Bundle):
     summaries = {}
-    for name, dataset_id in {"val": bundle.val, **bundle.tests}.items():
+    for name, dataset_id in get_evaluation_sets(bundle).items():
         dataset = load_dataset(dataset_id)
         if dataset.y_noise_sd is not None:
             summaries[f"{bundle.name}/{name}"] = get_noise_summary(dataset)

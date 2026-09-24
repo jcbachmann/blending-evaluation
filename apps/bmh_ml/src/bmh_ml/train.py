@@ -9,7 +9,7 @@ import numpy as np
 import yaml
 
 from bmh_ml.datasets.manifest import Dataset
-from bmh_ml.datasets.store import Bundle, load_bundle, load_dataset
+from bmh_ml.datasets.store import Bundle, get_evaluation_sets, load_bundle, load_dataset, load_training_dataset
 from bmh_ml.evaluation.evaluate import SetResult, evaluate_datasets, measure_throughput
 from bmh_ml.evaluation.plots import close_figure, plot_predictions
 from bmh_ml.models.registry import MODELS, create_model
@@ -25,8 +25,9 @@ class TrainingResult:
     metrics: dict[str, float]
 
 
-def load_bundle_datasets(bundle: Bundle) -> tuple[Dataset, Dataset, dict[str, Dataset]]:
-    return load_dataset(bundle.train), load_dataset(bundle.val), {name: load_dataset(dataset_id) for name, dataset_id in bundle.tests.items()}
+def load_bundle_datasets(bundle: Bundle) -> tuple[Dataset, dict[str, Dataset]]:
+    """The training data and the sets the model is evaluated on, the validation set first."""
+    return load_training_dataset(bundle), {name: load_dataset(dataset_id) for name, dataset_id in get_evaluation_sets(bundle).items()}
 
 
 def get_set_metrics(results: dict[str, SetResult], prefix: str = "") -> dict[str, float]:
@@ -47,10 +48,23 @@ def log_predictions(results: dict[str, SetResult], with_plots: bool = True):
                 close_figure(figure)
 
 
-def run_training(bundle_name: str, model_name: str, params: dict, seed: int = 1, run_name: str | None = None, with_plots: bool = True) -> TrainingResult:
-    """Trains a model on the training data of a bundle, evaluates it on the validation data and the test sets and logs everything to MLflow."""
+def run_training(
+    bundle_name: str,
+    model_name: str,
+    params: dict,
+    seed: int = 1,
+    run_name: str | None = None,
+    with_plots: bool = True,
+    nested: bool = False,
+    tags: dict[str, str] | None = None,
+) -> TrainingResult:
+    """Trains a model on the training data of a bundle, evaluates it on the validation data and the test sets and logs everything to MLflow.
+
+    `nested` makes the run a child of the active run, e.g. a trial of a sweep or a round of the refinement loop.
+    """
     bundle = load_bundle(bundle_name)
-    train, validation, tests = load_bundle_datasets(bundle)
+    train, evaluation = load_bundle_datasets(bundle)
+    validation = evaluation[VALIDATION]
     x_train, x_val = train.features(bundle.scope), validation.features(bundle.scope)
     model = create_model(model_name, **params)
 
@@ -60,7 +74,7 @@ def run_training(bundle_name: str, model_name: str, params: dict, seed: int = 1,
     fit_seconds = time.perf_counter() - start
     logging.info(f"Trained in {fit_seconds:.1f} s")
 
-    results = evaluate_datasets(model, {VALIDATION: validation, **tests}, bundle.scope)
+    results = evaluate_datasets(model, evaluation, bundle.scope)
     metrics = {
         **get_set_metrics(results),
         **{f"train/{key}": value for key, value in info.items()},
@@ -70,7 +84,7 @@ def run_training(bundle_name: str, model_name: str, params: dict, seed: int = 1,
     }
 
     mlflow = configure_mlflow()
-    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(bundle.scope)), run_name=run_name) as run:
+    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(bundle.scope)), run_name=run_name, nested=nested) as run:
         mlflow.log_params(
             {
                 **model.describe(),
@@ -78,12 +92,19 @@ def run_training(bundle_name: str, model_name: str, params: dict, seed: int = 1,
                 "scope": bundle.scope,
                 "seed": seed,
                 "train_dataset": bundle.train,
-                "val_dataset": bundle.val,
-                **{f"{name}_dataset": dataset_id for name, dataset_id in bundle.tests.items()},
+                **({"train_extra_datasets": ",".join(bundle.train_extra)} if bundle.train_extra else {}),
+                **{f"{name}_dataset": dataset_id for name, dataset_id in get_evaluation_sets(bundle).items()},
                 "train_repeats": train.repeats,
             }
         )
-        mlflow.set_tags({"code_version": get_code_version(), "lock_hash": get_lock_hash(), **{f"hardware.{k}": str(v) for k, v in get_hardware().items()}})
+        mlflow.set_tags(
+            {
+                "code_version": get_code_version(),
+                "lock_hash": get_lock_hash(),
+                **{f"hardware.{k}": str(v) for k, v in get_hardware().items()},
+                **(tags or {}),
+            }
+        )
         mlflow.log_metrics(get_finite_metrics(metrics))
         with tempfile.TemporaryDirectory() as directory:
             model.save(Path(directory) / "model")

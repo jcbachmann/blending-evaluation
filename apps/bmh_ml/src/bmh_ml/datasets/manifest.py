@@ -53,11 +53,7 @@ class Dataset:
 
     def features(self, scope: str) -> np.ndarray:
         """Model input: the deposition for S1, the material followed by the deposition for S2."""
-        if scope == SCOPE_FIXED_MATERIAL:
-            return self.deposition
-        if scope == SCOPE_GENERAL_MATERIAL:
-            return np.hstack([self.full_material(), self.deposition])
-        raise ValueError(f"Unknown scope '{scope}', use one of {SCOPES}")
+        return make_features(scope, self.material, self.deposition)
 
     def content_hash(self) -> str:
         """Hash of the numbers, so that the same content always has the same id."""
@@ -86,6 +82,41 @@ class Dataset:
             "content_hash": self.content_hash(),
             "material_rows": int(self.material.shape[0]),
         }
+
+
+def make_features(scope: str, material: np.ndarray, deposition: np.ndarray) -> np.ndarray:
+    """Model input: the deposition for S1, the material followed by the deposition for S2. `material` is one row for all or one row each."""
+    if scope == SCOPE_FIXED_MATERIAL:
+        return deposition
+    if scope == SCOPE_GENERAL_MATERIAL:
+        return np.hstack([np.broadcast_to(material, (len(deposition), MATERIAL_LENGTH)), deposition])
+    raise ValueError(f"Unknown scope '{scope}', use one of {SCOPES}")
+
+
+def concatenate_datasets(name: str, datasets: list[Dataset]) -> Dataset:
+    """The rows of several datasets, in order. The material stays a single row if all datasets share it.
+
+    The labels of the datasets may be the mean of different numbers of simulations, the result has the repeats of the first dataset.
+    """
+    if len(datasets) == 1:
+        return datasets[0]
+    materials = [dataset.material for dataset in datasets]
+    if all(material.shape[0] == 1 for material in materials) and all(np.array_equal(material, materials[0]) for material in materials):
+        material = materials[0]
+    else:
+        material = np.vstack([dataset.full_material() for dataset in datasets])
+    first = datasets[0]
+    return Dataset(
+        name=name,
+        generator="+".join(dict.fromkeys(dataset.generator for dataset in datasets)),
+        seed=first.seed,
+        repeats=first.repeats,
+        material=material,
+        deposition=np.vstack([dataset.deposition for dataset in datasets]),
+        y=np.vstack([dataset.y for dataset in datasets]),
+        settings=first.settings,
+        source={"datasets": [dataset.dataset_id() for dataset in datasets]},
+    )
 
 
 def manifest_to_json(manifest: dict) -> str:

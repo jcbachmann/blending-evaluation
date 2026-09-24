@@ -12,9 +12,20 @@ from bmh_ml.datasets.generators import (
     random_materials,
     stress_depositions,
 )
-from bmh_ml.datasets.manifest import Dataset
+from bmh_ml.datasets.manifest import Dataset, concatenate_datasets, make_features
 from bmh_ml.datasets.simulate import build_dataset, simulate
-from bmh_ml.datasets.store import Bundle, list_bundles, list_datasets, load_bundle, load_dataset, save_bundle, save_dataset
+from bmh_ml.datasets.store import (
+    Bundle,
+    get_bundle_file,
+    get_evaluation_sets,
+    list_bundles,
+    list_datasets,
+    load_bundle,
+    load_dataset,
+    load_training_dataset,
+    save_bundle,
+    save_dataset,
+)
 from bmh_ml.evaluation.noise import get_noise_summary
 from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH, MATERIAL_MAX, MATERIAL_MIN, X_MAX, X_MIN
 from bmh_ml.variables import generate_deposition_variables, generate_material_variables
@@ -155,6 +166,58 @@ def test_bundles_are_frozen():
     assert list_bundles() == ["B1"]
     with pytest.raises(FileExistsError, match="frozen"):
         save_bundle(bundle)
+
+
+def test_bundles_stored_before_the_extra_datasets_existed_still_load():
+    get_bundle_file("old").write_text(json.dumps({"name": "old", "scope": "S1", "train": "t", "val": "v", "tests": {"T1": "a"}, "notes": {}, "created": "x"}))
+
+    bundle = load_bundle("old")
+
+    assert (bundle.train_extra, bundle.val_extra) == ([], {})
+    assert get_evaluation_sets(bundle) == {"val": "v", "T1": "a"}
+
+
+def fixed_material_dataset(n: int, seed: int, material: np.ndarray, name: str = "part") -> Dataset:
+    rng = np.random.default_rng(seed)
+    return Dataset(name=name, generator=f"g{seed}", seed=seed, repeats=1, material=material, deposition=random_depositions(n, rng), y=rng.random((n, 2)))
+
+
+def test_the_training_data_is_the_base_followed_by_the_extra_datasets():
+    material = random_materials(1, np.random.default_rng(0))
+    base, first, second = (fixed_material_dataset(n, seed, material) for n, seed in ((5, 1), (2, 2), (3, 3)))
+    bundle = Bundle("B", "S1", save_dataset(base), "v", {}, train_extra=[save_dataset(first), save_dataset(second)], val_extra={"valop": "o"})
+    save_bundle(bundle)
+
+    train = load_training_dataset(load_bundle("B"))
+
+    assert len(train) == 10
+    assert train.material.shape == (1, MATERIAL_LENGTH)
+    assert np.array_equal(train.deposition, np.vstack([base.deposition, first.deposition, second.deposition]))
+    assert np.array_equal(train.y[5:7], first.y)
+    assert train.generator == "g1+g2+g3"
+    assert list(get_evaluation_sets(bundle)) == ["val", "valop"]
+
+
+def test_datasets_of_different_materials_are_concatenated_row_by_row():
+    rng = np.random.default_rng(0)
+    one = fixed_material_dataset(2, 1, random_materials(1, rng))
+    other = fixed_material_dataset(3, 2, random_materials(1, rng))
+
+    both = concatenate_datasets("both", [one, other])
+
+    assert both.material.shape == (5, MATERIAL_LENGTH)
+    assert np.array_equal(both.full_material()[2], other.material[0])
+    assert concatenate_datasets("single", [one]) is one
+
+
+def test_the_features_of_a_scope():
+    rng = np.random.default_rng(0)
+    material, deposition = random_materials(1, rng), random_depositions(3, rng)
+
+    assert np.array_equal(make_features("S1", material, deposition), deposition)
+    assert make_features("S2", material, deposition).shape == (3, MATERIAL_LENGTH + DEPOSITION_LENGTH)
+    with pytest.raises(ValueError, match="scope"):
+        make_features("S3", material, deposition)
 
 
 def write_result(path, variables, **extra):
@@ -328,6 +391,7 @@ def test_a_bundle_can_reuse_the_test_sets_of_another_bundle():
 
     first = load_bundle("first")
     assert second.tests == first.tests
+    assert second.val_extra == first.val_extra
     assert second.val == first.val
     assert second.train != first.train
 
