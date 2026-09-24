@@ -12,6 +12,7 @@ from bmh_ml.datasets.manifest import Dataset
 from bmh_ml.datasets.store import Bundle, get_evaluation_sets, load_bundle, load_dataset, load_training_dataset
 from bmh_ml.evaluation.evaluate import SetResult, evaluate_datasets, measure_throughput
 from bmh_ml.evaluation.plots import close_figure, plot_predictions
+from bmh_ml.evaluation.transfer import TransferConfig, log_transfer, run_transfer_test
 from bmh_ml.models.registry import MODELS, create_model
 from bmh_ml.tracking.environment import get_code_version, get_hardware, get_lock_hash
 from bmh_ml.tracking.runs import configure_mlflow, get_experiment_id, get_experiment_name, get_finite_metrics
@@ -57,10 +58,12 @@ def run_training(
     with_plots: bool = True,
     nested: bool = False,
     tags: dict[str, str] | None = None,
+    transfer: TransferConfig | None = None,
 ) -> TrainingResult:
     """Trains a model on the training data of a bundle, evaluates it on the validation data and the test sets and logs everything to MLflow.
 
-    `nested` makes the run a child of the active run, e.g. a trial of a sweep or a round of the refinement loop.
+    `nested` makes the run a child of the active run, e.g. a trial of a sweep or a round of the refinement loop. `transfer` adds the
+    transfer test (see `evaluation.transfer`), which needs the reference test set (T2) in the bundle.
     """
     bundle = load_bundle(bundle_name)
     train, evaluation = load_bundle_datasets(bundle)
@@ -82,6 +85,12 @@ def run_training(
         "train/rows": float(len(train)),
         **measure_throughput(model, x_val),
     }
+    transfer_result = None
+    if transfer:
+        if transfer.reference_set not in evaluation:
+            raise ValueError(f"The transfer test needs the set {transfer.reference_set}, bundle {bundle.name} has {sorted(evaluation)}")
+        transfer_result = run_transfer_test(model, bundle.scope, evaluation[transfer.reference_set], transfer)
+        metrics.update({f"transfer/{name}": value for name, value in transfer_result.metrics.items()})
 
     mlflow = configure_mlflow()
     with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(bundle.scope)), run_name=run_name, nested=nested) as run:
@@ -110,6 +119,8 @@ def run_training(
             model.save(Path(directory) / "model")
             mlflow.log_artifacts(str(Path(directory) / "model"), "model")
         log_predictions(results, with_plots)
+        if transfer_result:
+            log_transfer(transfer_result, transfer, with_plots)
         logging.info(f"Run {run.info.run_id} logged in experiment {get_experiment_name(bundle.scope)}")
         return TrainingResult(run.info.run_id, metrics)
 
@@ -132,6 +143,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--param", nargs="*", default=[], metavar="KEY=VALUE", help="Parameters of the model, e.g. width=512 depth=4")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--run-name", help="Name of the run in the UI")
+    parser.add_argument("--transfer", action="store_true", help="Also run the transfer test with its default settings (python -m bmh_ml.transfer)")
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args(argv)
@@ -142,8 +154,10 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None):
     args = get_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-    result = run_training(args.bundle, args.model, args.params, args.seed, args.run_name, not args.no_plots)
+    transfer = TransferConfig() if args.transfer else None
+    result = run_training(args.bundle, args.model, args.params, args.seed, args.run_name, not args.no_plots, transfer=transfer)
     shown = {name: value for name, value in result.metrics.items() if name.split("/")[-1] in ("nrmse", "r2") and name.split("/")[0] in (VALIDATION, "T1", "T2")}
+    shown.update({name: value for name, value in result.metrics.items() if name in ("transfer/hv_ratio", "transfer/igd_plus")})
     for name, value in sorted(shown.items()):
         print(f"{name:<16}{value:>10.4f}")
     print(f"Run {result.run_id}")
