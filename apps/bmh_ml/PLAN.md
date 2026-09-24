@@ -6,10 +6,14 @@ decisions and short conclusions.
 
 ## 0. How to resume
 
-1. Read section 9 (progress log) and the first unchecked milestone in section 5.
+1. Read section 9 (progress log), the first unchecked milestone in section 5 and the open proposals of section 10.
 2. `git log --oneline -20` shows what was done since. The repository and the tracking store are the memory, not the chat.
-3. Before declaring anything done, run the same checks as CI: `uv sync --locked --all-extras --dev`, `uv run pytest`, `uv run ruff check .`
-   (a lesson of this project: tests that only pass in a developer environment broke `master` once).
+3. Before declaring anything done, run the same checks as CI: `uv sync --locked --all-extras --dev`, `uv run pytest`, `uv run ruff check .`,
+   `uv run ruff format --check .`, in a fresh environment outside the repository (`UV_PROJECT_ENVIRONMENT=/tmp/ci-env`), never in the
+   repository's `.venv` (a lesson of this project: tests that only pass in a developer environment broke `master` once).
+4. Since 2026-09-24 the store is `workdir/bmh-ml-store/` in the repository (moved with the file sync from the first machine), so set
+   `BMH_ML_STORE` to it before running anything, or a new empty store starts at `~/bmh-ml-store`. After moving a store, run
+   `workdir/fix-mlflow-store-paths.py` once: MLflow keeps absolute artifact paths in its database.
 
 ## 1. Goal and success criteria
 
@@ -66,7 +70,10 @@ batched inference speed, by being smooth and denoised, or by being differentiabl
 **Data is cheap.** 250,000 rows are generated in about 2 minutes (16 cores). The bottleneck is not the amount of data but where it is
 sampled and which model is used.
 
-**Hardware:** 16 CPU cores, 38 GB RAM, no GPU. Everything below must be reasonable on the CPU.
+**Hardware:** 16 CPU cores, 38 GB RAM, no GPU. Everything below must be reasonable on the CPU. Since 2026-09-24 the work continues on an
+Intel i9-9900K (8 cores, 16 hardware threads), 62 GB RAM and an AMD Radeon RX 5600/5700 (Navi 10, gfx1010) GPU; the numbers above are
+from the first machine. ROCm is not installed, so TensorFlow runs on the CPU; Navi 10 is not on AMD's official ROCm support list, so using
+the GPU would need an unofficial setup (section 10).
 
 ## 3. Decisions
 
@@ -90,7 +97,8 @@ Made now, with the reason. Say so if one of them should be different; most are c
    once the first baselines are in.
 3. **Store location** `~/bmh-ml-store`, as above.
 4. **New dependencies:** `mlflow`, `lightgbm`, `optuna` (later maybe `torch`). All are large, none is needed by the rest of the repository.
-5. **Compute:** CPU only. If you have a GPU machine, some architectures in section 6 become cheaper.
+5. **Compute:** CPU only for now. The current machine has an AMD GPU (Navi 10) without ROCm; see section 10 for whether it is worth
+   setting up.
 
 ## 4. Architecture of the pipeline
 
@@ -248,3 +256,58 @@ Ordered by expected value. "H" is the hypothesis, to be confirmed or rejected by
 | 2026-09-20 | M1.4 metrics (errors, tail, ranking, negative rate, noise-normalized), evaluation on the bundle sets, throughput, plots, MLflow logging (params, dataset ids, code version, metrics, model, predictions), `train` and `evaluate_run` commands. Found and fixed on real data: LightGBM with all 16 threads was 10 to 40 times slower than with 8. First numbers on a 2,000 row S1 bundle: the operating-region set T2 already shows R2 below 0 for F2 for every model, as the plan predicted. |
 | 2026-09-20 | M1.5 `report` (leaderboard with noise ceilings, markdown and HTML), `ui`, README. Checked with the real MLflow UI: health and API answer, the runs are listed. Open for the M1 acceptance: the run on full-size bundles. |
 | 2026-09-20 | M1 acceptance on the full-size bundle S1-v1 (250,000 training rows, validation 20,000 x 8 repeats, T1 5,000, T2 544, T2s 2,450, T5 231, all x 16 repeats; building it took about 8 minutes). Baselines trained: mean, ridge, LightGBM, MLP. A second LightGBM run with the same seed gave identical values for all 123 metrics. Results (R2, noise ceiling about 0.9998): MLP is best with T1 0.907 (F1) and 0.972 (F2); LightGBM 0.827 and 0.951; ridge and mean have no skill. **In the operating region the F2 models have almost none:** MLP T2 F2 R2 0.02, on the surrogate fronts T2s -12.5. So random-data accuracy hides the problem, as expected, and B1 (operating-region training data) is the first thing to test in M2. The legacy LSTM run (100 epochs, batch 32) took about 29 minutes on 250,000 rows; its R2 (T1 0.781/0.929, T2 F2 -0.96) is behind both the new MLP and LightGBM, so the new MLP is already the best baseline. **M1 is complete, all its checkboxes and its acceptance criterion are met.** |
+
+## 10. Review against the domain definitions (2026-09-24)
+
+Read in the Entropy vault: the objective definitions (`Concepts/Optimization/Objectives/`, `Concepts/Stockpile Math/`), the student
+research questions and the notes on the students' ML work (`Projects/Students/`), and `IEEE SSCI 2027 Submission.md`. Compared with the code:
+`bmh.helpers.reclaimed_material_evaluator` and the thesis optimizer `bmh.optimization.homogenization_problem`.
+
+**Findings**
+
+1. **bmh_ml predicts the absolute objectives, the thesis optimizes relative ones.** bmh_ml's F1 is the volume-weighted standard deviation of
+   the reclaimed quality, and F2 is the standard deviation of the difference between the reclaimed volume per slice and the reclaim volume of
+   the ideal stockpile. These are the numerators of the thesis objectives. The thesis F1 is the *homogenization efficiency ratio*, this
+   standard deviation divided by that of full-speed Chevron stacking of the same material (1 = as good as Chevron, hypervolume reference
+   point 1). The thesis optimizer divides F2 by one sixth of the volume per slice ("worst acceptable"); the vault has "relative F2 against
+   Chevron" as an open TODO.
+   - For S1 (one material) the difference is a constant factor, so the models and M1/M2 accuracy numbers are unaffected. The reporting is
+     not: fronts, hypervolumes and the transfer test should also be given relative to Chevron, so they compare with the thesis experiments
+     and the students' results.
+   - For S2 (any material) it matters for the model: absolute F1 scales with the spread of the material, a ratio to Chevron of the same
+     material does not. S2 should predict the ratio, with the Chevron denominator simulated with repeats (it is noisy too).
+2. **Chevron is the baseline everyone asks about, and the transfer test does not report it yet.** Keith Kumar re-simulated 8,388 fronts
+   of MLP and XGBoost surrogates: the simulated values were worse than predicted for 79 to 89 % of the points, and only 4.6 % of them
+   dominated Chevron. The same exploitation shows here (section 9). The transfer test should add the Chevron point and the share of
+   found solutions that dominate it in the simulator.
+3. **The student research questions are this milestone's questions.** "How does the front change when the solutions found by the ML model
+   are re-evaluated with the simulation?" is the transfer test. "How much does a different material curve affect the results?" needs the
+   transfer test on several materials (S2, or S1 bundles for other materials). "How can a front be compared with Chevron?" is finding 2.
+   Keith's CSVs (fronts with predicted and simulated objectives) can check a re-implementation, not replace it: they come without code.
+4. **Cost should be counted in simulations, not only in prediction speed.** The surrogate here was trained on 250,000 simulations plus
+   about 3,000 per refinement round; one optimization run on the simulator uses 20,000 to 100,000. A claim that a surrogate helps
+   optimization needs the hypervolume reached per simulation spent, including the training data. The experiment that answers it: the
+   refinement loop from a small random base (for example 10,000 or 25,000 rows) against simulator-only optimization with the same number of
+   simulations. This joins B1 and B8.
+5. **F2 is geometry and F1 is linear mixing, both by definition.** F2 compares the reclaimed volume curve with the ideal stockpile (half
+   cones and a triangular core at 45 degrees, closed form in the vault), and the volume per slice is a function of the deposition only. F1 is
+   the weighted spread of reclaimed quality, which is a volume-weighted average of the input material per slice. This supports B3/B7 (predict
+   the reclaimed volume and the mixing weights per slice, compute F1 and F2 from them) and connects to the student topic "compare a
+   mathematical formulation with the simulation".
+6. **The publication deadline sets the order.** The IEEE SSCI 2027 poster abstract (250 words) is due 1 November 2026. What it needs from
+   here: the transfer-test result with a spread over training seeds, the refinement loop against its control, and the Chevron comparison.
+   Hyperparameter tuning and architectures (M3) do not change that story and come after.
+7. **GPU:** the RX 5600/5700 (Navi 10) could speed up the Keras models, but ROCm is not installed and Navi 10 would need an unofficial
+   setup. The models are small (the MLP trains in about 2.5 minutes on the CPU), so it only pays off for B5 (larger models, ensembles).
+   Installing ROCm is a system change and your decision.
+
+**Proposed changes** (not applied yet, they wait for your decision):
+
+- M2: add the Chevron reference to the transfer test (relative objectives, hypervolume at reference point 1, share dominating Chevron),
+  and repeat the transfer test over training seeds before stating an effect.
+- New M2b before M3, for the abstract: the simulation-budget experiment of finding 4, and the transfer test on a few other materials
+  (finding 3).
+- S2: predict F1 relative to Chevron of the same material (finding 1). Needs a decision on the Chevron schedule in the 20-variable
+  encoding (for example alternating between the two ends of the bed) and on the F2 normalization (Chevron's F2, or the thesis's one
+  sixth of the volume per slice).
+- Backlog: move B3/B7 (geometric features, predicting per-slice profiles) up, next to B1.
