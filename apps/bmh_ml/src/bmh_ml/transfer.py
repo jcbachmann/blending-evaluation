@@ -20,8 +20,7 @@ def transfer_run(run_id: str, config: TransferConfig, with_plots: bool = True) -
     if config.reference_set not in bundle.tests:
         raise ValueError(f"The transfer test needs the test set {config.reference_set}, bundle {bundle.name} has {sorted(bundle.tests)}")
     result = run_transfer_test(load_run_model(run_id), bundle.scope, load_dataset(bundle.tests[config.reference_set]), config)
-    with mlflow.start_run(run_id=run_id):
-        log_transfer(result, config, with_plots)
+    log_transfer(run_id, result, config, with_plots)
     annotate_run(run_id)
     return result
 

@@ -210,24 +210,26 @@ def plot_transfer(result: TransferResult):
     return figure
 
 
-def log_transfer(result: TransferResult, config: TransferConfig, with_plots: bool = True) -> None:
-    """Logs the metrics (`transfer/...`), the settings and the solutions of a transfer test to the active MLflow run."""
+def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, with_plots: bool = True) -> None:
+    """Logs the metrics (`transfer/...`), the settings and the solutions of a transfer test to a run, also to a finished one: logging by
+    run id does not reopen the run, which would change its end time."""
     import tempfile
 
     from bmh_ml.evaluation.plots import close_figure
-    from bmh_ml.tracking.runs import configure_mlflow, get_finite_metrics
+    from bmh_ml.tracking.runs import configure_mlflow, log_metrics_to_run
 
-    mlflow = configure_mlflow()
-    mlflow.log_params(config.params())
-    mlflow.log_metrics(get_finite_metrics({f"transfer/{name}": value for name, value in result.metrics.items()}))
+    client = configure_mlflow().MlflowClient()
+    for key, value in config.params().items():
+        client.log_param(run_id, key, value)
+    log_metrics_to_run(run_id, {f"transfer/{name}": value for name, value in result.metrics.items()})
     with tempfile.TemporaryDirectory() as directory:
         file = Path(directory) / "solutions.npz"
         arrays = {"deposition": result.deposition, "seed": result.seed, "predicted": result.predicted, "simulated": result.simulated}
         if result.simulated_sd is not None:
             arrays["simulated_sd"] = result.simulated_sd
         np.savez_compressed(file, reference=result.reference, **arrays)
-        mlflow.log_artifact(str(file), "transfer")
+        client.log_artifact(run_id, str(file), "transfer")
     if with_plots:
         figure = plot_transfer(result)
-        mlflow.log_figure(figure, "transfer/front.png")
+        client.log_figure(run_id, figure, "transfer/front.png")
         close_figure(figure)

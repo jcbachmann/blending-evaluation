@@ -136,7 +136,7 @@ def run_training(
             mlflow.log_artifacts(str(Path(directory) / "model"), "model")
         log_predictions(results, with_plots)
         if transfer_result:
-            log_transfer(transfer_result, transfer, with_plots)
+            log_transfer(run.info.run_id, transfer_result, transfer, with_plots)
         logging.info(f"Run {run.info.run_id} logged in experiment {get_experiment_name(bundle.scope)}")
     annotate_run(run.info.run_id)
     return TrainingResult(run.info.run_id, metrics)
