@@ -21,13 +21,13 @@ BEGIN = "<!-- bmh_ml: generated description, text outside of these markers is ke
 END = "<!-- bmh_ml: end of the generated description -->"
 SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5")
 SET_NAMES = {
-    "val": "validation, random inputs (early stopping)",
-    "valop": "validation, operating region (model selection)",
+    "val": "validation, random inputs, stops the training",
+    "valop": "validation, operating region, for choosing models",
     "T1": "test, random inputs",
     "T2": "test, fronts of the optimization on the simulator",
     "T2s": "test, fronts of the optimization on the old LSTM surrogate",
     "T3": "test, unseen materials",
-    "T5": "test, extreme depositions (stress)",
+    "T5": "test, extreme depositions",
 }
 INFRASTRUCTURE_PARAMS = ("model", "bundle", "scope", "seed", "train_dataset", "train_extra_datasets", "train_repeats")
 EXPERIMENT_DESCRIPTIONS = {
@@ -109,7 +109,7 @@ def describe_purpose(kind: str, run, parent_link: str) -> list[str]:
         if round_number == 0:
             lines.append(f"Round 0 of the refinement loop {parent_link}: the starting model, trained on the base data only.")
         else:
-            source = tags.get("source_model_run")
+            source = tags.get("source_model_run") or get_source_model_run(params)
             found_by = f"the model of round {round_number - 1} ({run_link(experiment_id, source)})" if source else f"the model of round {round_number - 1}"
             lines.append(
                 f"Round {round_number} of the refinement loop {parent_link}: trained on the base data plus the solutions found by optimizing "
@@ -127,12 +127,19 @@ def describe_purpose(kind: str, run, parent_link: str) -> list[str]:
     return lines
 
 
+def get_source_model_run(params: dict) -> str | None:
+    """The run whose model found the data added last, as the manifest of the added dataset records it."""
+    added = list(filter(None, params.get("train_extra_datasets", "").split(",")))
+    manifest = read_manifest(added[-1]) if added else None
+    return manifest["source"].get("model_run") if manifest else None
+
+
 def describe_data(params: dict) -> list[str]:
     bundle = read_bundle(params.get("bundle", ""))
     lines = ["", "**Data**", ""]
     lines.append(f"- training: {describe_dataset(params['train_dataset'])}" if "train_dataset" in params else "- training: unknown")
     lines.extend(f"- training, added: {describe_dataset(dataset_id)}" for dataset_id in filter(None, params.get("train_extra_datasets", "").split(",")))
-    lines.extend(f"- {name} ({SET_NAMES[name]}): {describe_dataset(params[f'{name}_dataset'])}" for name in SETS if f"{name}_dataset" in params)
+    lines.extend(f"- {name}, {SET_NAMES[name]}: {describe_dataset(params[f'{name}_dataset'])}" for name in SETS if f"{name}_dataset" in params)
     if bundle and bundle.get("notes"):
         notes = {key: value for key, value in bundle["notes"].items() if key != "arguments"}
         if notes:
