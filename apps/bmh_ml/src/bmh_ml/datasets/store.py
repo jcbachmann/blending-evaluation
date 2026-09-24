@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 import numpy as np
 
-from bmh_ml.datasets.manifest import Dataset, manifest_to_json
+from bmh_ml.datasets.manifest import Dataset, concatenate_datasets, manifest_to_json
 from bmh_ml.tracking.store import get_bundles_directory, get_datasets_directory
 
 
@@ -60,7 +60,11 @@ def list_datasets() -> list[dict]:
 
 @dataclass
 class Bundle:
-    """The datasets that belong together: training, validation and the frozen test sets, and the scope they are meant for."""
+    """The datasets that belong together: training, validation and the frozen test sets, and the scope they are meant for.
+
+    The training data is `train` followed by the datasets of `train_extra`, e.g. the data added by the refinement loop, so the base data is
+    stored once. `val_extra` are more validation sets for choosing models, e.g. `valop` in the operating region; `val` alone stops the training.
+    """
 
     name: str
     scope: str
@@ -68,6 +72,8 @@ class Bundle:
     val: str
     tests: dict[str, str]
     notes: dict = field(default_factory=dict)
+    train_extra: list[str] = field(default_factory=list)
+    val_extra: dict[str, str] = field(default_factory=dict)
     created: str = field(default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds"))
 
 
@@ -92,6 +98,15 @@ def load_bundle(name: str) -> Bundle:
     if not path.exists():
         raise FileNotFoundError(f"Bundle '{name}' not found in {path.parent}")
     return Bundle(**json.loads(path.read_text()))
+
+
+def load_training_dataset(bundle: Bundle) -> Dataset:
+    return concatenate_datasets(f"{bundle.name}-train", [load_dataset(dataset_id) for dataset_id in [bundle.train, *bundle.train_extra]])
+
+
+def get_evaluation_sets(bundle: Bundle) -> dict[str, str]:
+    """Every set a model is evaluated on, by name: `val`, the extra validation sets and the test sets."""
+    return {"val": bundle.val, **bundle.val_extra, **bundle.tests}
 
 
 def list_bundles() -> list[str]:

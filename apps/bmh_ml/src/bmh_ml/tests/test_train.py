@@ -1,11 +1,12 @@
 import argparse
 import json
+from dataclasses import replace
 
 import numpy as np
 import pytest
 
 from bmh_ml import build_bundle
-from bmh_ml.datasets.store import load_bundle
+from bmh_ml.datasets.store import load_bundle, save_bundle
 from bmh_ml.tracking.runs import get_experiment_name, get_finite_metrics
 from bmh_ml.train import get_args, parse_parameters, run_training
 
@@ -119,3 +120,21 @@ def test_plots_are_logged_if_wanted():
 
     plots = {artifact.path for artifact in mlflow.MlflowClient().list_artifacts(result.run_id, "plots")}
     assert {"plots/val.png", "plots/T1.png", "plots/T3.png", "plots/T5.png"} <= plots
+
+
+def test_the_extra_datasets_of_a_bundle_are_trained_on_and_evaluated():
+    mlflow = pytest.importorskip("mlflow")
+    pytest.importorskip("sklearn")
+    make_bundle("B1")
+    base = load_bundle("B1")
+    extended = replace(base, name="B2", train_extra=[base.val], val_extra={"valop": base.tests["T1"]})
+    save_bundle(extended)
+
+    result = run_training("B2", "ridge", {}, with_plots=False, tags={"purpose": "test"})
+
+    run = mlflow.get_run(result.run_id)
+    assert run.data.metrics["train/rows"] == 50
+    assert run.data.params["train_extra_datasets"] == base.val
+    assert run.data.params["valop_dataset"] == base.tests["T1"]
+    assert run.data.metrics["valop/F1/rmse"] == run.data.metrics["T1/F1/rmse"]
+    assert run.data.tags["purpose"] == "test"

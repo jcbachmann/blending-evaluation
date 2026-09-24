@@ -3,7 +3,7 @@ import logging
 import tempfile
 from pathlib import Path
 
-from bmh_ml.datasets.store import load_bundle, load_dataset
+from bmh_ml.datasets.store import get_evaluation_sets, load_bundle, load_dataset
 from bmh_ml.evaluation.evaluate import evaluate_datasets
 from bmh_ml.models.registry import load_model
 from bmh_ml.tracking.runs import configure_mlflow, get_finite_metrics
@@ -26,7 +26,7 @@ def evaluate_run(run_id: str, bundle_name: str) -> dict[str, float]:
     with tempfile.TemporaryDirectory() as directory:
         mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path="model", dst_path=directory)
         model = load_model(Path(directory) / "model")
-    datasets = {"val": load_dataset(bundle.val), **{name: load_dataset(dataset_id) for name, dataset_id in bundle.tests.items()}}
+    datasets = {name: load_dataset(dataset_id) for name, dataset_id in get_evaluation_sets(bundle).items()}
     results = evaluate_datasets(model, datasets, bundle.scope)
     metrics = get_set_metrics(results, prefix=f"{bundle_name}/")
     with mlflow.start_run(run_id=run_id):
