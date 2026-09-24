@@ -13,6 +13,7 @@ import numpy as np
 from bmh_ml.datasets.store import get_evaluation_sets, load_bundle
 from bmh_ml.models.registry import MODELS
 from bmh_ml.parallel import run_parallel
+from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow, get_experiment_id, get_experiment_name
 from bmh_ml.tracking.store import get_store
 from bmh_ml.train import parse_parameters, run_training
@@ -149,6 +150,7 @@ def run_sweep(config: SweepConfig):
         mlflow.log_metric("sweep/best_objective", best.value)
         mlflow.log_dict({"value": best.value, "params": best.params, "trial": best.number}, "best_trial.json")
         mlflow.set_tags({"best_run": best.user_attrs["run_id"], "best_trial": str(best.number)})
+    annotate_run(parent.info.run_id)
     return study
 
 

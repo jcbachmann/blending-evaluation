@@ -2,6 +2,7 @@ import argparse
 import logging
 import tempfile
 import time
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,8 +16,10 @@ from bmh_ml.evaluation.plots import close_figure, plot_predictions
 from bmh_ml.evaluation.transfer import TransferConfig, log_transfer, run_transfer_test
 from bmh_ml.models.registry import MODELS, create_model
 from bmh_ml.parallel import run_parallel
+from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.environment import get_code_version, get_hardware, get_lock_hash
 from bmh_ml.tracking.runs import configure_mlflow, get_experiment_id, get_experiment_name, get_finite_metrics
+from bmh_ml.tracking.store import get_datasets_directory
 
 VALIDATION = "val"
 
@@ -61,12 +64,14 @@ def run_training(
     tags: dict[str, str] | None = None,
     transfer: TransferConfig | None = None,
     parent_run_id: str | None = None,
+    purpose: str | None = None,
 ) -> TrainingResult:
     """Trains a model on the training data of a bundle, evaluates it on the validation data and the test sets and logs everything to MLflow.
 
     `nested` makes the run a child of the active run, e.g. a round of the refinement loop, `parent_run_id` a child of that run, also from
     another process (the trials of a parallel sweep). `transfer` adds the
-    transfer test (see `evaluation.transfer`), which needs the reference test set (T2) in the bundle.
+    transfer test (see `evaluation.transfer`), which needs the reference test set (T2) in the bundle. `purpose` is a sentence on why the
+    run was made, it goes into the run's description (see `tracking.annotate`).
     """
     bundle = load_bundle(bundle_name)
     train, evaluation = load_bundle_datasets(bundle)
@@ -111,14 +116,20 @@ def run_training(
                 "train_repeats": train.repeats,
             }
         )
+        code_version = get_code_version()
         mlflow.set_tags(
             {
-                "code_version": get_code_version(),
+                "code_version": code_version,
+                "mlflow.source.git.commit": code_version.removesuffix("+dirty"),
                 "lock_hash": get_lock_hash(),
+                "bundle": bundle.name,
+                "model": model_name,
                 **{f"hardware.{k}": str(v) for k, v in get_hardware().items()},
+                **({"purpose": purpose} if purpose else {}),
                 **(tags or {}),
             }
         )
+        log_dataset_inputs(bundle, train, evaluation)
         mlflow.log_metrics(get_finite_metrics(metrics))
         with tempfile.TemporaryDirectory() as directory:
             model.save(Path(directory) / "model")
@@ -127,7 +138,28 @@ def run_training(
         if transfer_result:
             log_transfer(transfer_result, transfer, with_plots)
         logging.info(f"Run {run.info.run_id} logged in experiment {get_experiment_name(bundle.scope)}")
-        return TrainingResult(run.info.run_id, metrics)
+    annotate_run(run.info.run_id)
+    return TrainingResult(run.info.run_id, metrics)
+
+
+def log_dataset_inputs(bundle: Bundle, train: Dataset, evaluation: dict[str, Dataset]) -> None:
+    """The datasets of the run as MLflow inputs, shown with the run and usable as a filter in the UI. The data itself stays in the store."""
+    mlflow = configure_mlflow()
+
+    def log(dataset: Dataset, name: str, digest: str, context: str) -> None:
+        features = dataset.features(bundle.scope)
+        with warnings.catch_warnings():  # MLflow finds two equivalent source types for a local path and warns about it
+            warnings.simplefilter("ignore", UserWarning)
+            source = str(get_datasets_directory() / name)
+            logged = mlflow.data.from_numpy(features, targets=dataset.y, source=source, name=name, digest=digest[:32])
+        mlflow.log_input(logged, context=context)
+
+    training_ids = [bundle.train, *bundle.train_extra]
+    log(train, training_ids[0] if len(training_ids) == 1 else f"{bundle.name}-train", "+".join(training_ids), "training")
+    dataset_ids = get_evaluation_sets(bundle)
+    for name, dataset in evaluation.items():
+        context = "testing" if name in bundle.tests else "validation"
+        log(dataset, dataset_ids[name], dataset.content_hash(), context)
 
 
 def parse_parameters(assignments: list[str]) -> dict:
@@ -150,6 +182,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=1, help="Runs trained at the same time, each process gets an equal share of the cores")
     parser.add_argument("--run-name", help="Name of the run in the UI, with several seeds followed by -seed<seed>")
     parser.add_argument("--transfer", action="store_true", help="Also run the transfer test with its default settings (python -m bmh_ml.transfer)")
+    parser.add_argument("--description", help="Why this run was made, one or two sentences for the run's description in the UI")
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args(argv)
@@ -162,7 +195,10 @@ def main(argv: list[str] | None = None):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
     transfer = TransferConfig() if args.transfer else None
     names = [args.run_name and (f"{args.run_name}-seed{seed}" if len(args.seed) > 1 else args.run_name) for seed in args.seed]
-    runs = [(args.bundle, args.model, args.params, seed, name, not args.no_plots, False, None, transfer) for seed, name in zip(args.seed, names, strict=True)]
+    runs = [
+        (args.bundle, args.model, args.params, seed, name, not args.no_plots, False, None, transfer, None, args.description)
+        for seed, name in zip(args.seed, names, strict=True)
+    ]
     for result in run_parallel(run_training, runs, args.workers):
         shown = {
             name: value for name, value in result.metrics.items() if name.split("/")[-1] in ("nrmse", "r2") and name.split("/")[0] in (VALIDATION, "T1", "T2")

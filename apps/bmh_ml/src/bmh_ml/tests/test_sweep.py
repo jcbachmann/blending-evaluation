@@ -78,6 +78,9 @@ def test_every_trial_is_a_nested_run_and_the_sweep_can_be_continued():
     expected = (best_run.data.metrics["val/F1/nrmse"] + best_run.data.metrics["val/F2/nrmse"]) / 2
     assert study.best_value == pytest.approx(expected)
     assert set(parents["tags.best_run"]) <= set(trials["run_id"])
+    description = mlflow.get_run(parents["run_id"].iloc[-1]).data.tags["mlflow.note.content"]
+    assert "Hyperparameter sweep s" in description
+    assert study.best_trial.user_attrs["run_id"] in description
 
 
 def test_trials_can_run_in_parallel_processes():

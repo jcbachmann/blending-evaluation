@@ -7,6 +7,7 @@ from bmh_ml.datasets.store import get_evaluation_sets, load_bundle, load_dataset
 from bmh_ml.evaluation.evaluate import evaluate_datasets
 from bmh_ml.models.base import Model
 from bmh_ml.models.registry import load_model
+from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow, get_finite_metrics
 from bmh_ml.train import get_set_metrics
 
@@ -38,6 +39,7 @@ def evaluate_run(run_id: str, bundle_name: str) -> dict[str, float]:
     metrics = get_set_metrics(results, prefix=f"{bundle_name}/")
     with mlflow.start_run(run_id=run_id):
         mlflow.log_metrics(get_finite_metrics(metrics))
+    annotate_run(run_id)
     return metrics
 
 
