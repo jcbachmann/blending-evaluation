@@ -7,7 +7,16 @@ import numpy as np
 from bmh_ml.datasets.generators import find_result_files
 from bmh_ml.datasets.store import load_bundle, load_dataset
 from bmh_ml.evaluate_run import load_run_model
-from bmh_ml.evaluation.transfer import TransferConfig, TransferResult, get_simulator_run_ratios, log_transfer, run_transfer_test
+from bmh_ml.evaluation.chevron import get_chevron_objectives
+from bmh_ml.evaluation.transfer import (
+    TransferConfig,
+    TransferResult,
+    get_reference_front,
+    get_simulator_run_metrics,
+    get_transfer_metrics,
+    log_transfer,
+    run_transfer_test,
+)
 from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow
 
@@ -23,6 +32,55 @@ def transfer_run(run_id: str, config: TransferConfig, with_plots: bool = True) -
     log_transfer(run_id, result, config, with_plots)
     annotate_run(run_id)
     return result
+
+
+def recompute_transfer(run_id: str, with_plots: bool = True) -> dict[str, float]:
+    """Computes the metrics of an earlier transfer test again from its stored solutions, without optimizing or simulating: for metrics
+    added after the test ran. Keeps the timing metrics of the test."""
+    import tempfile
+
+    mlflow = configure_mlflow()
+    run = mlflow.get_run(run_id)
+    bundle = load_bundle(run.data.params["bundle"])
+    reference_dataset = load_dataset(bundle.tests[run.data.params.get("transfer.reference_set", "T2")])
+    with tempfile.TemporaryDirectory() as directory:
+        path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path="transfer/solutions.npz", dst_path=directory)
+        with np.load(path) as stored:
+            arrays = {name: stored[name] for name in stored.files}
+    chevron = get_chevron_objectives(reference_dataset.material[:1])
+    reference = get_reference_front(reference_dataset)
+    metrics = get_transfer_metrics(arrays["seed"], arrays["predicted"], arrays["simulated"], reference, chevron)
+    result = TransferResult(
+        {
+            **metrics,
+            **{key.removeprefix("transfer/"): value for key, value in run.data.metrics.items() if key.endswith("_seconds") and key.startswith("transfer/")},
+        },
+        arrays["deposition"],
+        arrays["seed"],
+        arrays["predicted"],
+        arrays["simulated"],
+        arrays.get("simulated_sd"),
+        reference,
+        chevron,
+    )
+    config = TransferConfig(**parse_transfer_params(run.data.params))
+    log_transfer(run_id, result, config, with_plots)
+    annotate_run(run_id)
+    return result.metrics
+
+
+def parse_transfer_params(params: dict[str, str]) -> dict:
+    """The settings of a transfer test as the run logged them (`transfer.<name>`)."""
+    import ast
+
+    values = {key.removeprefix("transfer."): value for key, value in params.items() if key.startswith("transfer.")}
+    parsed = {}
+    for key, value in values.items():
+        try:
+            parsed[key] = ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            parsed[key] = value
+    return parsed
 
 
 def get_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -44,6 +102,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Instead: the hypervolume ratio of each optimization run on the simulator in this directory (the yardstick), needs --bundle",
     )
     parser.add_argument("--bundle", help="Bundle of the reference set for --simulator-runs")
+    parser.add_argument("--recompute", action="store_true", help="Compute the metrics of the earlier tests of --run-id again from their stored solutions")
     args = parser.parse_args(argv)
     if not args.run_id and not args.simulator_runs:
         parser.error("give --run-id or --simulator-runs")
@@ -57,9 +116,16 @@ def main(argv: list[str] | None = None):
     logging.basicConfig(level=logging.INFO)
     if args.simulator_runs:
         reference = load_dataset(load_bundle(args.bundle).tests[args.reference_set])
-        ratios = get_simulator_run_ratios(find_result_files(args.simulator_runs), reference)
-        print(f"Hypervolume ratio of {len(ratios)} runs on the simulator: mean {ratios.mean():.4f}, min {ratios.min():.4f}, max {ratios.max():.4f}")
-        print("   " + " ".join(f"{ratio:.3f}" for ratio in np.sort(ratios)))
+        chevron = get_chevron_objectives(reference.material[:1], n_jobs=args.n_jobs)
+        metrics = get_simulator_run_metrics(find_result_files(args.simulator_runs), reference, chevron)
+        print(f"{len(metrics['hv_ratio'])} runs on the simulator, Chevron F1 {chevron[0]:.4f} F2 {chevron[1]:.3f}:")
+        for name, values in metrics.items():
+            print(f"  {name:<22} mean {values.mean():.4f}, min {values.min():.4f}, max {values.max():.4f}")
+    if args.recompute:
+        for run_id in args.run_id:
+            metrics = recompute_transfer(run_id, not args.no_plots)
+            print(f"{run_id}: better than Chevron {metrics['chevron_beaten_rate']:.1%}, Chevron hypervolume {metrics['chevron_hv']:.4f}")
+        return
 
     config = TransferConfig(tuple(args.seeds), args.population_size, args.evaluations, args.repeats, args.reference_set, args.n_jobs)
     for run_id in args.run_id:

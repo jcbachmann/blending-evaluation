@@ -15,6 +15,7 @@ import numpy as np
 
 from bmh_ml.datasets.manifest import Dataset, make_features
 from bmh_ml.datasets.simulate import simulate
+from bmh_ml.evaluation.chevron import get_chevron_metrics, get_chevron_objectives
 from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.models.base import Model
 from bmh_ml.settings import DEPOSITION_LENGTH, X_MAX, X_MIN
@@ -46,6 +47,7 @@ class TransferResult:
     simulated: np.ndarray  # objectives of the simulator, mean of the repeats
     simulated_sd: np.ndarray | None
     reference: np.ndarray  # the reference front
+    chevron: np.ndarray | None = None  # F1 and F2 of the 19-pass Chevron for the material, the denominators of the relative objectives
 
 
 def get_problem_class():
@@ -150,42 +152,63 @@ def run_transfer_test(model: Model, scope: str, reference_dataset: Dataset, conf
     simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
     simulate_seconds = time.perf_counter() - start
 
+    chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
+    metrics = get_transfer_metrics(seeds, predicted, simulated, reference, chevron)
+    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": simulate_seconds})
+    return TransferResult(metrics, deposition, seeds, predicted, simulated, simulated_sd, reference, chevron)
+
+
+def get_transfer_metrics(seeds: np.ndarray, predicted: np.ndarray, simulated: np.ndarray, reference: np.ndarray, chevron: np.ndarray) -> dict[str, float]:
+    """The metrics of the solutions found on a model, from their predicted and simulated objectives and the seed of the run that found them.
+
+    Against the reference front (normalized to it): `hv_ratio`, `igd_plus`, per run `hv_ratio_run_mean` and `hv_ratio_run_min`, and
+    `predicted_hv_ratio`, what the model promised. Against Chevron (objectives divided by Chevron's, reference point (1, 1)): `chevron_hv`,
+    `chevron_beaten_rate` (share of the solutions better than Chevron in both), `chevron_best_F1` and `chevron_best_F2`, per run
+    `chevron_hv_run_mean`, the same for the reference front (`reference_chevron_hv`) and for the predictions (`predicted_chevron_hv`).
+    """
+    run_seeds = np.unique(seeds)
     metrics = get_front_metrics(simulated, reference)
-    per_run = [get_front_metrics(simulated[seeds == seed], reference)["hv_ratio"] for seed in config.seeds]
+    per_run = [get_front_metrics(simulated[seeds == seed], reference)["hv_ratio"] for seed in run_seeds]
     metrics.update(
         {
             "hv_ratio_run_mean": float(np.mean(per_run)),
             "hv_ratio_run_min": float(np.min(per_run)),
             "predicted_hv_ratio": get_front_metrics(predicted, reference)["hv_ratio"],
             "negative_rate": float(np.mean(np.any(predicted < 0, axis=1))),
-            "solutions": float(len(deposition)),
-            "optimize_seconds": optimize_seconds,
-            "simulate_seconds": simulate_seconds,
+            "solutions": float(len(simulated)),
+            **get_chevron_metrics(simulated, chevron),
+            "chevron_hv_run_mean": float(np.mean([get_chevron_metrics(simulated[seeds == seed], chevron)["chevron_hv"] for seed in run_seeds])),
+            "reference_chevron_hv": get_chevron_metrics(reference, chevron)["chevron_hv"],
+            "predicted_chevron_hv": get_chevron_metrics(predicted, chevron)["chevron_hv"],
+            "chevron_F1": float(chevron[0]),
+            "chevron_F2": float(chevron[1]),
         }
     )
     for i, objective in enumerate(OBJECTIVES):
         error = predicted[:, i] - simulated[:, i]
         metrics[f"{objective}/bias"] = float(np.mean(error))  # negative: the model promises better values than the simulator gives
         metrics[f"{objective}/rmse"] = float(np.sqrt(np.mean(error**2)))
-    return TransferResult(metrics, deposition, seeds, predicted, simulated, simulated_sd, reference)
+    return metrics
 
 
-def get_simulator_run_ratios(result_files: list[Path], reference_dataset: Dataset) -> np.ndarray:
-    """The hypervolume ratio of each optimization run on the simulator, the yardstick for `hv_ratio_run_mean`.
+def get_simulator_run_metrics(result_files: list[Path], reference_dataset: Dataset, chevron: np.ndarray) -> dict[str, np.ndarray]:
+    """The metrics of each optimization run on the simulator, the yardstick for the per-run metrics of the transfer test: `hv_ratio`
+    against the reference front, and against Chevron `chevron_hv`, `chevron_beaten_rate`, `chevron_best_F1`, `chevron_best_F2`.
 
     Its solutions are judged by their labels in the reference dataset (which contains the solutions of these runs), not by the single
-    simulation the run saw, so the ratio is free of the luck of the noise.
+    simulation the run saw, so the metrics are free of the luck of the noise.
     """
     labels = {deposition.tobytes(): y for deposition, y in zip(reference_dataset.deposition, reference_dataset.y, strict=True)}
     reference = get_reference_front(reference_dataset)
-    ratios = []
+    rows = []
     for file in result_files:
         variables = np.array(json.loads(file.read_text())["variables"], dtype=float)[:, -DEPOSITION_LENGTH:]
         missing = [row for row in variables if row.tobytes() not in labels]
         if missing:
             raise ValueError(f"{len(missing)} solutions of {file.name} are not in the reference dataset {reference_dataset.name}")
-        ratios.append(get_front_metrics(np.array([labels[row.tobytes()] for row in variables]), reference)["hv_ratio"])
-    return np.array(ratios)
+        objectives = np.array([labels[row.tobytes()] for row in variables])
+        rows.append({"hv_ratio": get_front_metrics(objectives, reference)["hv_ratio"], **get_chevron_metrics(objectives, chevron)})
+    return {name: np.array([row[name] for row in rows]) for name in rows[0]}
 
 
 def plot_transfer(result: TransferResult):
@@ -200,11 +223,16 @@ def plot_transfer(result: TransferResult):
     axis.plot(result.reference[order, 0], result.reference[order, 1], color="black", marker="o", markersize=3, label="reference front (simulator)")
     axis.scatter(result.predicted[:, 0], result.predicted[:, 1], s=6, alpha=0.4, label="found on the model, predicted")
     axis.scatter(result.simulated[:, 0], result.simulated[:, 1], s=6, alpha=0.6, label="found on the model, simulated")
+    if result.chevron is not None:
+        axis.scatter(*result.chevron, marker="*", s=200, color="red", zorder=5, label="Chevron, 19 passes")
+        axis.axvline(result.chevron[0], color="red", linewidth=0.5, linestyle="--")
+        axis.axhline(result.chevron[1], color="red", linewidth=0.5, linestyle="--")
     metrics = result.metrics
     axis.set(
         xlabel="F1",
         ylabel="F2",
-        title=f"Transfer: hypervolume ratio {metrics['hv_ratio']:.3f} (per run {metrics['hv_ratio_run_mean']:.3f}), IGD+ {metrics['igd_plus']:.3f}",
+        title=f"Transfer: hypervolume ratio {metrics['hv_ratio']:.3f} (per run {metrics['hv_ratio_run_mean']:.3f}), "
+        f"{100 * metrics.get('chevron_beaten_rate', float('nan')):.0f} % better than Chevron in both",
     )
     axis.legend()
     return figure
@@ -227,6 +255,8 @@ def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, wi
         arrays = {"deposition": result.deposition, "seed": result.seed, "predicted": result.predicted, "simulated": result.simulated}
         if result.simulated_sd is not None:
             arrays["simulated_sd"] = result.simulated_sd
+        if result.chevron is not None:
+            arrays["chevron"] = result.chevron
         np.savez_compressed(file, reference=result.reference, **arrays)
         client.log_artifact(run_id, str(file), "transfer")
     if with_plots:
