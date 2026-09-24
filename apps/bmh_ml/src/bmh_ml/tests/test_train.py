@@ -78,6 +78,14 @@ def test_a_training_run_is_logged_with_everything_needed_to_compare_and_reproduc
         assert name in run.data.metrics, name
     artifacts = {artifact.path for artifact in mlflow.MlflowClient().list_artifacts(result.run_id)}
     assert {"model", "predictions"} <= artifacts
+    description = run.data.tags["mlflow.note.content"]
+    assert "**ridge** model on bundle **B1**" in description
+    assert bundle.tests["T1"] in description
+    assert "python -m bmh_ml.train --bundle B1 --model ridge --seed 5" in description
+    contexts = {dataset_input.dataset.name: dataset_input.tags[0].value for dataset_input in run.inputs.dataset_inputs}
+    assert contexts[bundle.train] == "training"
+    assert contexts[bundle.val] == "validation"
+    assert contexts[bundle.tests["T1"]] == "testing"
     assert mlflow.get_experiment(run.info.experiment_id).name == "S2-general-material"
 
 

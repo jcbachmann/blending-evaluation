@@ -20,6 +20,7 @@ from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.evaluation.transfer import TransferConfig, optimize_model
 from bmh_ml.models.registry import MODELS
 from bmh_ml.settings import X_MAX, X_MIN
+from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow, get_experiment_id, get_experiment_name, get_finite_metrics
 from bmh_ml.train import parse_parameters, run_training
 
@@ -90,7 +91,7 @@ def get_front_errors(predicted: np.ndarray, simulated: np.ndarray) -> dict[str, 
     return metrics
 
 
-def train_round(config: RefineConfig, bundle: str, run_name: str, round_number: int) -> tuple[str, dict[str, float]]:
+def train_round(config: RefineConfig, bundle: str, run_name: str, round_number: int, source_run: str | None = None) -> tuple[str, dict[str, float]]:
     result = run_training(
         bundle,
         config.model,
@@ -99,7 +100,7 @@ def train_round(config: RefineConfig, bundle: str, run_name: str, round_number: 
         run_name,
         with_plots=True,
         nested=True,
-        tags={"refine": config.name, "round": str(round_number)},
+        tags={"refine": config.name, "round": str(round_number), **({"source_model_run": source_run} if source_run else {})},
         transfer=config.transfer,
     )
     return result.run_id, result.metrics
@@ -153,7 +154,7 @@ def refine(config: RefineConfig) -> list[str]:
             notes = {"refine": config.name, "round": k, "base": base.name, "model": config.model, "params": config.params}
             save_bundle(Bundle(name, base.scope, base.train, base.val, base.tests, notes, [*base.train_extra, *added], val_extra))
 
-            run_id, metrics = train_round(config, name, f"{config.name}-r{k}", k)
+            run_id, metrics = train_round(config, name, f"{config.name}-r{k}", k, source_run=run_id)
             run_ids.append(run_id)
             round_metrics = {**get_round_metrics(metrics), **front_errors, "refine/rows_added": float(len(inputs))}
             mlflow.log_metrics(get_finite_metrics({**round_metrics, "refine/round_seconds": time.perf_counter() - start}), step=k)
@@ -166,6 +167,7 @@ def refine(config: RefineConfig) -> list[str]:
     # The models of the earlier rounds on the sets of the final bundle (`<name>/valop/...`), for comparison. Needs the parent run closed.
     for earlier in run_ids[: config.rounds]:
         evaluate_run(earlier, config.name)
+    annotate_run(parent.info.run_id)
     return run_ids
 
 

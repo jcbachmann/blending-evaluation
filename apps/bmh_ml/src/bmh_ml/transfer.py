@@ -8,6 +8,7 @@ from bmh_ml.datasets.generators import find_result_files
 from bmh_ml.datasets.store import load_bundle, load_dataset
 from bmh_ml.evaluate_run import load_run_model
 from bmh_ml.evaluation.transfer import TransferConfig, TransferResult, get_simulator_run_ratios, log_transfer, run_transfer_test
+from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow
 
 
@@ -21,6 +22,7 @@ def transfer_run(run_id: str, config: TransferConfig, with_plots: bool = True) -
     result = run_transfer_test(load_run_model(run_id), bundle.scope, load_dataset(bundle.tests[config.reference_set]), config)
     with mlflow.start_run(run_id=run_id):
         log_transfer(result, config, with_plots)
+    annotate_run(run_id)
     return result
 
 

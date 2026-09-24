@@ -92,3 +92,8 @@ def test_the_loop_adds_the_solutions_found_to_the_training_data_round_by_round()
     assert "transfer/hv_ratio" in runs[run_ids[2]].data.metrics
     assert "valop/F1/rmse" in runs[run_ids[2]].data.metrics
     assert "R/valop/F1/rmse" in runs[run_ids[0]].data.metrics  # the earlier rounds on the final validation sets
+    description = mlflow.get_run(parent_id).data.tags["mlflow.note.content"]
+    assert "Refinement loop R" in description
+    assert all(run_id in description for run_id in run_ids)
+    assert runs[run_ids[2]].data.tags["source_model_run"] == run_ids[1]
+    assert "Round 2 of the refinement loop" in runs[run_ids[2]].data.tags["mlflow.note.content"]
