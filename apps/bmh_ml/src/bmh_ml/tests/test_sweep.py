@@ -2,7 +2,7 @@ import pytest
 
 from bmh_ml import build_bundle
 from bmh_ml.models.registry import get_model_class
-from bmh_ml.sweep import SEARCH_SPACES, SweepConfig, get_args, get_objective_metrics, run_sweep, suggest
+from bmh_ml.sweep import SEARCH_SPACES, SweepConfig, get_args, get_objective_metrics, run_sweep, split_trials, suggest
 
 SMALL = ["--train-size", "40", "--val-size", "10", "--test-size", "10", "--val-repeats", "2", "--test-repeats", "2", "--n-jobs", "1", "--stress-random", "1"]
 
@@ -78,3 +78,23 @@ def test_every_trial_is_a_nested_run_and_the_sweep_can_be_continued():
     expected = (best_run.data.metrics["val/F1/nrmse"] + best_run.data.metrics["val/F2/nrmse"]) / 2
     assert study.best_value == pytest.approx(expected)
     assert set(parents["tags.best_run"]) <= set(trials["run_id"])
+
+
+def test_trials_can_run_in_parallel_processes():
+    mlflow = pytest.importorskip("mlflow")
+    pytest.importorskip("optuna")
+    pytest.importorskip("sklearn")
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "B", "--scope", "S2", "--t3-materials", "1", "--t3-depositions", "2", *SMALL]))
+
+    study = run_sweep(SweepConfig("p", "B", "ridge", trials=3, workers=2))
+
+    assert len(study.trials) == 3
+    runs = mlflow.search_runs(experiment_names=["S2-general-material"], filter_string="tags.sweep = 'p'")
+    parent = runs[runs["tags.mlflow.parentRunId"].isna()]
+    assert len(parent) == 1
+    assert set(runs[runs["tags.mlflow.parentRunId"].notna()]["tags.mlflow.parentRunId"]) == {parent["run_id"].iloc[0]}
+
+
+def test_the_trials_are_split_between_the_workers():
+    assert split_trials(5, 2) == [3, 2]
+    assert split_trials(1, 3) == [1, 0, 0]

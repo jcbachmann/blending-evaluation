@@ -1,12 +1,14 @@
 """Models without a neural network: the mean, a linear model and gradient boosting."""
 
-import os
 from pathlib import Path
 from typing import Any, ClassVar
 
 import numpy as np
 
 from bmh_ml.models.base import Model, PerObjectiveModel
+from bmh_ml.parallel import get_cpu_count
+
+SMALL_BATCH = 1000  # predictions for at most this many rows use one thread, more threads only wait for each other
 
 
 class MeanModel(Model):
@@ -90,7 +92,7 @@ class LightGBMModel(PerObjectiveModel):
             subsample=params["subsample"],
             subsample_freq=1,
             colsample_bytree=params["colsample_bytree"],
-            n_jobs=min(params["n_jobs"], os.cpu_count() or 1),
+            n_jobs=self.get_threads(),
             random_state=seed,
             verbose=-1,
         )
@@ -103,8 +105,13 @@ class LightGBMModel(PerObjectiveModel):
         )
         return regressor.booster_, {"trees": float(regressor.booster_.num_trees())}
 
+    def get_threads(self) -> int:
+        """The configured threads, at most the cores and the thread limit of the process (see `parallel`)."""
+        return min(self.params["n_jobs"], get_cpu_count())
+
     def predict_objective(self, estimator, x):
-        return estimator.predict(x)
+        # Without a thread count LightGBM uses all cores for every call, which for the batches of an optimizer is mostly waiting
+        return estimator.predict(x, num_threads=1 if len(x) <= SMALL_BATCH else self.get_threads())
 
     def save_objective(self, estimator, path: Path):
         path.mkdir(parents=True, exist_ok=True)

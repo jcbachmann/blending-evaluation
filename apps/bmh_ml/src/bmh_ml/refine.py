@@ -130,9 +130,13 @@ def refine(config: RefineConfig) -> list[str]:
             start = time.perf_counter()
             model = load_run_model(run_id)
             seeds = get_round_seeds(k, config.optimizations)
-            deposition, predicted, _ = optimize_model(model, base.scope, material, seeds, config.population_size, config.evaluations)
             valop_seeds = get_round_seeds(k, config.valop_optimizations, VALOP_SEED_OFFSET)
-            valop_depositions.append(optimize_model(model, base.scope, material, valop_seeds, config.population_size, config.evaluations)[0])
+            found, predicted_all, found_seeds = optimize_model(
+                model, base.scope, material, seeds + valop_seeds, config.population_size, config.evaluations, config.n_jobs
+            )
+            for_training = np.isin(found_seeds, seeds)
+            deposition, predicted = found[for_training], predicted_all[for_training]
+            valop_depositions.append(found[~for_training])
 
             inputs = np.vstack([deposition, perturb(deposition, config.perturbations, config.perturbation_sd, rng)])
             source = {"round": k, "model_run": run_id, "seeds": list(seeds), "front_solutions": len(deposition)}

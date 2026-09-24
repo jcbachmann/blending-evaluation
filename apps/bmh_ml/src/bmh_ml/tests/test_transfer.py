@@ -11,6 +11,7 @@ from bmh_ml.evaluation.transfer import (
     get_nondominated,
     get_reference_front,
     get_simulator_run_ratios,
+    optimize_model,
     run_transfer_test,
 )
 from bmh_ml.models.registry import create_model
@@ -86,3 +87,19 @@ def test_the_transfer_test_optimizes_the_model_and_simulates_what_it_finds():
     for name in ("hv_ratio", "hv_ratio_run_mean", "igd_plus", "predicted_hv_ratio", "negative_rate", "F1/bias", "F2/rmse", "optimize_seconds"):
         assert np.isfinite(result.metrics[name]), name
     assert result.metrics["solutions"] == len(result.deposition)
+
+
+def test_the_fronts_do_not_depend_on_the_number_of_workers():
+    pytest.importorskip("sklearn")
+    rng = np.random.default_rng(1)
+    x = random_depositions(50, rng)
+    y = np.column_stack([x[:, 0] / 100, x[:, -1]])
+    model = create_model("ridge")
+    model.fit(x, y, x, y, seed=0)
+    material = random_materials(1, rng)
+
+    one = optimize_model(model, "S1", material, (1, 2), population_size=6, evaluations=12, workers=1)
+    two = optimize_model(model, "S1", material, (1, 2), population_size=6, evaluations=12, workers=2)
+
+    for first, second in zip(one, two, strict=True):
+        assert np.allclose(first, second)

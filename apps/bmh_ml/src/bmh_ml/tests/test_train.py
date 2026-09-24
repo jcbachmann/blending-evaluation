@@ -37,9 +37,9 @@ def test_a_parameter_needs_a_value():
 
 
 def test_the_command_line_is_parsed():
-    args = get_args(["--bundle", "B", "--model", "ridge", "--param", "alpha=2", "--seed", "3"])
+    args = get_args(["--bundle", "B", "--model", "ridge", "--param", "alpha=2", "--seed", "3", "4", "--workers", "2"])
 
-    assert (args.bundle, args.model, args.params, args.seed) == ("B", "ridge", {"alpha": 2}, 3)
+    assert (args.bundle, args.model, args.params, args.seed, args.workers) == ("B", "ridge", {"alpha": 2}, [3, 4], 2)
     with pytest.raises(SystemExit):
         get_args(["--bundle", "B", "--model", "forest"])
 
