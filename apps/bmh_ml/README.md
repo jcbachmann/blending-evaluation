@@ -102,6 +102,26 @@ uv run --package bmh_ml python -m bmh_ml.evaluate_run --run-id <id> --bundle S1-
 * Models are chosen on the validation data. The test sets are for reporting; do not tune on them, or use a new bundle.
 * The store is a SQLite database and a directory of files, the runs are kept until they are deleted in the UI. Copy the store directory to keep or move them. MLflow stores absolute paths in the database, so a moved store needs them rewritten once.
 
+### Tracking the attempts in the MLflow UI
+
+Start the UI (`python -m bmh_ml.ui`), open the experiment `S1-fixed-material` and switch to **Model training** (top left) if the page shows the GenAI overview. The **Views** menu of the runs page has saved views:
+
+| View | Shows |
+|---|---|
+| 1 Leaderboard | every run with a transfer test, best first: transfer hypervolume, negative predictions, bias, accuracy on `valop`, T2, T1 and `val` |
+| 2 Comparison charts | the same runs as bar charts (chart tab) |
+| 3 Refinement loops | each refinement loop round by round (chart tab): transfer test, the error on the solutions found, accuracy |
+| 4 Sweep trials | the trials of all sweeps with their parameters and validation metrics |
+| 5 All runs | everything, newest first |
+
+The views are defined in `bmh_ml/tracking/views.py`; `python -m bmh_ml.tracking.views` installs or updates them (they are stored in the tracking database).
+
+Every run has a **description** (the "Description" on its page, its first line in the runs table): what it is and why (for example round 2 of a refinement loop, with a link to the model whose solutions were added), the datasets, the parameters, a results table, the transfer test, later evaluations, the command to reproduce it and the code version. Parent runs of refinement loops and sweeps summarize their rounds or best trials with links. The descriptions are generated from what the runs logged; text you add outside of the generated block is kept when they are regenerated (`python -m bmh_ml.tracking.annotate --all`). `train --description "..."` adds a sentence on why a run was made. The datasets of a run are also logged as MLflow inputs.
+
+### Using the cores
+
+Independent work runs in parallel processes, each with a share of the cores: the NSGA-III runs of the transfer test and of a refinement round, `train --seed 1 2 3 --workers 3` (seed replicates), `sweep --workers 4` (trials). A single training uses the cores itself, so several at once only pay off with a limited share each.
+
 ### Transfer test: is a model useful for optimization?
 
 ```shell
