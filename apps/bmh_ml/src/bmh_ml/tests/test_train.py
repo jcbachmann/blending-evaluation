@@ -7,8 +7,10 @@ import pytest
 
 from bmh_ml import build_bundle
 from bmh_ml.datasets.store import load_bundle, save_bundle
+from bmh_ml.evaluation.transfer import TransferConfig
 from bmh_ml.tracking.runs import get_experiment_name, get_finite_metrics
 from bmh_ml.train import get_args, parse_parameters, run_training
+from bmh_ml.transfer import transfer_run
 
 SMALL = ["--train-size", "40", "--val-size", "10", "--test-size", "10", "--val-repeats", "2", "--test-repeats", "2", "--n-jobs", "1", "--stress-random", "1"]
 
@@ -138,3 +140,23 @@ def test_the_extra_datasets_of_a_bundle_are_trained_on_and_evaluated():
     assert run.data.params["valop_dataset"] == base.tests["T1"]
     assert run.data.metrics["valop/F1/rmse"] == run.data.metrics["T1/F1/rmse"]
     assert run.data.tags["purpose"] == "test"
+
+
+def test_the_transfer_test_is_logged_with_the_training_or_later():
+    mlflow = pytest.importorskip("mlflow")
+    pytest.importorskip("sklearn")
+    make_bundle("B1")
+    config = TransferConfig(seeds=(1,), population_size=6, evaluations=12, repeats=2, reference_set="T1", n_jobs=1)
+
+    result = run_training("B1", "ridge", {}, with_plots=False, transfer=config)
+
+    run = mlflow.get_run(result.run_id)
+    assert run.data.metrics["transfer/hv_ratio"] == result.metrics["transfer/hv_ratio"]
+    assert run.data.params["transfer.seeds"] == "(1,)"
+    assert "transfer/solutions.npz" in {artifact.path for artifact in mlflow.MlflowClient().list_artifacts(result.run_id, "transfer")}
+
+    later = run_training("B1", "ridge", {}, with_plots=False)
+    transfer_run(later.run_id, config, with_plots=False)
+    assert "transfer/hv_ratio" in mlflow.get_run(later.run_id).data.metrics
+    with pytest.raises(ValueError, match="T2"):
+        transfer_run(later.run_id, TransferConfig(), with_plots=False)

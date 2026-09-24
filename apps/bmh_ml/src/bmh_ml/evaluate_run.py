@@ -5,9 +5,18 @@ from pathlib import Path
 
 from bmh_ml.datasets.store import get_evaluation_sets, load_bundle, load_dataset
 from bmh_ml.evaluation.evaluate import evaluate_datasets
+from bmh_ml.models.base import Model
 from bmh_ml.models.registry import load_model
 from bmh_ml.tracking.runs import configure_mlflow, get_finite_metrics
 from bmh_ml.train import get_set_metrics
+
+
+def load_run_model(run_id: str) -> Model:
+    """The model stored in a training run."""
+    mlflow = configure_mlflow()
+    with tempfile.TemporaryDirectory() as directory:
+        mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path="model", dst_path=directory)
+        return load_model(Path(directory) / "model")
 
 
 def evaluate_run(run_id: str, bundle_name: str) -> dict[str, float]:
@@ -23,9 +32,7 @@ def evaluate_run(run_id: str, bundle_name: str) -> dict[str, float]:
     if bundle.scope != run.data.params["scope"]:
         raise ValueError(f"Bundle {bundle_name} has scope {bundle.scope}, the run has scope {run.data.params['scope']}")
 
-    with tempfile.TemporaryDirectory() as directory:
-        mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path="model", dst_path=directory)
-        model = load_model(Path(directory) / "model")
+    model = load_run_model(run_id)
     datasets = {name: load_dataset(dataset_id) for name, dataset_id in get_evaluation_sets(bundle).items()}
     results = evaluate_datasets(model, datasets, bundle.scope)
     metrics = get_set_metrics(results, prefix=f"{bundle_name}/")
