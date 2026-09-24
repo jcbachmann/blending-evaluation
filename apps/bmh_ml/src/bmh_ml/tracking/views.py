@@ -107,7 +107,8 @@ def base_state(search_filter: str = "", order_by: str = "attributes.start_time",
 
 LEADERBOARD_COLUMNS = [
     "attributes.`Description`",
-    *map(metric_column, ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/negative_rate", "transfer/F1/bias", "transfer/F2/bias"]),
+    *map(metric_column, ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/chevron_hv"]),
+    *map(metric_column, ["transfer/negative_rate", "transfer/F1/bias", "transfer/F2/bias"]),
     *map(metric_column, ["valop/F1/nrmse", "valop/F2/nrmse", "T2/F1/r2", "T2/F2/r2", "T1/F1/r2", "T1/F2/r2", "val/F1/nrmse", "val/F2/nrmse"]),
     metric_column("train/seconds"),
     *map(param_column, ["model", "bundle", "seed"]),
@@ -122,7 +123,7 @@ def get_views() -> dict[str, tuple[str, dict]]:
             "transfer",
             "Transfer test: optimize the model, simulate what it finds (higher hv is better)",
             "LINE",
-            ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/negative_rate", "transfer/F1/bias", "transfer/F2/bias"],
+            ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/chevron_hv", "transfer/negative_rate"],
         ),
         (
             "front",
@@ -138,7 +139,7 @@ def get_views() -> dict[str, tuple[str, dict]]:
             "transfer",
             "Transfer test (higher hv is better, negative rate and bias should be 0)",
             "BAR",
-            ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/negative_rate", "transfer/F2/bias", "transfer/F1/bias"],
+            ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/chevron_hv", "transfer/negative_rate"],
         ),
         (
             "accuracy",

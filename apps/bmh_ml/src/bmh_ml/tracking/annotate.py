@@ -70,6 +70,8 @@ def merge_description(existing: str | None, generated: str) -> str:
 def get_summary(metrics: dict) -> str:
     """The results that tell attempts apart, for the first line of a description."""
     parts = []
+    if "transfer/chevron_beaten_rate" in metrics:
+        parts.append(f"{format_number(100 * metrics['transfer/chevron_beaten_rate'])} % beat Chevron")
     for name, label in (("transfer/hv_ratio", "transfer hv"), ("valop/F2/nrmse", "valop F2 nrmse"), ("T2/F2/r2", "T2 F2 R2"), ("val/F1/nrmse", "val F1 nrmse")):
         if name in metrics:
             parts.append(f"{label} {format_number(metrics[name])}")
@@ -193,7 +195,22 @@ def describe_transfer(metrics: dict, params: dict) -> list[str]:
         f"- the model promised a hypervolume ratio of {format_number(get('transfer/predicted_hv_ratio'))}; bias of its predictions on the solutions it "
         f"found: F1 {format_number(get('transfer/F1/bias'))}, F2 {format_number(get('transfer/F2/bias'))}; solutions with a negative prediction "
         f"{format_number(100 * get('transfer/negative_rate', float('nan')))} %",
+        *describe_chevron(metrics),
         f"- settings: {settings}",
+    ]
+
+
+def describe_chevron(metrics: dict) -> list[str]:
+    if "transfer/chevron_hv" not in metrics:
+        return []
+    get = metrics.get
+    return [
+        f"- against the 19-pass Chevron (F1 {format_number(get('transfer/chevron_F1'), 4)}, F2 {format_number(get('transfer/chevron_F2'), 4)}): "
+        f"{format_number(100 * get('transfer/chevron_beaten_rate', float('nan')))} % of the solutions found are better in both objectives; "
+        f"hypervolume beyond Chevron {format_number(get('transfer/chevron_hv'))} over all runs, {format_number(get('transfer/chevron_hv_run_mean'))} "
+        f"per run (the simulator's best front {format_number(get('transfer/reference_chevron_hv'))}, the model promised "
+        f"{format_number(get('transfer/predicted_chevron_hv'))}); best relative F1 {format_number(get('transfer/chevron_best_F1'))}, "
+        f"best relative F2 {format_number(get('transfer/chevron_best_F2'))} (1 is Chevron, lower is better)",
     ]
 
 

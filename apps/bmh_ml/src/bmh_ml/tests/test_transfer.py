@@ -10,7 +10,7 @@ from bmh_ml.evaluation.transfer import (
     get_front_metrics,
     get_nondominated,
     get_reference_front,
-    get_simulator_run_ratios,
+    get_simulator_run_metrics,
     optimize_model,
     run_transfer_test,
 )
@@ -60,14 +60,16 @@ def test_simulator_runs_are_judged_by_the_labels_of_the_reference_set(tmp_path):
     best.write_text(json.dumps({"variables": reference.deposition[:3].tolist()}))
     dominated.write_text(json.dumps({"variables": reference.deposition[3:].tolist()}))
 
-    ratios = get_simulator_run_ratios([best, dominated], reference)
+    metrics = get_simulator_run_metrics([best, dominated], reference, chevron=np.array([0.3, 6.0]))
 
-    assert ratios[0] == pytest.approx(1)
-    assert ratios[1] < 1
+    assert metrics["hv_ratio"][0] == pytest.approx(1)
+    assert metrics["hv_ratio"][1] < 1
+    assert metrics["chevron_beaten_rate"][0] == pytest.approx(1 / 3)  # only (0.2, 5) beats (0.3, 6) in both
+    assert metrics["chevron_beaten_rate"][1] == 0
     unknown = tmp_path / "unknown.json"
     unknown.write_text(json.dumps({"variables": random_depositions(1, np.random.default_rng(9)).tolist()}))
     with pytest.raises(ValueError, match="not in the reference"):
-        get_simulator_run_ratios([unknown], reference)
+        get_simulator_run_metrics([unknown], reference, chevron=np.array([0.3, 6.0]))
 
 
 def test_the_transfer_test_optimizes_the_model_and_simulates_what_it_finds():
@@ -84,7 +86,10 @@ def test_the_transfer_test_optimizes_the_model_and_simulates_what_it_finds():
     assert set(result.seed) == {1, 2}
     assert result.simulated_sd is not None
     assert np.allclose(result.predicted, model.predict(result.deposition))
-    for name in ("hv_ratio", "hv_ratio_run_mean", "igd_plus", "predicted_hv_ratio", "negative_rate", "F1/bias", "F2/rmse", "optimize_seconds"):
+    assert result.chevron is not None
+    assert result.metrics["chevron_F1"] == result.chevron[0]
+    names = ("hv_ratio", "hv_ratio_run_mean", "igd_plus", "predicted_hv_ratio", "negative_rate", "F1/bias", "F2/rmse", "optimize_seconds")
+    for name in (*names, "chevron_hv", "chevron_beaten_rate", "chevron_best_F2", "reference_chevron_hv", "chevron_hv_run_mean"):
         assert np.isfinite(result.metrics[name]), name
     assert result.metrics["solutions"] == len(result.deposition)
 

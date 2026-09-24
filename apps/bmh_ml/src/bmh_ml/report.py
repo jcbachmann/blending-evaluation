@@ -11,7 +11,12 @@ from bmh_ml.tracking.store import get_reports_directory
 SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5")
 OBJECTIVES = ("F1", "F2")
 PARAMETER_COLUMNS = ("params.model", "params.bundle", "params.seed")
-TRANSFER_COLUMNS = {"metrics.transfer/hv_ratio": "transfer hv", "metrics.transfer/hv_ratio_run_mean": "transfer hv/run"}
+TRANSFER_COLUMNS = {
+    "metrics.transfer/hv_ratio": "transfer hv",
+    "metrics.transfer/hv_ratio_run_mean": "transfer hv/run",
+    "metrics.transfer/chevron_beaten_rate": "beat Chevron",
+    "metrics.transfer/chevron_hv": "hv vs Chevron",
+}
 COST_COLUMNS = {"metrics.train/seconds": "train s", "metrics.throughput/batch_10000": "pred/s (10k)"}
 
 

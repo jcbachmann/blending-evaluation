@@ -10,7 +10,7 @@ from bmh_ml.datasets.store import load_bundle, save_bundle
 from bmh_ml.evaluation.transfer import TransferConfig
 from bmh_ml.tracking.runs import get_experiment_name, get_finite_metrics
 from bmh_ml.train import get_args, parse_parameters, run_training
-from bmh_ml.transfer import transfer_run
+from bmh_ml.transfer import recompute_transfer, transfer_run
 
 SMALL = ["--train-size", "40", "--val-size", "10", "--test-size", "10", "--val-repeats", "2", "--test-repeats", "2", "--n-jobs", "1", "--stress-random", "1"]
 
@@ -168,5 +168,11 @@ def test_the_transfer_test_is_logged_with_the_training_or_later():
     transfer_run(later.run_id, config, with_plots=False)
     assert "transfer/hv_ratio" in mlflow.get_run(later.run_id).data.metrics
     assert mlflow.get_run(later.run_id).info.end_time == end_time  # the finished run is not reopened
+
+    recomputed = recompute_transfer(later.run_id, with_plots=False)
+    metrics = mlflow.get_run(later.run_id).data.metrics
+    assert metrics["transfer/chevron_hv"] == pytest.approx(recomputed["chevron_hv"])
+    assert metrics["transfer/hv_ratio"] == pytest.approx(recomputed["hv_ratio"])  # the same solutions give the same metrics
+    assert "transfer/optimize_seconds" in metrics
     with pytest.raises(ValueError, match="T2"):
         transfer_run(later.run_id, TransferConfig(), with_plots=False)
