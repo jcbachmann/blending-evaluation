@@ -73,7 +73,9 @@ class LightGBMModel(PerObjectiveModel):
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "early_stopping_rounds": 50,
-        "n_jobs": 8,  # all 16 threads of the development machine were 10 to 40 times slower than 8, so the default is not "all"
+        # Not "all": 16 threads were 10 to 40 times slower than 8 on the first development machine, and 1.6 times slower on an 8 core i9-9900K
+        # with 16 hardware threads, where 8 and 12 were the fastest
+        "n_jobs": 8,
     }
 
     def fit_objective(self, x_train, y_train, x_val, y_val, seed):
