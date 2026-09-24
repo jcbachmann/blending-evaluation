@@ -100,7 +100,39 @@ uv run --package bmh_ml python -m bmh_ml.evaluate_run --run-id <id> --bundle S1-
 * `train` trains on the training data of the bundle, stops early on the validation data, and evaluates on the validation data and **every** test set of the bundle. One run in the UI contains: the parameters, the dataset ids, the code version (`+dirty` if there were uncommitted changes) and a hash of `uv.lock`, the metrics of all sets, the training time and the prediction throughput, and as artifacts the model, its predictions and plots.
 * Metrics are named `<set>/<objective>/<metric>`, for example `T2/F2/nrmse`. `nrmse` is the rmse divided by the noise of one simulation, so 1 means as accurate as the simulator is repeatable. Because the test labels are averages over 16 simulations, even a perfect model has an `nrmse` of 0.25. Others: `rmse`, `mae`, `bias`, `r2` (with the ceiling `r2_ceiling`), `tail_rmse` and `tail_bias` (best 10 % of the solutions), `spearman` and `pairwise_accuracy` (is the order of solutions right), `negative_rate` (impossible negative predictions).
 * Models are chosen on the validation data. The test sets are for reporting; do not tune on them, or use a new bundle.
-* The store is a SQLite database and a directory of files, the runs are kept until they are deleted in the UI. Copy the store directory to keep or move them.
+* The store is a SQLite database and a directory of files, the runs are kept until they are deleted in the UI. Copy the store directory to keep or move them. MLflow stores absolute paths in the database, so a moved store needs them rewritten once.
+
+### Transfer test: is a model useful for optimization?
+
+```shell
+uv run --package bmh_ml python -m bmh_ml.transfer --run-id <id> [<id> ...]                  # or: train ... --transfer
+uv run --package bmh_ml python -m bmh_ml.transfer --simulator-runs output/simulation --bundle S1-v1   # the yardstick
+```
+
+* The model is optimized with NSGA-III (5 seeds, population 100, 20,000 evaluations each), the solutions it finds are simulated 16 times, and their front is compared with the **reference front**: the non-dominated solutions of `T2`, the optimization runs on the simulator, with their repeat-averaged labels.
+* Metrics (`transfer/...` in the run): `hv_ratio` hypervolume of the found solutions divided by that of the reference front (objectives normalized to the reference front, reference point 1.1), for all seeds together and per run (`hv_ratio_run_mean`); `igd_plus`; `predicted_hv_ratio`, what the model promised; `F1/bias`, `F2/bias` of the predictions on the found solutions (negative: too optimistic); `negative_rate`. The solutions and a plot are artifacts.
+* `--simulator-runs` prints the same ratio for each optimization run on the simulator, which is what a single run of the model has to be compared with.
+
+### Refinement loop: training data in the operating region
+
+```shell
+uv run --package bmh_ml python -m bmh_ml.refine --base S1-v1 --name S1-v1-rmlp --model mlp --rounds 4 --control --transfer
+```
+
+* Each round optimizes the current model (10 NSGA-III runs), simulates the solutions found and 4 perturbed copies of each, adds them as a new dataset and trains the model again. The bundles `<name>-r1` ... share the base data and list the added datasets in `train_extra`, the final bundle is `<name>`.
+* The final bundle has the extra validation set **`valop`**: solutions from separate optimizations of every round's model, never trained on, labeled with 8 repeats. Use it to choose models for the operating region; `T2` stays a test set.
+* `--control` trains on the base data plus as many *random* rows as the loop added (`<name>-control`), which separates the effect of the data's location from the effect of its amount. `--start-run <id>` uses an existing model as round 0.
+* The rounds are nested runs of a parent run `refine-<name>`, whose metrics have one step per round (curves in the UI).
+
+### Hyperparameter sweeps
+
+```shell
+uv run --package bmh_ml python -m bmh_ml.sweep --name lgbm-1 --bundle S1-v1-rmlp --model lightgbm --trials 30
+```
+
+* Optuna (TPE) chooses the parameters of each trial from the search space of the model (`SEARCH_SPACES` in `sweep.py`); `--param` fixes parameters. Each trial is a training run nested in the parent run `sweep-<name>`, which is tagged with the best run.
+* The objective is the mean `nrmse` of F1 and F2 on every validation set of the bundle (`val`, and `valop` if present), or the metrics given with `--objective`. Test sets are refused.
+* The study is stored in the store (`optuna.db`): the same `--name` continues a sweep.
 
 ## Improving the models
 
