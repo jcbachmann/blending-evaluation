@@ -11,6 +11,7 @@ from bmh_ml.tracking.store import get_reports_directory
 SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5")
 OBJECTIVES = ("F1", "F2")
 PARAMETER_COLUMNS = ("params.model", "params.bundle", "params.seed")
+TRANSFER_COLUMNS = {"metrics.transfer/hv_ratio": "transfer hv", "metrics.transfer/hv_ratio_run_mean": "transfer hv/run"}
 COST_COLUMNS = {"metrics.train/seconds": "train s", "metrics.throughput/batch_10000": "pred/s (10k)"}
 
 
@@ -21,17 +22,20 @@ def get_metric_columns(runs: pd.DataFrame, metric: str) -> list[str]:
 
 
 def build_leaderboard(runs: pd.DataFrame, metric: str = "nrmse", sort_by: str | None = None, top: int | None = None) -> pd.DataFrame:
-    """A table with a row for each run, sorted by the best value of `sort_by` (lower is better for the errors, higher for r2 and correlations).
+    """A table with a row for each run, sorted by the best value of `sort_by` (lower is better for the errors, higher for r2, correlations and
+    the transfer test). Runs without any of the metrics, like the parent runs of sweeps, are left out.
 
     `runs` is a table of runs like MLflow returns it: columns `params.*`, `metrics.*` and `tags.mlflow.runName`.
     """
     columns = get_metric_columns(runs, metric)
     if not columns:
         raise ValueError(f"No run has the metric '{metric}' ({', '.join(f'{s}/F1/{metric}' for s in SETS[:2])} ...)")
+    transfer_columns = [title for column, title in TRANSFER_COLUMNS.items() if column in runs.columns]
     default_sort = f"T2/F2/{metric}"
     sort_by = sort_by or (default_sort if default_sort in columns else columns[0])
-    if sort_by not in columns:
-        raise ValueError(f"Cannot sort by '{sort_by}', choose one of {columns}")
+    if sort_by not in columns + transfer_columns:
+        raise ValueError(f"Cannot sort by '{sort_by}', choose one of {columns + transfer_columns}")
+    runs = runs[runs[[f"metrics.{name}" for name in columns]].notna().any(axis=1)]
 
     table = pd.DataFrame(index=runs.index)
     table["run"] = runs.get("tags.mlflow.runName", pd.Series(index=runs.index, dtype=object)).fillna(runs["run_id"].str[:8])
@@ -39,10 +43,10 @@ def build_leaderboard(runs: pd.DataFrame, metric: str = "nrmse", sort_by: str | 
         table[column.removeprefix("params.")] = runs.get(column)
     for name in columns:
         table[name] = runs[f"metrics.{name}"]
-    for column, title in COST_COLUMNS.items():
+    for column, title in {**TRANSFER_COLUMNS, **COST_COLUMNS}.items():
         if column in runs.columns:
             table[title] = runs[column]
-    higher_is_better = metric in ("r2", "spearman", "pairwise_accuracy")
+    higher_is_better = metric in ("r2", "spearman", "pairwise_accuracy") or sort_by in transfer_columns
     table = table.sort_values(sort_by, ascending=not higher_is_better, na_position="last")
     return table.head(top) if top else table
 
@@ -97,7 +101,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Leaderboard of the runs of an experiment")
     parser.add_argument("--experiment", default=EXPERIMENT_NAMES["S1"], help=f"Experiment name, {' or '.join(EXPERIMENT_NAMES.values())}")
     parser.add_argument("--metric", default="nrmse", help="rmse, mae, bias, r2, nrmse, tail_rmse, tail_bias, spearman, pairwise_accuracy, negative_rate")
-    parser.add_argument("--sort", help="Column to sort by, default T2/F2/<metric> if it exists")
+    parser.add_argument("--sort", help="Column to sort by, default T2/F2/<metric> if it exists, or 'transfer hv'")
     parser.add_argument("--top", type=int, help="Only the best runs")
     parser.add_argument("--bundle", help="Only runs trained on this bundle")
     parser.add_argument("--html", action="store_true", help="Also write an HTML file to the reports directory of the store")
