@@ -111,3 +111,18 @@ def test_the_ui_uses_the_store(tmp_path, monkeypatch):
     assert f"sqlite:///{(tmp_path / 'mlflow.db').as_posix()}" in command
     assert (tmp_path / "artifacts").as_uri() in command
     assert command[-2:] == ["--port", "5001"]
+
+
+def test_the_transfer_test_is_shown_and_can_be_sorted_by():
+    runs = make_runs()
+    runs["metrics.transfer/hv_ratio"] = [0.5, None, 0.9]
+
+    table = report.build_leaderboard(runs, sort_by="transfer hv")
+
+    assert list(table["model"]) == ["mean", "mlp", "ridge"]
+
+
+def test_runs_without_metrics_like_the_parents_of_sweeps_are_left_out():
+    runs = pd.concat([make_runs(), pd.DataFrame({"run_id": ["dddddddd4444"], "tags.mlflow.runName": ["sweep-x"]})], ignore_index=True)
+
+    assert "sweep-x" not in set(report.build_leaderboard(runs)["run"])
