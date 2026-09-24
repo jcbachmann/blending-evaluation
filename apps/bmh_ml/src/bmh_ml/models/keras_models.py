@@ -6,8 +6,22 @@ from typing import Any, ClassVar
 import numpy as np
 
 from bmh_ml.models.base import PerObjectiveModel
+from bmh_ml.parallel import get_thread_limit
 
 PREDICT_BATCH_SIZE = 8192
+
+
+def limit_keras_threads() -> None:
+    """Applies the thread limit of the process (see `parallel`) to TensorFlow, which only accepts it before its first operation."""
+    limit = get_thread_limit()
+    if limit:
+        import tensorflow as tf
+
+        try:
+            tf.config.threading.set_intra_op_parallelism_threads(limit)
+            tf.config.threading.set_inter_op_parallelism_threads(min(limit, 2))
+        except RuntimeError:  # TensorFlow already runs, the limit of the environment variables applies
+            pass
 
 
 class KerasModel(PerObjectiveModel):
@@ -29,6 +43,7 @@ class KerasModel(PerObjectiveModel):
         return x
 
     def fit_objective(self, x_train, y_train, x_val, y_val, seed):
+        limit_keras_threads()
         import keras
         from sklearn.preprocessing import StandardScaler
 
@@ -74,6 +89,7 @@ class KerasModel(PerObjectiveModel):
         joblib.dump({"x_scaler": x_scaler, "y_mean": y_mean, "y_std": y_std}, path / "scaling.joblib")
 
     def load_objective(self, path: Path):
+        limit_keras_threads()
         import joblib
         import keras
 

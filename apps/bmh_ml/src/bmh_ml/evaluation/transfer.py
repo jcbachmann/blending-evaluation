@@ -31,7 +31,7 @@ class TransferConfig:
     evaluations: int = 20_000
     repeats: int = 16
     reference_set: str = "T2"
-    n_jobs: int | None = None
+    n_jobs: int | None = None  # processes of the simulation and of the optimizations, default all cores
 
     def params(self) -> dict[str, str]:
         return {f"transfer.{key}": str(value) for key, value in self.__dict__.items() if key != "n_jobs"}
@@ -64,20 +64,40 @@ def get_problem_class():
     return ModelProblem
 
 
-def optimize_model(
-    model: Model, scope: str, material: np.ndarray, seeds: tuple[int, ...], population_size: int, evaluations: int
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """The final fronts of one NSGA-III run per seed on the model: depositions, predicted objectives and the seed of each solution."""
+def optimize_once(model: Model | Path, scope: str, material: np.ndarray, seed: int, population_size: int, evaluations: int) -> tuple[np.ndarray, np.ndarray]:
+    """The final front of one NSGA-III run on the model (or the model stored in a directory): depositions and predicted objectives."""
     from bmh_ml.experiment import optimize
+    from bmh_ml.models.registry import load_model
 
+    if isinstance(model, Path):
+        model = load_model(model)
     problem = get_problem_class()(model, scope, np.atleast_2d(material))
-    depositions, predictions, run_seeds = [], [], []
-    for seed in seeds:
-        objectives, variables = optimize(problem, population_size, evaluations, seed)
-        depositions.append(np.atleast_2d(variables))
-        predictions.append(np.atleast_2d(objectives))
-        run_seeds.append(np.full(len(depositions[-1]), seed))
-    return np.vstack(depositions), np.vstack(predictions), np.concatenate(run_seeds)
+    objectives, variables = optimize(problem, population_size, evaluations, seed)
+    return np.atleast_2d(variables), np.atleast_2d(objectives)
+
+
+def optimize_model(
+    model: Model, scope: str, material: np.ndarray, seeds: tuple[int, ...], population_size: int, evaluations: int, workers: int | None = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The final fronts of one NSGA-III run per seed on the model: depositions, predicted objectives and the seed of each solution.
+
+    The runs are independent and each is a single thread, so they run in parallel processes, one per seed up to `workers` (default: all
+    cores). The results do not depend on the number of workers.
+    """
+    import tempfile
+
+    from bmh_ml.parallel import get_cpu_count, run_parallel
+
+    workers = min(workers or get_cpu_count(), len(seeds))
+    with tempfile.TemporaryDirectory() as directory:
+        source: Model | Path = model
+        if workers > 1:
+            source = Path(directory) / "model"
+            model.save(source)
+        fronts = run_parallel(optimize_once, [(source, scope, material, seed, population_size, evaluations) for seed in seeds], workers, threads=1)
+    depositions = [front[0] for front in fronts]
+    run_seeds = [np.full(len(deposition), seed) for deposition, seed in zip(depositions, seeds, strict=True)]
+    return np.vstack(depositions), np.vstack([front[1] for front in fronts]), np.concatenate(run_seeds)
 
 
 def get_nondominated(objectives: np.ndarray) -> np.ndarray:
@@ -124,7 +144,7 @@ def run_transfer_test(model: Model, scope: str, reference_dataset: Dataset, conf
     reference = get_reference_front(reference_dataset)
 
     start = time.perf_counter()
-    deposition, predicted, seeds = optimize_model(model, scope, material, config.seeds, config.population_size, config.evaluations)
+    deposition, predicted, seeds = optimize_model(model, scope, material, config.seeds, config.population_size, config.evaluations, config.n_jobs)
     optimize_seconds = time.perf_counter() - start
     start = time.perf_counter()
     simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)

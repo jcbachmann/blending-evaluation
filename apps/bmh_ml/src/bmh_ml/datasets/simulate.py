@@ -1,12 +1,12 @@
 """Labels inputs with the simulator: F1 and F2, the mean of several simulations of the same input."""
 
 import logging
-import os
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 
 from bmh_ml.datasets.manifest import Dataset
+from bmh_ml.parallel import get_cpu_count
 from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME
 from bmh_ml.simulation import evaluate_sim
 
@@ -30,7 +30,7 @@ def simulate(
     if repeats < 1:
         raise ValueError("repeats must be at least 1")
     material = np.broadcast_to(material, (len(deposition), material.shape[1]))
-    n_jobs = n_jobs or os.cpu_count() or 1
+    n_jobs = n_jobs or get_cpu_count()
     starts = range(0, len(deposition), chunk_size)
     chunks = [(material[s : s + chunk_size], deposition[s : s + chunk_size]) for s in starts]
 
