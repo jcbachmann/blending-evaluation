@@ -216,3 +216,19 @@ def test_small_and_large_batches_give_the_same_prediction(data, monkeypatch):
     monkeypatch.setattr(keras_models, "PREDICT_BATCH_SIZE", 8)  # larger inputs than this go through `predict` in batches
 
     assert np.allclose(model.predict(x_test), direct, atol=1e-5)
+
+
+def test_the_objectives_are_fitted_in_parallel_with_the_same_result(data, monkeypatch):
+    pytest.importorskip("sklearn")
+    from bmh_ml.models import base
+
+    (x, y), (x_val, y_val), (x_test, _) = data
+    sequential = create_model("ridge")
+    sequential.fit(x, y, x_val, y_val, seed=0)
+    monkeypatch.setattr(base, "MIN_ROWS_FOR_PARALLEL_OBJECTIVES", 1)
+    monkeypatch.setattr(base, "MIN_CORES_FOR_PARALLEL_OBJECTIVES", 1)
+    parallel = create_model("ridge")
+
+    parallel.fit(x, y, x_val, y_val, seed=0)
+
+    assert np.allclose(parallel.predict(x_test), sequential.predict(x_test))
