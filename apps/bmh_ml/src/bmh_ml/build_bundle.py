@@ -40,6 +40,8 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--t3-depositions", type=int, default=50, help="S2: depositions per material of T3")
     parser.add_argument("--stress-random", type=int, default=200, help="Random inputs at the edges of the range in the stress test set T5")
     parser.add_argument("--tests-from", help="Use the validation and test sets of this bundle (same scope) and only generate new training data")
+    parser.add_argument("--new-val", action="store_true", help="With --tests-from: generate a new validation set, keep only the test sets")
+    parser.add_argument("--profiles", action="store_true", help="Store the reclaimed profiles of the training and validation data (for profile models)")
     return parser.parse_args(argv)
 
 
@@ -62,25 +64,38 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
     if needs_material:
         fixed_material, material_source = load_fixed_material(args.material_from, rngs["material"])
 
-    def build(name: str, generator: str, material, deposition, repeats: int, source: dict | None = None) -> str:
+    def build(name: str, generator: str, material, deposition, repeats: int, source: dict | None = None, with_profiles: bool = False) -> str:
         dataset = build_dataset(
-            f"{args.name}-{name}", generator, args.seed, material, deposition, repeats, args.n_jobs, settings, {**material_source, **(source or {})}
+            f"{args.name}-{name}",
+            generator,
+            args.seed,
+            material,
+            deposition,
+            repeats,
+            args.n_jobs,
+            settings,
+            {**material_source, **(source or {})},
+            with_profiles=with_profiles,
         )
         dataset_id = save_dataset(dataset)
         logging.info(f"{name}: {len(dataset)} rows, repeats {repeats}, {dataset_id}")
         return dataset_id
 
     train_material, train_deposition = build_inputs(scope, args.train_size, rngs["train"], fixed_material)
-    train = build("train", "random", train_material, train_deposition, args.train_repeats)
+    train = build("train", "random", train_material, train_deposition, args.train_repeats, with_profiles=args.profiles)
+
+    def build_val() -> str:
+        val_material, val_deposition = build_inputs(scope, args.val_size, rngs["val"], fixed_material)
+        return build("val", "random", val_material, val_deposition, args.val_repeats, with_profiles=args.profiles)
 
     if args.tests_from:
         other = load_bundle(args.tests_from)
         if other.scope != scope:
             raise ValueError(f"Bundle {other.name} has scope {other.scope}, not {scope}")
-        return finish(args, Bundle(args.name, scope, train, other.val, other.tests, {"tests_from": other.name}, val_extra=other.val_extra))
+        val = build_val() if args.new_val else other.val
+        return finish(args, Bundle(args.name, scope, train, val, other.tests, {"tests_from": other.name}, val_extra=other.val_extra))
 
-    val_material, val_deposition = build_inputs(scope, args.val_size, rngs["val"], fixed_material)
-    val = build("val", "random", val_material, val_deposition, args.val_repeats)
+    val = build_val()
 
     tests = {}
     material, deposition = build_inputs(scope, args.test_size, rngs["t1"], fixed_material)

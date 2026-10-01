@@ -22,6 +22,8 @@ def save_dataset(dataset: Dataset) -> str:
     arrays = {"material": dataset.material, "deposition": dataset.deposition, "y": dataset.y}
     if dataset.y_noise_sd is not None:
         arrays["y_noise_sd"] = dataset.y_noise_sd
+    if dataset.profiles is not None:
+        arrays["profiles"] = dataset.profiles
     np.savez_compressed(temporary / "data.npz", **arrays)
     (temporary / "manifest.json").write_text(manifest_to_json(dataset.manifest()))
     temporary.rename(directory)
@@ -44,6 +46,7 @@ def load_dataset(dataset_id: str) -> Dataset:
         deposition=arrays["deposition"],
         y=arrays["y"],
         y_noise_sd=arrays.get("y_noise_sd"),
+        profiles=arrays.get("profiles"),
         settings=manifest["settings"],
         source=manifest["source"],
         code_version=manifest["code_version"],
@@ -52,6 +55,14 @@ def load_dataset(dataset_id: str) -> Dataset:
     if dataset.content_hash() != manifest["content_hash"]:
         raise ValueError(f"Dataset '{dataset_id}' is damaged, its content does not match its hash")
     return dataset
+
+
+def load_manifest(dataset_id: str) -> dict:
+    """The manifest of a stored dataset, without loading its data."""
+    path = get_datasets_directory() / dataset_id / "manifest.json"
+    if not path.exists():
+        raise FileNotFoundError(f"Dataset '{dataset_id}' not found in {path.parent.parent}")
+    return json.loads(path.read_text())
 
 
 def list_datasets() -> list[dict]:

@@ -23,6 +23,7 @@ class Model(ABC):
 
     name: ClassVar[str]
     defaults: ClassVar[dict[str, Any]] = {}
+    needs_profiles: ClassVar[bool] = False  # trained on the reclaimed profiles: `fit` then also gets `profiles_train` and `profiles_val`
 
     def __init__(self, **params):
         unknown = sorted(set(params) - set(self.defaults))

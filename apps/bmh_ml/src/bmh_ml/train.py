@@ -116,7 +116,7 @@ def run_training(
 
         logging.info(f"Training {model_name} on {bundle_name} ({len(train)} rows, scope {bundle.scope})")
         start = time.perf_counter()
-        info = model.fit(x_train, train.y, x_val, validation.y, seed)
+        info = model.fit(x_train, train.y, x_val, validation.y, seed, **get_profile_arguments(model, train, validation))
         fit_seconds = time.perf_counter() - start
         logging.info(f"Trained in {fit_seconds:.1f} s")
 
@@ -142,6 +142,15 @@ def run_training(
         logging.info(f"Run {run.info.run_id} logged in experiment {get_experiment_name(bundle.scope)}")
     annotate_run(run.info.run_id)
     return TrainingResult(run.info.run_id, metrics)
+
+
+def get_profile_arguments(model, train: Dataset, validation: Dataset) -> dict:
+    """The reclaimed profiles for a model trained on them, which needs a bundle built with profiles."""
+    if not model.needs_profiles:
+        return {}
+    if train.profiles is None or validation.profiles is None:
+        raise ValueError(f"Model '{model.name}' needs the reclaimed profiles; build the bundle with --profiles (training data: {train.name})")
+    return {"profiles_train": train.profiles, "profiles_val": validation.profiles}
 
 
 def log_dataset_inputs(bundle: Bundle, train: Dataset, evaluation: dict[str, Dataset]) -> None:

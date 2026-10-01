@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 
 import numpy as np
 
-from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH
+from bmh_ml.settings import DEPOSITION_LENGTH, MATERIAL_LENGTH, PROFILE_LENGTH
 from bmh_ml.tracking.environment import get_code_version
 
 SCOPE_FIXED_MATERIAL = "S1"
@@ -18,7 +18,9 @@ class Dataset:
     """Inputs and labels of one dataset.
 
     `material` has one row per sample, or a single row when all samples share the material. `y` holds F1 and F2, the mean of `repeats`
-    simulations of the same input; `y_noise_sd` is the standard deviation of those simulations (only if repeated).
+    simulations of the same input; `y_noise_sd` is the standard deviation of those simulations (only if repeated). `profiles` (optional)
+    is the mean reclaimed profile of each input, shape (rows, 2, slices): the volume and the quality of each reclaimed slice, from which
+    F1 and F2 are computed. It is kept as float16 (half the size; the noise of a slice is far above the rounding).
     """
 
     name: str
@@ -33,8 +35,13 @@ class Dataset:
     source: dict = field(default_factory=dict)
     code_version: str = field(default_factory=get_code_version)
     created: str = field(default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds"))
+    profiles: np.ndarray | None = None
 
     def __post_init__(self):
+        if self.profiles is not None:
+            self.profiles = np.asarray(self.profiles, dtype=np.float16)
+            if self.profiles.shape != (len(self.deposition), 2, PROFILE_LENGTH):
+                raise ValueError(f"profiles must have shape ({len(self.deposition)}, 2, {PROFILE_LENGTH}), got {self.profiles.shape}")
         if self.material.ndim != 2 or self.material.shape[1] != MATERIAL_LENGTH:
             raise ValueError(f"material must have shape (rows, {MATERIAL_LENGTH}), got {self.material.shape}")
         if self.deposition.ndim != 2 or self.deposition.shape[1] != DEPOSITION_LENGTH:
@@ -58,7 +65,8 @@ class Dataset:
     def content_hash(self) -> str:
         """Hash of the numbers, so that the same content always has the same id."""
         digest = hashlib.sha256()
-        for name, array in (("material", self.material), ("deposition", self.deposition), ("y", self.y), ("y_noise_sd", self.y_noise_sd)):
+        arrays = (("material", self.material), ("deposition", self.deposition), ("y", self.y), ("y_noise_sd", self.y_noise_sd), ("profiles", self.profiles))
+        for name, array in arrays:
             if array is not None:
                 digest.update(f"{name}{array.dtype}{array.shape}".encode())
                 digest.update(np.ascontiguousarray(array, dtype=np.float64).tobytes())
@@ -81,6 +89,7 @@ class Dataset:
             "created": self.created,
             "content_hash": self.content_hash(),
             "material_rows": int(self.material.shape[0]),
+            "profiles": self.profiles is not None,
         }
 
 
@@ -114,6 +123,7 @@ def concatenate_datasets(name: str, datasets: list[Dataset]) -> Dataset:
         material=material,
         deposition=np.vstack([dataset.deposition for dataset in datasets]),
         y=np.vstack([dataset.y for dataset in datasets]),
+        profiles=np.concatenate([dataset.profiles for dataset in datasets]) if all(dataset.profiles is not None for dataset in datasets) else None,
         settings=first.settings,
         source={"datasets": [dataset.dataset_id() for dataset in datasets]},
     )
