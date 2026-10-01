@@ -235,3 +235,19 @@ def test_the_objectives_are_fitted_in_parallel_with_the_same_result(data, monkey
     parallel.fit(x, y, x_val, y_val, seed=0)
 
     assert np.allclose(parallel.predict(x_test), sequential.predict(x_test))
+
+
+def test_lightgbm_models_are_stored_compressed_and_old_ones_still_load(data, tmp_path):
+    pytest.importorskip("lightgbm")
+    (x, y), (x_val, y_val), (x_test, _) = data
+    model = create_model("lightgbm", n_estimators=50, n_jobs=1)
+    model.fit(x, y, x_val, y_val, seed=0)
+    model.save(tmp_path / "new")
+
+    assert (tmp_path / "new" / "F1" / "booster.txt.gz").exists()
+    assert np.allclose(load_model(tmp_path / "new").predict(x_test), model.predict(x_test))
+    model.save(tmp_path / "old")
+    for objective, booster in zip(("F1", "F2"), model.estimators, strict=True):  # the uncompressed format of earlier runs
+        (tmp_path / "old" / objective / "booster.txt.gz").unlink()
+        booster.save_model(str(tmp_path / "old" / objective / "booster.txt"))
+    assert np.allclose(load_model(tmp_path / "old").predict(x_test), model.predict(x_test))

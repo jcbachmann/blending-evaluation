@@ -1,5 +1,6 @@
 """Models without a neural network: the mean, a linear model and gradient boosting."""
 
+import gzip
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -8,6 +9,7 @@ import numpy as np
 from bmh_ml.models.base import Model, PerObjectiveModel
 from bmh_ml.parallel import get_cpu_count
 
+COMPRESSED_BOOSTER = "booster.txt.gz"
 SMALL_BATCH = 1000  # predictions for at most this many rows use one thread, more threads only wait for each other
 
 
@@ -114,10 +116,15 @@ class LightGBMModel(PerObjectiveModel):
         return estimator.predict(x, num_threads=1 if len(x) <= SMALL_BATCH else self.get_threads())
 
     def save_objective(self, estimator, path: Path):
+        # Compressed: the text format of a large forest is hundreds of megabytes and compresses about tenfold
         path.mkdir(parents=True, exist_ok=True)
-        estimator.save_model(str(path / "booster.txt"))
+        with gzip.open(path / COMPRESSED_BOOSTER, "wt", encoding="utf-8") as file:
+            file.write(estimator.model_to_string())
 
     def load_objective(self, path: Path):
         import lightgbm
 
-        return lightgbm.Booster(model_file=str(path / "booster.txt"))
+        if (path / COMPRESSED_BOOSTER).exists():
+            with gzip.open(path / COMPRESSED_BOOSTER, "rt", encoding="utf-8") as file:
+                return lightgbm.Booster(model_str=file.read())
+        return lightgbm.Booster(model_file=str(path / "booster.txt"))  # models stored before the compression
