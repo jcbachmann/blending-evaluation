@@ -8,6 +8,7 @@ DEPOSITION_LENGTH: int = 20  # Length of deposition variables array
 BED_SIZE_X: int = 59  # Bed size in X dimension
 BED_SIZE_Z: int = 20  # Bed size in Z dimension
 TOTAL_VOLUME: int = 2500  # Total volume for simulation
+PROFILE_LENGTH: int = BED_SIZE_X + 1  # Reclaimed slices, one per unit of the bed length (positions 0 to BED_SIZE_X)
 MATERIAL_MIN: int = 5
 MATERIAL_MAX: int = 10
 

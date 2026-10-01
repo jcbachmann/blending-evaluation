@@ -5,7 +5,7 @@ from typing import Any, ClassVar
 
 import numpy as np
 
-from bmh_ml.models.base import PerObjectiveModel
+from bmh_ml.models.base import Model, PerObjectiveModel
 from bmh_ml.parallel import get_thread_limit
 
 PREDICT_BATCH_SIZE = 8192
@@ -148,3 +148,119 @@ class LegacyLSTMModel(KerasModel):
                 keras.layers.Dense(1),
             ]
         )
+
+
+class ProfileMLPModel(Model):
+    """Predicts the reclaimed profile (volume and quality of every slice) and computes F1 and F2 from it, as the simulator does.
+
+    The profile carries far more information than the two objectives (120 numbers per simulation instead of 2), and objectives computed
+    from a profile are consistent by construction: never negative, and F1 and F2 belong to one stockpile. The objectives of a mean
+    profile are a little lower than the mean of the objectives of noisy simulations (the noise of the slices adds to their spread), so
+    `noise_correction` adds a constant learned from the training labels: F = sqrt(F_profile^2 + c).
+    """
+
+    name = "profile_mlp"
+    needs_profiles = True
+    defaults: ClassVar[dict[str, Any]] = {
+        "width": 512,
+        "depth": 4,
+        "activation": "relu",
+        "dropout": 0.0,
+        "learning_rate": 1e-3,
+        "batch_size": 512,
+        "epochs": 200,
+        "patience": 15,
+        "noise_correction": True,
+    }
+
+    def __init__(self, **params):
+        super().__init__(**params)
+        self.network = None
+        self.scaling: dict[str, np.ndarray] = {}
+
+    def build(self, n_features: int, n_outputs: int):
+        import keras
+
+        params = self.params
+        layers: list[Any] = [keras.layers.Input(shape=(n_features,))]
+        for _ in range(params["depth"]):
+            layers.append(keras.layers.Dense(params["width"], activation=params["activation"]))
+            if params["dropout"] > 0:
+                layers.append(keras.layers.Dropout(params["dropout"]))
+        layers.append(keras.layers.Dense(n_outputs))
+        return keras.Sequential(layers)
+
+    def fit(self, x_train, y_train, x_val, y_val, seed, profiles_train=None, profiles_val=None):  # noqa: ARG002 - y_val: the profiles stop the training
+        limit_keras_threads()
+        import keras
+
+        from bmh_ml.evaluation.profile import get_profile_objectives
+
+        if profiles_train is None or profiles_val is None:
+            raise ValueError("profile_mlp needs the reclaimed profiles of the training and validation data, build the bundle with --profiles")
+        params = self.params
+        keras.utils.set_random_seed(seed)
+        targets, targets_val = (np.asarray(p, dtype=np.float32).reshape(len(p), -1) for p in (profiles_train, profiles_val))
+        target_std = targets.std(axis=0)
+        self.scaling = {
+            "x_mean": x_train.mean(axis=0),
+            "x_std": np.where(x_train.std(axis=0) > 0, x_train.std(axis=0), 1.0),
+            "t_mean": targets.mean(axis=0),
+            "t_std": np.where(target_std > 1e-6, target_std, 1.0),  # the slices at the ends are always empty
+            "profile_shape": np.array(profiles_train.shape[1:]),
+            "noise": np.zeros(2),
+        }
+        self.network = self.build(x_train.shape[1], targets.shape[1])
+        self.network.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss="mean_squared_error")
+        callbacks = [keras.callbacks.EarlyStopping(patience=params["patience"], restore_best_weights=True)] if params["patience"] > 0 else []
+        history = self.network.fit(
+            self.scale_inputs(x_train),
+            (targets - self.scaling["t_mean"]) / self.scaling["t_std"],
+            validation_data=(self.scale_inputs(x_val), (targets_val - self.scaling["t_mean"]) / self.scaling["t_std"]),
+            epochs=params["epochs"],
+            batch_size=params["batch_size"],
+            callbacks=callbacks,
+            verbose=0,
+        )
+        if params["noise_correction"]:
+            uncorrected = get_profile_objectives(self.predict_profiles(x_train))
+            self.scaling["noise"] = np.maximum((np.asarray(y_train) ** 2 - uncorrected**2).mean(axis=0), 0.0)
+        losses = history.history["val_loss"]
+        return {
+            "epochs": float(len(losses)),
+            "best_epoch": float(int(np.argmin(losses)) + 1),
+            "val_loss": float(min(losses)),
+            "F1/noise_correction": float(self.scaling["noise"][0]),
+            "F2/noise_correction": float(self.scaling["noise"][1]),
+        }
+
+    def scale_inputs(self, x: np.ndarray) -> np.ndarray:
+        return (x - self.scaling["x_mean"]) / self.scaling["x_std"]
+
+    def predict_profiles(self, x: np.ndarray) -> np.ndarray:
+        """The predicted reclaimed profiles, shape (n, 2, slices)."""
+        scaled = self.scale_inputs(x)
+        if len(scaled) <= PREDICT_BATCH_SIZE:
+            output = np.asarray(self.network(scaled, training=False))
+        else:
+            output = self.network.predict(scaled, batch_size=PREDICT_BATCH_SIZE, verbose=0)
+        output = output * self.scaling["t_std"] + self.scaling["t_mean"]
+        return output.reshape(len(x), *self.scaling["profile_shape"])
+
+    def predict(self, x):
+        from bmh_ml.evaluation.profile import get_profile_objectives
+
+        objectives = get_profile_objectives(self.predict_profiles(x))
+        return np.sqrt(objectives**2 + self.scaling["noise"])
+
+    def save_files(self, directory: Path):
+        self.network.save(directory / "model.keras")
+        np.savez(directory / "scaling.npz", **self.scaling)
+
+    def load_files(self, directory: Path):
+        limit_keras_threads()
+        import keras
+
+        self.network = keras.models.load_model(directory / "model.keras")
+        with np.load(directory / "scaling.npz") as stored:
+            self.scaling = {name: stored[name] for name in stored.files}

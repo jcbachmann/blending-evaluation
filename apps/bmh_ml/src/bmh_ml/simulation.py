@@ -48,6 +48,18 @@ def evaluate_sim(
     bed_size_z: float,
     total_volume: float,
 ) -> tuple[float, float]:
+    f1, f2, _ = evaluate_sim_with_profile(material_variables, deposition_variables, bed_size_x, bed_size_z, total_volume)
+    return f1, f2
+
+
+def evaluate_sim_with_profile(
+    material_variables,
+    deposition_variables,
+    bed_size_x: float,
+    bed_size_z: float,
+    total_volume: float,
+) -> tuple[float, float, np.ndarray]:
+    """F1, F2 and the reclaimed profile they are computed from: the volume and the quality of each reclaimed slice, shape (2, slices)."""
     x_min = bed_size_z * 0.5
     x_max = bed_size_x - x_min
 
@@ -69,5 +81,5 @@ def evaluate_sim(
     evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=x_min, x_max=x_max)
     f1 = evaluator.get_single_parameter_stdev("quality")
     f2 = evaluator.get_volume_stdev()
-
-    return f1, f2
+    profile = np.vstack([reclaimed_material.data["volume"].to_numpy(), reclaimed_material.data["quality"].to_numpy()])
+    return f1, f2, profile

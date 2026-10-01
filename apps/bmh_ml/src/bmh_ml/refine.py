@@ -14,7 +14,7 @@ import numpy as np
 
 from bmh_ml.datasets.manifest import SCOPE_FIXED_MATERIAL
 from bmh_ml.datasets.simulate import build_dataset
-from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, save_bundle, save_dataset
+from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, load_manifest, save_bundle, save_dataset
 from bmh_ml.evaluate_run import evaluate_run, load_run_model
 from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.evaluation.transfer import TransferConfig, optimize_model
@@ -115,6 +115,7 @@ def refine(config: RefineConfig) -> list[str]:
         raise FileExistsError(f"Bundles {existing} exist already, choose another name")
     material = get_fixed_material(base, config.reference_set)
     rng = np.random.default_rng(config.seed)
+    with_profiles = has_profiles(base)  # the added data keeps what the base data has, so a profile model can train on all of it
     mlflow = configure_mlflow()
 
     with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(base.scope)), run_name=f"refine-{config.name}") as parent:
@@ -142,7 +143,8 @@ def refine(config: RefineConfig) -> list[str]:
             inputs = np.vstack([deposition, perturb(deposition, config.perturbations, config.perturbation_sd, rng)])
             source = {"round": k, "model_run": run_id, "seeds": list(seeds), "front_solutions": len(deposition)}
             source |= {"perturbations": config.perturbations, "perturbation_sd": config.perturbation_sd}
-            dataset = build_dataset(f"{config.name}-add{k}", "refinement", config.seed, material, inputs, 1, config.n_jobs, {"scope": base.scope}, source)
+            settings = {"scope": base.scope}
+            dataset = build_dataset(f"{config.name}-add{k}", "refinement", config.seed, material, inputs, 1, config.n_jobs, settings, source, with_profiles)
             added.append(save_dataset(dataset))
             front_errors = get_front_errors(predicted, dataset.y[: len(deposition)])
             logging.info(f"Round {k}: {len(deposition)} solutions found, {len(inputs)} rows added, {front_errors}")
@@ -171,6 +173,10 @@ def refine(config: RefineConfig) -> list[str]:
     return run_ids
 
 
+def has_profiles(bundle: Bundle) -> bool:
+    return all(load_manifest(dataset_id).get("profiles", False) for dataset_id in [bundle.train, *bundle.train_extra])
+
+
 def build_valop(config: RefineConfig, base: Bundle, material: np.ndarray, depositions: list[np.ndarray], run_ids: list[str]) -> str:
     """The operating-region validation set: solutions of separate optimizations of every round's model, never trained on, with repeats."""
     inputs = np.unique(np.vstack(depositions), axis=0)
@@ -186,9 +192,9 @@ def train_control(config: RefineConfig, base: Bundle, material: np.ndarray, rows
     from bmh_ml.datasets.generators import random_depositions
 
     final = load_bundle(config.name)
-    dataset = build_dataset(
-        f"{config.name}-control-add", "random", config.seed, material, random_depositions(rows, rng), 1, config.n_jobs, {"scope": base.scope}
-    )
+    deposition = random_depositions(rows, rng)
+    settings = {"scope": base.scope}
+    dataset = build_dataset(f"{config.name}-control-add", "random", config.seed, material, deposition, 1, config.n_jobs, settings, None, has_profiles(base))
     name = f"{config.name}-control"
     notes = {"refine": config.name, "control_of": config.name, "base": base.name}
     save_bundle(Bundle(name, base.scope, base.train, base.val, base.tests, notes, [*base.train_extra, save_dataset(dataset)], final.val_extra))
