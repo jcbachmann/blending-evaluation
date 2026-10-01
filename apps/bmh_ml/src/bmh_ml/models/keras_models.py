@@ -151,16 +151,22 @@ class LegacyLSTMModel(KerasModel):
 
 
 class ProfileMLPModel(Model):
-    """Predicts the reclaimed profile (volume and quality of every slice) and computes F1 and F2 from it, as the simulator does.
+    """Predicts the reclaimed profile (volume and quality of every slice) together with F1 and F2, and computes the objectives from it.
 
-    The profile carries far more information than the two objectives (120 numbers per simulation instead of 2), and objectives computed
-    from a profile are consistent by construction: never negative, and F1 and F2 belong to one stockpile. The objectives of a mean
-    profile are a little lower than the mean of the objectives of noisy simulations (the noise of the slices adds to their spread), so
-    `noise_correction` adds a constant learned from the training labels: F = sqrt(F_profile^2 + c).
+    The profile carries far more information than the two objectives (120 numbers per simulation instead of 2), and F2 computed from a
+    predicted profile is consistent by construction (never negative, a real stockpile shape): measured on S1-v2, it generalizes to
+    optimized depositions far better than a direct prediction. F1 is the spread of a quality profile that varies only slightly, so the
+    small errors of every slice add up; it comes from the direct output by default (`f1_source`). Both outputs share one network and are
+    trained together; `objective_weight` weights each direct objective output against each profile value in the loss.
+
+    The objectives of a mean profile are a little lower than the mean objectives of noisy simulations (the noise of the slices adds to
+    their spread). For an objective computed from the profile, `noise_correction` adds a constant measured on the validation data, whose
+    labels and profiles are both means of R simulations: c = R/(R-1) * mean(y^2 - F(profile)^2), and F = sqrt(F_profile^2 + c).
     """
 
     name = "profile_mlp"
     needs_profiles = True
+    SOURCES = ("profile", "head")
     defaults: ClassVar[dict[str, Any]] = {
         "width": 512,
         "depth": 4,
@@ -171,10 +177,16 @@ class ProfileMLPModel(Model):
         "epochs": 200,
         "patience": 15,
         "noise_correction": True,
+        "f1_source": "head",
+        "f2_source": "profile",
+        "objective_weight": 30.0,
     }
 
     def __init__(self, **params):
         super().__init__(**params)
+        for key in ("f1_source", "f2_source"):
+            if self.params[key] not in self.SOURCES:
+                raise ValueError(f"{key} must be one of {self.SOURCES}, got {self.params[key]!r}")
         self.network = None
         self.scaling: dict[str, np.ndarray] = {}
 
@@ -190,18 +202,18 @@ class ProfileMLPModel(Model):
         layers.append(keras.layers.Dense(n_outputs))
         return keras.Sequential(layers)
 
-    def fit(self, x_train, y_train, x_val, y_val, seed, profiles_train=None, profiles_val=None):  # noqa: ARG002 - y_val: the profiles stop the training
+    def fit(self, x_train, y_train, x_val, y_val, seed, profiles_train=None, profiles_val=None, val_repeats: int = 1):
         limit_keras_threads()
         import keras
-
-        from bmh_ml.evaluation.profile import get_profile_objectives
 
         if profiles_train is None or profiles_val is None:
             raise ValueError("profile_mlp needs the reclaimed profiles of the training and validation data, build the bundle with --profiles")
         params = self.params
         keras.utils.set_random_seed(seed)
-        targets, targets_val = (np.asarray(p, dtype=np.float32).reshape(len(p), -1) for p in (profiles_train, profiles_val))
+        flat = [np.asarray(p, dtype=np.float32).reshape(len(p), -1) for p in (profiles_train, profiles_val)]
+        targets, targets_val = (np.hstack([profile, np.asarray(y, dtype=np.float32)]) for profile, y in zip(flat, (y_train, y_val), strict=True))
         target_std = targets.std(axis=0)
+        n_profile = flat[0].shape[1]
         self.scaling = {
             "x_mean": x_train.mean(axis=0),
             "x_std": np.where(x_train.std(axis=0) > 0, x_train.std(axis=0), 1.0),
@@ -210,8 +222,15 @@ class ProfileMLPModel(Model):
             "profile_shape": np.array(profiles_train.shape[1:]),
             "noise": np.zeros(2),
         }
+        weights = np.ones(targets.shape[1], dtype=np.float32)
+        weights[n_profile:] = params["objective_weight"]
+        weights = keras.ops.convert_to_tensor(weights / weights.mean())
+
+        def weighted_mse(y_true, y_pred):
+            return keras.ops.mean(weights * keras.ops.square(y_true - y_pred), axis=-1)
+
         self.network = self.build(x_train.shape[1], targets.shape[1])
-        self.network.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss="mean_squared_error")
+        self.network.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss=weighted_mse)
         callbacks = [keras.callbacks.EarlyStopping(patience=params["patience"], restore_best_weights=True)] if params["patience"] > 0 else []
         history = self.network.fit(
             self.scale_inputs(x_train),
@@ -223,8 +242,7 @@ class ProfileMLPModel(Model):
             verbose=0,
         )
         if params["noise_correction"]:
-            uncorrected = get_profile_objectives(self.predict_profiles(x_train))
-            self.scaling["noise"] = np.maximum((np.asarray(y_train) ** 2 - uncorrected**2).mean(axis=0), 0.0)
+            self.scaling["noise"] = get_noise_correction(profiles_val, y_val, val_repeats)
         losses = history.history["val_loss"]
         return {
             "epochs": float(len(losses)),
@@ -237,21 +255,27 @@ class ProfileMLPModel(Model):
     def scale_inputs(self, x: np.ndarray) -> np.ndarray:
         return (x - self.scaling["x_mean"]) / self.scaling["x_std"]
 
-    def predict_profiles(self, x: np.ndarray) -> np.ndarray:
-        """The predicted reclaimed profiles, shape (n, 2, slices)."""
+    def predict_outputs(self, x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """The predicted profiles, shape (n, 2, slices), and the directly predicted objectives, shape (n, 2)."""
         scaled = self.scale_inputs(x)
         if len(scaled) <= PREDICT_BATCH_SIZE:
             output = np.asarray(self.network(scaled, training=False))
         else:
             output = self.network.predict(scaled, batch_size=PREDICT_BATCH_SIZE, verbose=0)
         output = output * self.scaling["t_std"] + self.scaling["t_mean"]
-        return output.reshape(len(x), *self.scaling["profile_shape"])
+        n_profile = int(np.prod(self.scaling["profile_shape"]))
+        return output[:, :n_profile].reshape(len(x), *self.scaling["profile_shape"]), output[:, n_profile:]
+
+    def predict_profiles(self, x: np.ndarray) -> np.ndarray:
+        return self.predict_outputs(x)[0]
 
     def predict(self, x):
         from bmh_ml.evaluation.profile import get_profile_objectives
 
-        objectives = get_profile_objectives(self.predict_profiles(x))
-        return np.sqrt(objectives**2 + self.scaling["noise"])
+        profiles, direct = self.predict_outputs(x)
+        from_profile = np.sqrt(get_profile_objectives(profiles) ** 2 + self.scaling["noise"])
+        sources = (self.params["f1_source"], self.params["f2_source"])
+        return np.column_stack([from_profile[:, i] if source == "profile" else np.maximum(direct[:, i], 0.0) for i, source in enumerate(sources)])
 
     def save_files(self, directory: Path):
         self.network.save(directory / "model.keras")
@@ -261,6 +285,17 @@ class ProfileMLPModel(Model):
         limit_keras_threads()
         import keras
 
-        self.network = keras.models.load_model(directory / "model.keras")
+        self.network = keras.models.load_model(directory / "model.keras", compile=False)  # the weighted loss is only needed to train
         with np.load(directory / "scaling.npz") as stored:
             self.scaling = {name: stored[name] for name in stored.files}
+
+
+def get_noise_correction(profiles: np.ndarray, y: np.ndarray, repeats: int) -> np.ndarray:
+    """What the noise of the slices adds to the square of an objective, from data alone: the labels and the profiles of a dataset are both
+    means of `repeats` simulations, E[y^2] = F(true)^2 + c and E[F(mean profile)^2] = F(true)^2 + c / repeats. Zero without repeats."""
+    from bmh_ml.evaluation.profile import get_profile_objectives
+
+    if repeats < 2:
+        return np.zeros(2)
+    difference = np.asarray(y, dtype=float) ** 2 - get_profile_objectives(np.asarray(profiles, dtype=float)) ** 2
+    return np.maximum(difference.mean(axis=0) * repeats / (repeats - 1), 0.0)

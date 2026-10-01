@@ -150,7 +150,7 @@ def get_profile_arguments(model, train: Dataset, validation: Dataset) -> dict:
         return {}
     if train.profiles is None or validation.profiles is None:
         raise ValueError(f"Model '{model.name}' needs the reclaimed profiles; build the bundle with --profiles (training data: {train.name})")
-    return {"profiles_train": train.profiles, "profiles_val": validation.profiles}
+    return {"profiles_train": train.profiles, "profiles_val": validation.profiles, "val_repeats": validation.repeats}
 
 
 def log_dataset_inputs(bundle: Bundle, train: Dataset, evaluation: dict[str, Dataset]) -> None:
