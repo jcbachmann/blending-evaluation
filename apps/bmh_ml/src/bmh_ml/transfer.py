@@ -15,6 +15,7 @@ from bmh_ml.evaluation.transfer import (
     get_simulator_run_metrics,
     get_transfer_metrics,
     log_transfer,
+    run_simulator_baseline,
     run_transfer_test,
 )
 from bmh_ml.tracking.annotate import annotate_run
@@ -83,6 +84,35 @@ def parse_transfer_params(params: dict[str, str]) -> dict:
     return parsed
 
 
+def simulator_baseline(bundle_name: str, config: TransferConfig, with_plots: bool = True) -> str:
+    """NSGA-III directly on the simulator with the budget `config.evaluations` per run, logged as a run with the transfer test's metrics."""
+    from bmh_ml.tracking.annotate import NOTE
+    from bmh_ml.tracking.environment import get_code_version
+    from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
+
+    bundle = load_bundle(bundle_name)
+    result = run_simulator_baseline(load_dataset(bundle.tests[config.reference_set]), config)
+    mlflow = configure_mlflow()
+    name = f"simulator-nsga3-{config.evaluations}"
+    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(bundle.scope)), run_name=name) as run:
+        mlflow.log_params({"optimizer": "NSGA-III on the simulator", "bundle": bundle.name, "scope": bundle.scope})
+        mlflow.log_metrics({"budget/simulations": float(config.evaluations), "budget/simulations_all_runs": float(config.evaluations * len(config.seeds))})
+        m = result.metrics
+        mlflow.set_tags(
+            {
+                "code_version": get_code_version(),
+                "purpose": "simulator baseline",
+                NOTE: f"{name} | transfer hv {m['hv_ratio']:.3f}; per run {m['hv_ratio_run_mean']:.3f}; "
+                f"{100 * m['chevron_beaten_rate']:.0f} % beat Chevron\n\nThe yardstick of the transfer test: NSGA-III directly on the simulator, "
+                f"{len(config.seeds)} runs (seeds {list(config.seeds)}) of {config.evaluations:,} simulations each (population {config.population_size}), "
+                f"the final fronts simulated {config.repeats} times and scored like the transfer test of a model. `transfer/predicted_*` and the "
+                "bias are the single noisy simulations the optimizer saw against the repeated ones.",
+            }
+        )
+    log_transfer(run.info.run_id, result, config, with_plots)
+    return run.info.run_id
+
+
 def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     defaults = TransferConfig()
     parser = argparse.ArgumentParser(
@@ -102,9 +132,12 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Instead: the hypervolume ratio of each optimization run on the simulator in this directory (the yardstick), needs --bundle",
     )
     parser.add_argument("--bundle", help="Bundle of the reference set for --simulator-runs")
+    parser.add_argument(
+        "--simulator-baseline", nargs="+", type=int, metavar="SIMULATIONS", help="Instead: NSGA-III on the simulator with these budgets per run, needs --bundle"
+    )
     parser.add_argument("--recompute", action="store_true", help="Compute the metrics of the earlier tests of --run-id again from their stored solutions")
     args = parser.parse_args(argv)
-    if not args.run_id and not args.simulator_runs:
+    if not args.run_id and not args.simulator_runs and not args.simulator_baseline:
         parser.error("give --run-id or --simulator-runs")
     if args.simulator_runs and not args.bundle:
         parser.error("--simulator-runs needs --bundle")
@@ -121,6 +154,14 @@ def main(argv: list[str] | None = None):
         print(f"{len(metrics['hv_ratio'])} runs on the simulator, Chevron F1 {chevron[0]:.4f} F2 {chevron[1]:.3f}:")
         for name, values in metrics.items():
             print(f"  {name:<22} mean {values.mean():.4f}, min {values.min():.4f}, max {values.max():.4f}")
+    if args.simulator_baseline:
+        if not args.bundle:
+            raise SystemExit("--simulator-baseline needs --bundle")
+        for budget in args.simulator_baseline:
+            config = TransferConfig(tuple(args.seeds), args.population_size, budget, args.repeats, args.reference_set, args.n_jobs)
+            run_id = simulator_baseline(args.bundle, config, not args.no_plots)
+            print(f"simulator NSGA-III, {budget} simulations per run: run {run_id}")
+        return
     if args.recompute:
         for run_id in args.run_id:
             metrics = recompute_transfer(run_id, not args.no_plots)
