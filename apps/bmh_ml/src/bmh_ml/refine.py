@@ -18,7 +18,7 @@ from bmh_ml.datasets.simulate import build_dataset
 from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, load_manifest, save_bundle, save_dataset
 from bmh_ml.evaluate_run import evaluate_run, load_run_model
 from bmh_ml.evaluation.noise import OBJECTIVES
-from bmh_ml.evaluation.transfer import TransferConfig, optimize_model
+from bmh_ml.evaluation.transfer import TransferConfig, optimize_model_many
 from bmh_ml.models.registry import MODELS
 from bmh_ml.settings import DEPOSITION_LENGTH, X_MAX, X_MIN
 from bmh_ml.tracking.annotate import annotate_run
@@ -138,10 +138,8 @@ def refine(config: RefineConfig) -> list[str]:
             valop_seeds = get_round_seeds(k, config.valop_optimizations, VALOP_SEED_OFFSET)
             round_materials = [material] if material is not None else [m[None, :] for m in random_materials(config.materials_per_round, material_rng)]
             parts, predicted_parts, front_rows, offset = [], [], [], 0
-            for round_material in round_materials:
-                found, predicted_all, found_seeds = optimize_model(
-                    model, base.scope, round_material, seeds + valop_seeds, config.population_size, config.evaluations, config.n_jobs
-                )
+            all_fronts = optimize_model_many(model, base.scope, round_materials, seeds + valop_seeds, config.population_size, config.evaluations, config.n_jobs)
+            for round_material, (found, predicted_all, found_seeds) in zip(round_materials, all_fronts, strict=True):
                 for_training = np.isin(found_seeds, seeds)
                 deposition = found[for_training]
                 valop_depositions.append((round_material, found[~for_training]))

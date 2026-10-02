@@ -20,6 +20,7 @@ from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.models.base import Model
 from bmh_ml.settings import DEPOSITION_LENGTH, X_MAX, X_MIN
 
+LOADED_MODELS: dict[Path, Model] = {}
 REFERENCE_POINT = 1.1  # in objectives normalized to the reference front (0 its best, 1 its worst value), so its extremes count as well
 
 
@@ -74,7 +75,9 @@ def optimize_once(model: Model | Path, scope: str, material: np.ndarray, seed: i
     from bmh_ml.models.registry import load_model
 
     if isinstance(model, Path):
-        model = load_model(model)
+        if model not in LOADED_MODELS:  # a worker process runs many optimizations of the same model, it loads the model once
+            LOADED_MODELS[model] = load_model(model)
+        model = LOADED_MODELS[model]
     problem = get_problem_class()(model, scope, np.atleast_2d(material))
     objectives, variables = optimize(problem, population_size, evaluations, seed)
     return np.atleast_2d(variables), np.atleast_2d(objectives)
@@ -83,25 +86,33 @@ def optimize_once(model: Model | Path, scope: str, material: np.ndarray, seed: i
 def optimize_model(
     model: Model, scope: str, material: np.ndarray, seeds: tuple[int, ...], population_size: int, evaluations: int, workers: int | None = None
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """The final fronts of one NSGA-III run per seed on the model: depositions, predicted objectives and the seed of each solution.
+    """The final fronts of one NSGA-III run per seed on the model: depositions, predicted objectives and the seed of each solution."""
+    return optimize_model_many(model, scope, [material], seeds, population_size, evaluations, workers)[0]
 
-    The runs are independent and each is a single thread, so they run in parallel processes, one per seed up to `workers` (default: all
-    cores). The results do not depend on the number of workers.
-    """
+
+def optimize_model_many(
+    model: Model, scope: str, materials: list[np.ndarray], seeds: tuple[int, ...], population_size: int, evaluations: int, workers: int | None = None
+) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """`optimize_model` for several materials: the runs of all materials and seeds are independent single-threaded jobs, so they share
+    one set of parallel processes (default: all cores) instead of one material after the other. One result per material."""
     import tempfile
 
     from bmh_ml.parallel import get_cpu_count, run_parallel
 
-    workers = min(workers or get_cpu_count(), len(seeds))
+    tasks = [(material, seed) for material in materials for seed in seeds]
+    workers = min(workers or get_cpu_count(), len(tasks))
     with tempfile.TemporaryDirectory() as directory:
         source: Model | Path = model
         if workers > 1:
             source = Path(directory) / "model"
             model.save(source)
-        fronts = run_parallel(optimize_once, [(source, scope, material, seed, population_size, evaluations) for seed in seeds], workers, threads=1)
-    depositions = [front[0] for front in fronts]
-    run_seeds = [np.full(len(deposition), seed) for deposition, seed in zip(depositions, seeds, strict=True)]
-    return np.vstack(depositions), np.vstack([front[1] for front in fronts]), np.concatenate(run_seeds)
+        fronts = run_parallel(optimize_once, [(source, scope, material, seed, population_size, evaluations) for material, seed in tasks], workers, threads=1)
+    results = []
+    for i in range(len(materials)):
+        own = fronts[i * len(seeds) : (i + 1) * len(seeds)]
+        run_seeds = np.concatenate([np.full(len(front[0]), seed) for front, seed in zip(own, seeds, strict=True)])
+        results.append((np.vstack([front[0] for front in own]), np.vstack([front[1] for front in own]), run_seeds))
+    return results
 
 
 def get_simulator_problem_class():
@@ -132,31 +143,31 @@ def run_simulator_baseline(reference_dataset: Dataset, config: TransferConfig) -
     """The transfer test's yardstick: NSGA-III directly on the simulator with `config.evaluations` simulations per run, for each material of
     the reference dataset, the final fronts simulated `config.repeats` times and scored with the same metrics. `predicted` holds the single
     noisy simulations the optimizer saw."""
-    results = [run_simulator_single(material, part, config) for material, part in split_by_material(reference_dataset)]
+    parts = split_by_material(reference_dataset)
+    start = time.perf_counter()
+    fronts = run_simulator_fronts_many([material for material, _ in parts], config)
+    optimize_seconds = (time.perf_counter() - start) / len(parts)
+    results = [score_found_solutions(material, part, front, config, optimize_seconds) for (material, part), front in zip(parts, fronts, strict=True)]
     return combine_results(results)
 
 
 def run_simulator_fronts(material: np.ndarray, config: TransferConfig) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """NSGA-III on the simulator, one run per seed in parallel processes: depositions, the objectives the optimizer saw, the seed of each."""
+    return run_simulator_fronts_many([material], config)[0]
+
+
+def run_simulator_fronts_many(materials: list[np.ndarray], config: TransferConfig) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """`run_simulator_fronts` for several materials, all runs in one set of parallel processes. One result per material."""
     from bmh_ml.parallel import get_cpu_count, run_parallel
 
-    arguments = [(material, seed, config.population_size, config.evaluations) for seed in config.seeds]
-    fronts = run_parallel(optimize_simulator_once, arguments, min(config.n_jobs or get_cpu_count(), len(config.seeds)), threads=1)
-    seeds = np.concatenate([np.full(len(front[0]), seed) for front, seed in zip(fronts, config.seeds, strict=True)])
-    return np.vstack([front[0] for front in fronts]), np.vstack([front[1] for front in fronts]), seeds
-
-
-def run_simulator_single(material: np.ndarray, reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
-    reference = get_reference_front(reference_dataset)
-    start = time.perf_counter()
-    deposition, seen, seeds = run_simulator_fronts(material, config)
-    optimize_seconds = time.perf_counter() - start
-    start = time.perf_counter()
-    simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
-    chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
-    metrics = get_transfer_metrics(seeds, seen, simulated, reference, chevron)
-    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": time.perf_counter() - start})
-    return TransferResult(metrics, deposition, seeds, seen, simulated, simulated_sd, reference, chevron)
+    tasks = [(material, seed, config.population_size, config.evaluations) for material in materials for seed in config.seeds]
+    fronts = run_parallel(optimize_simulator_once, tasks, min(config.n_jobs or get_cpu_count(), len(tasks)), threads=1)
+    results = []
+    for i in range(len(materials)):
+        own = fronts[i * len(config.seeds) : (i + 1) * len(config.seeds)]
+        seeds = np.concatenate([np.full(len(front[0]), seed) for front, seed in zip(own, config.seeds, strict=True)])
+        results.append((np.vstack([front[0] for front in own]), np.vstack([front[1] for front in own]), seeds))
+    return results
 
 
 def get_nondominated(objectives: np.ndarray) -> np.ndarray:
@@ -212,21 +223,25 @@ def run_transfer_test(model: Model, scope: str, reference_dataset: Dataset, conf
     """Optimizes the model for each material of the reference dataset, simulates the solutions found and compares them with the reference
     front of that material (its non-dominated rows) and with Chevron for that material. With several materials the metrics are means over
     the materials, and `hv_ratio_material_min` is the worst material."""
-    results = [run_transfer_single(model, scope, material, part, config) for material, part in split_by_material(reference_dataset)]
+    parts = split_by_material(reference_dataset)
+    start = time.perf_counter()
+    fronts = optimize_model_many(model, scope, [material for material, _ in parts], config.seeds, config.population_size, config.evaluations, config.n_jobs)
+    optimize_seconds = (time.perf_counter() - start) / len(parts)
+    results = [score_found_solutions(material, part, front, config, optimize_seconds) for (material, part), front in zip(parts, fronts, strict=True)]
     return combine_results(results)
 
 
-def run_transfer_single(model: Model, scope: str, material: np.ndarray, reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
+def score_found_solutions(
+    material: np.ndarray, reference_dataset: Dataset, front: tuple[np.ndarray, np.ndarray, np.ndarray], config: TransferConfig, optimize_seconds: float
+) -> TransferResult:
+    """Simulates the solutions an optimizer found for one material and scores them against its reference front and its Chevron."""
+    deposition, predicted, seeds = front
     reference = get_reference_front(reference_dataset)
     start = time.perf_counter()
-    deposition, predicted, seeds = optimize_model(model, scope, material, config.seeds, config.population_size, config.evaluations, config.n_jobs)
-    optimize_seconds = time.perf_counter() - start
-    start = time.perf_counter()
     simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
-    simulate_seconds = time.perf_counter() - start
     chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
     metrics = get_transfer_metrics(seeds, predicted, simulated, reference, chevron)
-    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": simulate_seconds})
+    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": time.perf_counter() - start})
     return TransferResult(metrics, deposition, seeds, predicted, simulated, simulated_sd, reference, chevron)
 
 

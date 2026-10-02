@@ -139,13 +139,15 @@ def build_tests(args: argparse.Namespace, scope: str, rngs: dict, fixed_material
 def build_material_fronts(args: argparse.Namespace, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray, dict]:
     """New random materials and, for each, the final front solutions of NSGA-III runs on the simulator: one row per solution, the material
     repeated. The reference front of a material for the transfer test is the non-dominated part of its rows (after relabeling)."""
-    from bmh_ml.evaluation.transfer import TransferConfig, run_simulator_fronts
+    from bmh_ml.evaluation.transfer import TransferConfig, run_simulator_fronts_many
 
     seeds = tuple(range(1, args.front_seeds + 1))
     config = TransferConfig(seeds=seeds, population_size=args.front_population, evaluations=args.front_evaluations, n_jobs=args.n_jobs)
+    new_materials = random_materials(args.material_fronts, rng)
+    fronts = run_simulator_fronts_many([material[None, :] for material in new_materials], config)  # all runs of all materials in parallel
     materials, depositions = [], []
-    for material in random_materials(args.material_fronts, rng):
-        deposition = np.unique(run_simulator_fronts(material[None, :], config)[0], axis=0)
+    for material, front in zip(new_materials, fronts, strict=True):
+        deposition = np.unique(front[0], axis=0)
         materials.append(np.repeat(material[None, :], len(deposition), axis=0))
         depositions.append(deposition)
         logging.info(f"T6: material {len(materials)} of {args.material_fronts}, {len(deposition)} front solutions")
