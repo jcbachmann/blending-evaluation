@@ -97,3 +97,38 @@ def test_the_loop_adds_the_solutions_found_to_the_training_data_round_by_round()
     assert all(run_id in description for run_id in run_ids)
     assert runs[run_ids[2]].data.tags["source_model_run"] == run_ids[1]
     assert "Round 2 of the refinement loop" in runs[run_ids[2]].data.tags["mlflow.note.content"]
+
+
+def test_the_loop_can_draw_new_materials_every_round():
+    pytest.importorskip("mlflow")
+    pytest.importorskip("sklearn")
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "base", "--scope", "S2", "--t3-materials", "1", "--t3-depositions", "2", *SMALL]))
+    config = RefineConfig(
+        base="base",
+        name="M",
+        model="ridge",
+        params={},
+        rounds=2,
+        optimizations=1,
+        population_size=6,
+        evaluations=12,
+        perturbations=1,
+        valop_optimizations=1,
+        valop_repeats=2,
+        control=True,
+        materials_per_round=3,
+        n_jobs=1,
+    )
+
+    refine(config)
+
+    final = load_bundle("M")
+    first, second = (load_dataset(dataset_id) for dataset_id in final.train_extra)
+    assert len(np.unique(first.full_material(), axis=0)) == 3
+    assert not np.array_equal(np.unique(first.full_material(), axis=0), np.unique(second.full_material(), axis=0))  # new materials each round
+    assert first.source["materials"] == 3
+    valop = load_dataset(final.val_extra["valop"])
+    assert len(np.unique(valop.full_material(), axis=0)) == 6
+    control = load_dataset(load_bundle("M-control").train_extra[0])
+    assert len(control) == len(first) + len(second)
+    assert len(np.unique(control.full_material(), axis=0)) == len(control)

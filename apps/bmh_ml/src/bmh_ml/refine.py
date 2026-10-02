@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from bmh_ml.datasets.generators import random_materials
 from bmh_ml.datasets.manifest import SCOPE_FIXED_MATERIAL
 from bmh_ml.datasets.simulate import build_dataset
 from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, load_manifest, save_bundle, save_dataset
@@ -19,7 +20,7 @@ from bmh_ml.evaluate_run import evaluate_run, load_run_model
 from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.evaluation.transfer import TransferConfig, optimize_model
 from bmh_ml.models.registry import MODELS
-from bmh_ml.settings import X_MAX, X_MIN
+from bmh_ml.settings import DEPOSITION_LENGTH, X_MAX, X_MIN
 from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow, get_experiment_id, get_experiment_name, get_finite_metrics
 from bmh_ml.train import parse_parameters, run_training
@@ -50,6 +51,7 @@ class RefineConfig:
     transfer: TransferConfig | None = None
     reference_set: str = "T2"
     n_jobs: int | None = None
+    materials_per_round: int = 0  # 0: the fixed material of the reference set; else new random materials each round (scope S2)
 
     def params_to_log(self) -> dict:
         skip = {"params", "transfer", "n_jobs"}
@@ -113,8 +115,9 @@ def refine(config: RefineConfig) -> list[str]:
     existing = [name for name in names if bundle_exists(name)]
     if existing:
         raise FileExistsError(f"Bundles {existing} exist already, choose another name")
-    material = get_fixed_material(base, config.reference_set)
+    material = get_fixed_material(base, config.reference_set) if not config.materials_per_round else None
     rng = np.random.default_rng(config.seed)
+    material_rng = np.random.default_rng([config.seed, 7])  # its own stream, so the perturbations do not depend on the material count
     with_profiles = has_profiles(base)  # the added data keeps what the base data has, so a profile model can train on all of it
     mlflow = configure_mlflow()
 
@@ -133,21 +136,34 @@ def refine(config: RefineConfig) -> list[str]:
             model = load_run_model(run_id)
             seeds = get_round_seeds(k, config.optimizations)
             valop_seeds = get_round_seeds(k, config.valop_optimizations, VALOP_SEED_OFFSET)
-            found, predicted_all, found_seeds = optimize_model(
-                model, base.scope, material, seeds + valop_seeds, config.population_size, config.evaluations, config.n_jobs
-            )
-            for_training = np.isin(found_seeds, seeds)
-            deposition, predicted = found[for_training], predicted_all[for_training]
-            valop_depositions.append(found[~for_training])
-
-            inputs = np.vstack([deposition, perturb(deposition, config.perturbations, config.perturbation_sd, rng)])
-            source = {"round": k, "model_run": run_id, "seeds": list(seeds), "front_solutions": len(deposition)}
+            round_materials = [material] if material is not None else [m[None, :] for m in random_materials(config.materials_per_round, material_rng)]
+            parts, predicted_parts, front_rows, offset = [], [], [], 0
+            for round_material in round_materials:
+                found, predicted_all, found_seeds = optimize_model(
+                    model, base.scope, round_material, seeds + valop_seeds, config.population_size, config.evaluations, config.n_jobs
+                )
+                for_training = np.isin(found_seeds, seeds)
+                deposition = found[for_training]
+                valop_depositions.append((round_material, found[~for_training]))
+                inputs = np.vstack([deposition, perturb(deposition, config.perturbations, config.perturbation_sd, rng)])
+                parts.append((np.repeat(round_material, len(inputs), axis=0), inputs))
+                predicted_parts.append(predicted_all[for_training])
+                front_rows.append(np.arange(offset, offset + len(deposition)))  # the solutions come first, their perturbations after
+                offset += len(inputs)
+            fronts = np.concatenate(front_rows)
+            solutions = len(fronts)
+            materials = np.vstack([part[0] for part in parts])
+            inputs = np.vstack([part[1] for part in parts])
+            source = {"round": k, "model_run": run_id, "seeds": list(seeds), "front_solutions": solutions, "materials": len(round_materials)}
             source |= {"perturbations": config.perturbations, "perturbation_sd": config.perturbation_sd}
             settings = {"scope": base.scope}
-            dataset = build_dataset(f"{config.name}-add{k}", "refinement", config.seed, material, inputs, 1, config.n_jobs, settings, source, with_profiles)
+            rows_material = materials if material is None else material
+            dataset = build_dataset(
+                f"{config.name}-add{k}", "refinement", config.seed, rows_material, inputs, 1, config.n_jobs, settings, source, with_profiles
+            )
             added.append(save_dataset(dataset))
-            front_errors = get_front_errors(predicted, dataset.y[: len(deposition)])
-            logging.info(f"Round {k}: {len(deposition)} solutions found, {len(inputs)} rows added, {front_errors}")
+            front_errors = get_front_errors(np.vstack(predicted_parts), dataset.y[fronts])
+            logging.info(f"Round {k}: {solutions} solutions found for {len(round_materials)} material(s), {len(inputs)} rows added, {front_errors}")
 
             val_extra = dict(base.val_extra)
             if k == config.rounds:
@@ -162,7 +178,8 @@ def refine(config: RefineConfig) -> list[str]:
             mlflow.log_metrics(get_finite_metrics({**round_metrics, "refine/round_seconds": time.perf_counter() - start}), step=k)
 
         if config.control:
-            run_ids.append(train_control(config, base, material, sum(len(load_dataset(dataset_id)) for dataset_id in added), rng))
+            rows = sum(load_manifest(dataset_id)["size"] for dataset_id in added)
+            run_ids.append(train_control(config, base, material, rows, rng, material_rng))
         mlflow.set_tags({"final_run": run_ids[config.rounds], "final_bundle": config.name})
         logging.info(f"Refinement {config.name} done in parent run {parent.info.run_id}")
 
@@ -177,22 +194,37 @@ def has_profiles(bundle: Bundle) -> bool:
     return all(load_manifest(dataset_id).get("profiles", False) for dataset_id in [bundle.train, *bundle.train_extra])
 
 
-def build_valop(config: RefineConfig, base: Bundle, material: np.ndarray, depositions: list[np.ndarray], run_ids: list[str]) -> str:
-    """The operating-region validation set: solutions of separate optimizations of every round's model, never trained on, with repeats."""
-    inputs = np.unique(np.vstack(depositions), axis=0)
+def build_valop(config: RefineConfig, base: Bundle, material: np.ndarray | None, depositions: list[tuple[np.ndarray, np.ndarray]], run_ids: list[str]) -> str:
+    """The operating-region validation set: solutions of separate optimizations of every round's model, never trained on, with repeats.
+    `depositions` holds the material and the solutions of each optimization."""
+    rows = np.unique(np.vstack([np.hstack([np.repeat(m, len(d), axis=0), d]) for m, d in depositions]), axis=0)
+    materials, inputs = rows[:, :-DEPOSITION_LENGTH], rows[:, -DEPOSITION_LENGTH:]
     source = {"model_runs": run_ids, "optimizations_per_round": config.valop_optimizations, "refine": config.name}
     dataset = build_dataset(
-        f"{config.name}-{VALOP}", "refinement-validation", config.seed, material, inputs, config.valop_repeats, config.n_jobs, {"scope": base.scope}, source
+        f"{config.name}-{VALOP}",
+        "refinement-validation",
+        config.seed,
+        material if material is not None else materials,
+        inputs,
+        config.valop_repeats,
+        config.n_jobs,
+        {"scope": base.scope},
+        source,
     )
     return save_dataset(dataset)
 
 
-def train_control(config: RefineConfig, base: Bundle, material: np.ndarray, rows: int, rng: np.random.Generator) -> str:
-    """The same number of rows added as random depositions: the effect of more data without the operating region."""
+def train_control(
+    config: RefineConfig, base: Bundle, material: np.ndarray | None, rows: int, rng: np.random.Generator, material_rng: np.random.Generator | None = None
+) -> str:
+    """The same number of rows added as random depositions (and, without a fixed material, random materials): the effect of more data
+    without the operating region."""
     from bmh_ml.datasets.generators import random_depositions
 
     final = load_bundle(config.name)
     deposition = random_depositions(rows, rng)
+    if material is None:
+        material = random_materials(rows, material_rng)
     settings = {"scope": base.scope}
     dataset = build_dataset(f"{config.name}-control-add", "random", config.seed, material, deposition, 1, config.n_jobs, settings, None, has_profiles(base))
     name = f"{config.name}-control"
@@ -222,6 +254,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--transfer", action="store_true", help="Run the transfer test on the model of every round")
     parser.add_argument("--reference-set", default=defaults.reference_set, help="Test set that defines the material and the transfer reference")
     parser.add_argument("--n-jobs", type=int, help="Processes for the simulation (default: all cores)")
+    parser.add_argument("--materials-per-round", type=int, default=0, help="Scope S2: optimize the model for this many new random materials each round")
     args = parser.parse_args(argv)
     args.params = parse_parameters(args.param)
     return args
