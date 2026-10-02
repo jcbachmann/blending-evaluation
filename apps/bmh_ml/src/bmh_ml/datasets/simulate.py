@@ -1,6 +1,7 @@
 """Labels inputs with the simulator: F1 and F2, the mean of several simulations of the same input."""
 
 import logging
+import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
@@ -52,7 +53,8 @@ def simulate_with_profiles(
         results = [simulate_chunk(m, d, repeats, with_profiles) for m, d in chunks]
     else:
         logging.info(f"Simulating {len(deposition)} inputs x {repeats} repeats with {n_jobs} processes")
-        with ProcessPoolExecutor(max_workers=n_jobs) as executor:
+        # spawn, not fork: forking a process that already runs TensorFlow threads can deadlock (seen in the refinement loop)
+        with ProcessPoolExecutor(max_workers=n_jobs, mp_context=multiprocessing.get_context("spawn")) as executor:
             results = list(executor.map(simulate_chunk, *zip(*chunks, strict=True), [repeats] * len(chunks), [with_profiles] * len(chunks)))
 
     samples = np.concatenate([result[0] for result in results])
