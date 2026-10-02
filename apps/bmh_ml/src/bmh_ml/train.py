@@ -165,7 +165,14 @@ def log_dataset_inputs(bundle: Bundle, train: Dataset, evaluation: dict[str, Dat
             warnings.simplefilter("ignore", UserWarning)
             source = str(get_datasets_directory() / name)
             logged = mlflow.data.from_numpy(features, targets=dataset.y, source=source, name=name, digest=digest[:32])
-        mlflow.log_input(logged, context=context)
+        for attempt in range(2):  # parallel runs may register the same dataset at the same moment; the second attempt finds it
+            try:
+                mlflow.log_input(logged, context=context)
+                return
+            except Exception:
+                if attempt:
+                    logging.warning(f"Dataset {name} could not be logged as an input of the run", exc_info=True)
+                time.sleep(1.0)
 
     training_ids = [bundle.train, *bundle.train_extra]
     log(train, training_ids[0] if len(training_ids) == 1 else f"{bundle.name}-train", "+".join(training_ids), "training")
