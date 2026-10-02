@@ -126,6 +126,8 @@ def run_training(
             **{f"train/{key}": value for key, value in info.items()},
             "train/seconds": fit_seconds,
             "train/rows": float(len(train)),
+            # the simulations this model cost: training data and the validation data that stops the training
+            "budget/simulations": float(len(train) * train.repeats + len(validation) * validation.repeats),
             **measure_throughput(model, x_val),
         }
         transfer_result = None

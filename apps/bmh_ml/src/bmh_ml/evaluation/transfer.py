@@ -102,6 +102,52 @@ def optimize_model(
     return np.vstack(depositions), np.vstack([front[1] for front in fronts]), np.concatenate(run_seeds)
 
 
+def get_simulator_problem_class():
+    from pymoo.core.problem import Problem
+
+    class SimulatorProblem(Problem):
+        """Optimizes the deposition for a fixed material with the objectives of single simulations, as an optimizer without a model would."""
+
+        def __init__(self, material: np.ndarray):
+            self.material = material
+            super().__init__(n_var=DEPOSITION_LENGTH, n_obj=2, xl=np.full(DEPOSITION_LENGTH, X_MIN), xu=np.full(DEPOSITION_LENGTH, X_MAX))
+
+        def _evaluate(self, x, out, *_args, **_kwargs):
+            out["F"] = simulate(self.material, x, 1, n_jobs=1)[0]
+
+    return SimulatorProblem
+
+
+def optimize_simulator_once(material: np.ndarray, seed: int, population_size: int, evaluations: int) -> tuple[np.ndarray, np.ndarray]:
+    """The final front of one NSGA-III run on the simulator: depositions and the objectives the optimizer saw (one simulation each)."""
+    from bmh_ml.experiment import optimize
+
+    objectives, variables = optimize(get_simulator_problem_class()(np.atleast_2d(material)), population_size, evaluations, seed)
+    return np.atleast_2d(variables), np.atleast_2d(objectives)
+
+
+def run_simulator_baseline(reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
+    """The transfer test's yardstick: NSGA-III directly on the simulator with `config.evaluations` simulations per run, the final fronts
+    simulated `config.repeats` times and scored with the same metrics. `predicted` holds the single noisy simulations the optimizer saw."""
+    from bmh_ml.parallel import get_cpu_count, run_parallel
+
+    material = reference_dataset.material[:1]
+    reference = get_reference_front(reference_dataset)
+    start = time.perf_counter()
+    arguments = [(material, seed, config.population_size, config.evaluations) for seed in config.seeds]
+    fronts = run_parallel(optimize_simulator_once, arguments, min(config.n_jobs or get_cpu_count(), len(config.seeds)), threads=1)
+    optimize_seconds = time.perf_counter() - start
+    deposition = np.vstack([front[0] for front in fronts])
+    seen = np.vstack([front[1] for front in fronts])
+    seeds = np.concatenate([np.full(len(front[0]), seed) for front, seed in zip(fronts, config.seeds, strict=True)])
+    start = time.perf_counter()
+    simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
+    chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
+    metrics = get_transfer_metrics(seeds, seen, simulated, reference, chevron)
+    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": time.perf_counter() - start})
+    return TransferResult(metrics, deposition, seeds, seen, simulated, simulated_sd, reference, chevron)
+
+
 def get_nondominated(objectives: np.ndarray) -> np.ndarray:
     """The rows of the non-dominated solutions (both objectives are minimized)."""
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting

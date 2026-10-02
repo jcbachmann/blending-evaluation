@@ -108,3 +108,17 @@ def test_the_fronts_do_not_depend_on_the_number_of_workers():
 
     for first, second in zip(one, two, strict=True):
         assert np.allclose(first, second)
+
+
+def test_the_simulator_baseline_is_scored_like_a_model():
+    from bmh_ml.evaluation.transfer import run_simulator_baseline
+
+    reference = make_reference_dataset()
+
+    result = run_simulator_baseline(reference, TransferConfig(seeds=(1, 2), population_size=6, evaluations=18, repeats=2, n_jobs=1))
+
+    assert set(result.seed) == {1, 2}
+    assert result.predicted.shape == result.simulated.shape
+    assert np.all(result.predicted >= 0)  # the optimizer saw real simulations
+    for name in ("hv_ratio", "hv_ratio_run_mean", "chevron_beaten_rate", "chevron_hv", "F2/bias"):
+        assert np.isfinite(result.metrics[name]), name
