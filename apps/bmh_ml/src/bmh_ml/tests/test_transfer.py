@@ -122,3 +122,30 @@ def test_the_simulator_baseline_is_scored_like_a_model():
     assert np.all(result.predicted >= 0)  # the optimizer saw real simulations
     for name in ("hv_ratio", "hv_ratio_run_mean", "chevron_beaten_rate", "chevron_hv", "F2/bias"):
         assert np.isfinite(result.metrics[name]), name
+
+
+def test_the_transfer_test_runs_per_material_and_averages():
+    pytest.importorskip("sklearn")
+    rng = np.random.default_rng(3)
+    materials = random_materials(2, rng)
+    parts = [make_reference_dataset(seed=i) for i in range(2)]
+    reference = Dataset(
+        name="two",
+        generator="test",
+        seed=0,
+        repeats=2,
+        material=np.vstack([np.repeat(m[None, :], len(p), axis=0) for m, p in zip(materials, parts, strict=True)]),
+        deposition=np.vstack([p.deposition for p in parts]),
+        y=np.vstack([p.y for p in parts]),
+    )
+    x = random_depositions(60, rng)
+    features = np.hstack([np.repeat(materials[:1], 60, axis=0), x])
+    model = create_model("ridge")
+    model.fit(features, np.column_stack([x[:, 0] / 100, x[:, -1]]), features, np.column_stack([x[:, 0] / 100, x[:, -1]]), seed=0)
+
+    result = run_transfer_test(model, "S2", reference, TransferConfig(seeds=(1,), population_size=6, evaluations=12, repeats=2, n_jobs=1))
+
+    assert result.metrics["materials"] == 2
+    assert set(result.material_index) == {0, 1}
+    assert result.chevron.shape == (2, 2)
+    assert result.metrics["hv_ratio_material_min"] <= result.metrics["hv_ratio"]

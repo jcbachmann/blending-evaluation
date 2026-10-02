@@ -38,6 +38,10 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--surrogate-fronts", type=Path, help="Directory with the results of the optimization on the surrogate, for T2s")
     parser.add_argument("--t3-materials", type=int, default=20, help="S2: number of new materials of T3")
     parser.add_argument("--t3-depositions", type=int, default=50, help="S2: depositions per material of T3")
+    parser.add_argument("--material-fronts", type=int, default=0, help="T6: new random materials with reference fronts found by NSGA-III on the simulator")
+    parser.add_argument("--front-evaluations", type=int, default=25_000, help="T6: simulations per NSGA-III run")
+    parser.add_argument("--front-seeds", type=int, default=3, help="T6: NSGA-III runs per material")
+    parser.add_argument("--front-population", type=int, default=100, help="T6: population of the NSGA-III runs")
     parser.add_argument("--stress-random", type=int, default=200, help="Random inputs at the edges of the range in the stress test set T5")
     parser.add_argument("--tests-from", help="Use the validation and test sets of this bundle (same scope) and only generate new training data")
     parser.add_argument("--new-val", action="store_true", help="With --tests-from: generate a new validation set, keep only the test sets")
@@ -54,8 +58,9 @@ def build_inputs(scope: str, n: int, rng: np.random.Generator, fixed_material: n
 def build_bundle(args: argparse.Namespace) -> Bundle:
     if bundle_exists(args.name):
         raise FileExistsError(f"Bundle '{args.name}' already exists and is frozen, choose another name")
-    seeds = np.random.SeedSequence(args.seed).spawn(6)
-    rngs = {name: np.random.default_rng(seed) for name, seed in zip(("material", "train", "val", "t1", "t3", "t5"), seeds, strict=True)}
+    seeds = np.random.SeedSequence(args.seed).spawn(7)
+    names = ("material", "train", "val", "t1", "t3", "t5", "t6")
+    rngs = {name: np.random.default_rng(seed) for name, seed in zip(names, seeds, strict=True)}
     scope = args.scope
     settings = {"scope": scope}
 
@@ -97,6 +102,12 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
 
     val = build_val()
 
+    tests = build_tests(args, scope, rngs, fixed_material, build)
+    return finish(args, Bundle(args.name, scope, train, val, tests))
+
+
+def build_tests(args: argparse.Namespace, scope: str, rngs: dict, fixed_material: np.ndarray | None, build) -> dict[str, str]:
+    """The frozen test sets of a new bundle, by name."""
     tests = {}
     material, deposition = build_inputs(scope, args.test_size, rngs["t1"], fixed_material)
     tests["T1"] = build("T1", "random", material, deposition, args.test_repeats)
@@ -114,11 +125,32 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
         deposition = random_depositions(len(material), rngs["t3"])
         tests["T3"] = build("T3", "unseen-materials", material, deposition, args.test_repeats, {"depositions_per_material": args.t3_depositions})
 
+    if args.material_fronts:
+        material, deposition, source = build_material_fronts(args, rngs["t6"])
+        tests["T6"] = build("T6", "simulator-fronts-materials", material, deposition, args.test_repeats, source)
+
     deposition = stress_depositions(rngs["t5"], args.stress_random)
     material = fixed_material if scope == SCOPE_FIXED_MATERIAL else random_materials(len(deposition), rngs["t5"])
     tests["T5"] = build("T5", "stress", material, deposition, args.test_repeats)
 
-    return finish(args, Bundle(args.name, scope, train, val, tests))
+    return tests
+
+
+def build_material_fronts(args: argparse.Namespace, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray, dict]:
+    """New random materials and, for each, the final front solutions of NSGA-III runs on the simulator: one row per solution, the material
+    repeated. The reference front of a material for the transfer test is the non-dominated part of its rows (after relabeling)."""
+    from bmh_ml.evaluation.transfer import TransferConfig, run_simulator_fronts
+
+    seeds = tuple(range(1, args.front_seeds + 1))
+    config = TransferConfig(seeds=seeds, population_size=args.front_population, evaluations=args.front_evaluations, n_jobs=args.n_jobs)
+    materials, depositions = [], []
+    for material in random_materials(args.material_fronts, rng):
+        deposition = np.unique(run_simulator_fronts(material[None, :], config)[0], axis=0)
+        materials.append(np.repeat(material[None, :], len(deposition), axis=0))
+        depositions.append(deposition)
+        logging.info(f"T6: material {len(materials)} of {args.material_fronts}, {len(deposition)} front solutions")
+    source = {"materials": args.material_fronts, "evaluations_per_run": args.front_evaluations, "runs_per_material": args.front_seeds}
+    return np.vstack(materials), np.vstack(depositions), source
 
 
 def finish(args: argparse.Namespace, bundle: Bundle) -> Bundle:

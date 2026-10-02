@@ -11,12 +11,14 @@ from bmh_ml.evaluation.chevron import get_chevron_objectives
 from bmh_ml.evaluation.transfer import (
     TransferConfig,
     TransferResult,
+    combine_results,
     get_reference_front,
     get_simulator_run_metrics,
     get_transfer_metrics,
     log_transfer,
     run_simulator_baseline,
     run_transfer_test,
+    split_by_material,
 )
 from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow
@@ -48,22 +50,23 @@ def recompute_transfer(run_id: str, with_plots: bool = True) -> dict[str, float]
         path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path="transfer/solutions.npz", dst_path=directory)
         with np.load(path) as stored:
             arrays = {name: stored[name] for name in stored.files}
-    chevron = get_chevron_objectives(reference_dataset.material[:1])
-    reference = get_reference_front(reference_dataset)
-    metrics = get_transfer_metrics(arrays["seed"], arrays["predicted"], arrays["simulated"], reference, chevron)
-    result = TransferResult(
-        {
-            **metrics,
-            **{key.removeprefix("transfer/"): value for key, value in run.data.metrics.items() if key.endswith("_seconds") and key.startswith("transfer/")},
-        },
-        arrays["deposition"],
-        arrays["seed"],
-        arrays["predicted"],
-        arrays["simulated"],
-        arrays.get("simulated_sd"),
-        reference,
-        chevron,
-    )
+    parts = split_by_material(reference_dataset)
+    index = arrays.get("material_index", np.zeros(len(arrays["seed"]), dtype=int))
+    results = []
+    for i, (material, part) in enumerate(parts):
+        rows = index == i
+        chevron = get_chevron_objectives(material)
+        reference = get_reference_front(part)
+        metrics = get_transfer_metrics(arrays["seed"][rows], arrays["predicted"][rows], arrays["simulated"][rows], reference, chevron)
+        sd = arrays["simulated_sd"][rows] if "simulated_sd" in arrays else None
+        results.append(
+            TransferResult(
+                metrics, arrays["deposition"][rows], arrays["seed"][rows], arrays["predicted"][rows], arrays["simulated"][rows], sd, reference, chevron
+            )
+        )
+    result = combine_results(results)
+    times = {key.removeprefix("transfer/"): value for key, value in run.data.metrics.items() if key.endswith("_seconds") and key.startswith("transfer/")}
+    result.metrics.update(times)
     config = TransferConfig(**parse_transfer_params(run.data.params))
     log_transfer(run_id, result, config, with_plots)
     annotate_run(run_id)

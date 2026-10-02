@@ -202,6 +202,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--workers", type=int, default=1, help="Runs trained at the same time, each process gets an equal share of the cores")
     parser.add_argument("--run-name", help="Name of the run in the UI, with several seeds followed by -seed<seed>")
     parser.add_argument("--transfer", action="store_true", help="Also run the transfer test with its default settings (python -m bmh_ml.transfer)")
+    parser.add_argument("--transfer-reference", default="T2", help="Test set with the reference fronts of the transfer test (T6: several materials)")
     parser.add_argument("--description", help="Why this run was made, one or two sentences for the run's description in the UI")
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--verbose", "-v", action="store_true")
@@ -213,7 +214,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None):
     args = get_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-    transfer = TransferConfig() if args.transfer else None
+    transfer = TransferConfig(reference_set=args.transfer_reference) if args.transfer else None
     names = [args.run_name and (f"{args.run_name}-seed{seed}" if len(args.seed) > 1 else args.run_name) for seed in args.seed]
     runs = [
         (args.bundle, args.model, args.params, seed, name, not args.no_plots, False, None, transfer, None, args.description)
