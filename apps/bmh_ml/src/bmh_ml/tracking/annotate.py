@@ -19,7 +19,7 @@ from bmh_ml.tracking.store import get_bundles_directory, get_datasets_directory
 NOTE = "mlflow.note.content"
 BEGIN = "<!-- bmh_ml: generated description, text outside of these markers is kept -->"
 END = "<!-- bmh_ml: end of the generated description -->"
-SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5")
+SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5", "T6")
 SET_NAMES = {
     "val": "validation, random inputs, stops the training",
     "valop": "validation, operating region, for choosing models",
@@ -28,6 +28,7 @@ SET_NAMES = {
     "T2s": "test, fronts of the optimization on the old LSTM surrogate",
     "T3": "test, unseen materials",
     "T5": "test, extreme depositions",
+    "T6": "test, fronts of NSGA-III on the simulator for unseen materials (transfer reference per material)",
 }
 INFRASTRUCTURE_PARAMS = ("model", "bundle", "scope", "seed", "train_dataset", "train_extra_datasets", "train_repeats")
 EXPERIMENT_DESCRIPTIONS = {

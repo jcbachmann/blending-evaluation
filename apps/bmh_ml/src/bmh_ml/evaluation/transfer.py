@@ -48,6 +48,8 @@ class TransferResult:
     simulated_sd: np.ndarray | None
     reference: np.ndarray  # the reference front
     chevron: np.ndarray | None = None  # F1 and F2 of the 19-pass Chevron for the material, the denominators of the relative objectives
+    material_index: np.ndarray | None = None  # with several materials: the material of each solution (index into `materials`)
+    reference_index: np.ndarray | None = None  # with several materials: the material of each row of `reference`
 
 
 def get_problem_class():
@@ -127,19 +129,28 @@ def optimize_simulator_once(material: np.ndarray, seed: int, population_size: in
 
 
 def run_simulator_baseline(reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
-    """The transfer test's yardstick: NSGA-III directly on the simulator with `config.evaluations` simulations per run, the final fronts
-    simulated `config.repeats` times and scored with the same metrics. `predicted` holds the single noisy simulations the optimizer saw."""
+    """The transfer test's yardstick: NSGA-III directly on the simulator with `config.evaluations` simulations per run, for each material of
+    the reference dataset, the final fronts simulated `config.repeats` times and scored with the same metrics. `predicted` holds the single
+    noisy simulations the optimizer saw."""
+    results = [run_simulator_single(material, part, config) for material, part in split_by_material(reference_dataset)]
+    return combine_results(results)
+
+
+def run_simulator_fronts(material: np.ndarray, config: TransferConfig) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """NSGA-III on the simulator, one run per seed in parallel processes: depositions, the objectives the optimizer saw, the seed of each."""
     from bmh_ml.parallel import get_cpu_count, run_parallel
 
-    material = reference_dataset.material[:1]
-    reference = get_reference_front(reference_dataset)
-    start = time.perf_counter()
     arguments = [(material, seed, config.population_size, config.evaluations) for seed in config.seeds]
     fronts = run_parallel(optimize_simulator_once, arguments, min(config.n_jobs or get_cpu_count(), len(config.seeds)), threads=1)
-    optimize_seconds = time.perf_counter() - start
-    deposition = np.vstack([front[0] for front in fronts])
-    seen = np.vstack([front[1] for front in fronts])
     seeds = np.concatenate([np.full(len(front[0]), seed) for front, seed in zip(fronts, config.seeds, strict=True)])
+    return np.vstack([front[0] for front in fronts]), np.vstack([front[1] for front in fronts]), seeds
+
+
+def run_simulator_single(material: np.ndarray, reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
+    reference = get_reference_front(reference_dataset)
+    start = time.perf_counter()
+    deposition, seen, seeds = run_simulator_fronts(material, config)
+    optimize_seconds = time.perf_counter() - start
     start = time.perf_counter()
     simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
     chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
@@ -186,22 +197,64 @@ def get_front_metrics(objectives: np.ndarray, reference: np.ndarray) -> dict[str
     }
 
 
-def run_transfer_test(model: Model, scope: str, reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
-    """Optimizes the model for the material of the reference dataset, simulates the solutions found and compares them with the reference front."""
-    material = reference_dataset.material[:1]
-    reference = get_reference_front(reference_dataset)
+def split_by_material(dataset: Dataset) -> list[tuple[np.ndarray, Dataset]]:
+    """The rows of each material of a dataset, in the order the materials first appear."""
+    materials, first, inverse = np.unique(dataset.full_material(), axis=0, return_index=True, return_inverse=True)
+    parts = []
+    for index in np.argsort(first):
+        rows = np.flatnonzero(inverse.reshape(-1) == index)
+        part = Dataset(dataset.name, dataset.generator, dataset.seed, dataset.repeats, materials[index][None, :], dataset.deposition[rows], dataset.y[rows])
+        parts.append((materials[index][None, :], part))
+    return parts
 
+
+def run_transfer_test(model: Model, scope: str, reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
+    """Optimizes the model for each material of the reference dataset, simulates the solutions found and compares them with the reference
+    front of that material (its non-dominated rows) and with Chevron for that material. With several materials the metrics are means over
+    the materials, and `hv_ratio_material_min` is the worst material."""
+    results = [run_transfer_single(model, scope, material, part, config) for material, part in split_by_material(reference_dataset)]
+    return combine_results(results)
+
+
+def run_transfer_single(model: Model, scope: str, material: np.ndarray, reference_dataset: Dataset, config: TransferConfig) -> TransferResult:
+    reference = get_reference_front(reference_dataset)
     start = time.perf_counter()
     deposition, predicted, seeds = optimize_model(model, scope, material, config.seeds, config.population_size, config.evaluations, config.n_jobs)
     optimize_seconds = time.perf_counter() - start
     start = time.perf_counter()
     simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
     simulate_seconds = time.perf_counter() - start
-
     chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
     metrics = get_transfer_metrics(seeds, predicted, simulated, reference, chevron)
     metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": simulate_seconds})
     return TransferResult(metrics, deposition, seeds, predicted, simulated, simulated_sd, reference, chevron)
+
+
+def combine_results(results: list[TransferResult]) -> TransferResult:
+    """One result for several materials: the metrics averaged (times summed), the solutions stacked with the material of each."""
+    if len(results) == 1:
+        return results[0]
+    metrics = {}
+    for name in results[0].metrics:
+        values = [result.metrics[name] for result in results]
+        metrics[name] = float(np.sum(values)) if name.endswith("_seconds") or name == "solutions" else float(np.mean(values))
+    metrics["materials"] = float(len(results))
+    metrics["hv_ratio_material_min"] = float(min(result.metrics["hv_ratio"] for result in results))
+    metrics["chevron_beaten_rate_material_min"] = float(min(result.metrics["chevron_beaten_rate"] for result in results))
+    stack = lambda name: np.concatenate([getattr(result, name) for result in results])  # noqa: E731
+    simulated_sd = stack("simulated_sd") if all(result.simulated_sd is not None for result in results) else None
+    return TransferResult(
+        metrics,
+        stack("deposition"),
+        stack("seed"),
+        stack("predicted"),
+        stack("simulated"),
+        simulated_sd,
+        stack("reference"),
+        np.vstack([result.chevron for result in results]),
+        material_index=np.concatenate([np.full(len(result.deposition), i) for i, result in enumerate(results)]),
+        reference_index=np.concatenate([np.full(len(result.reference), i) for i, result in enumerate(results)]),
+    )
 
 
 def get_transfer_metrics(seeds: np.ndarray, predicted: np.ndarray, simulated: np.ndarray, reference: np.ndarray, chevron: np.ndarray) -> dict[str, float]:
@@ -264,6 +317,18 @@ def plot_transfer(result: TransferResult):
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    if result.material_index is not None:  # several materials: the first one
+        first = result.material_index == 0
+        result = TransferResult(
+            result.metrics,
+            result.deposition[first],
+            result.seed[first],
+            result.predicted[first],
+            result.simulated[first],
+            None,
+            result.reference[result.reference_index == 0],
+            result.chevron[0],
+        )
     figure, axis = plt.subplots(figsize=(8, 6), constrained_layout=True)
     order = np.argsort(result.reference[:, 0])
     axis.plot(result.reference[order, 0], result.reference[order, 1], color="black", marker="o", markersize=3, label="reference front (simulator)")
@@ -303,6 +368,8 @@ def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, wi
             arrays["simulated_sd"] = result.simulated_sd
         if result.chevron is not None:
             arrays["chevron"] = result.chevron
+        if result.material_index is not None:
+            arrays["material_index"], arrays["reference_index"] = result.material_index, result.reference_index
         np.savez_compressed(file, reference=result.reference, **arrays)
         client.log_artifact(run_id, str(file), "transfer")
     if with_plots:

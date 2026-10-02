@@ -8,7 +8,7 @@ import pandas as pd
 from bmh_ml.tracking.runs import EXPERIMENT_NAMES, configure_mlflow
 from bmh_ml.tracking.store import get_reports_directory
 
-SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5")
+SETS = ("val", "valop", "T1", "T2", "T2s", "T3", "T5", "T6")
 OBJECTIVES = ("F1", "F2")
 PARAMETER_COLUMNS = ("params.model", "params.bundle", "params.seed")
 TRANSFER_COLUMNS = {

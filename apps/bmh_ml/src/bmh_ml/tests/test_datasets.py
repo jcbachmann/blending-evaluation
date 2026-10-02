@@ -403,3 +403,13 @@ def test_a_bundle_cannot_reuse_the_tests_of_another_scope(tmp_path):
 
     with pytest.raises(ValueError, match="scope"):
         build_bundle.build_bundle(build_bundle.get_args(["--name", "two", "--scope", "S2", "--tests-from", "one", *SMALL]))
+
+
+def test_a_general_material_bundle_can_have_reference_fronts_for_new_materials():
+    args = ["--name", "S2-fronts", "--scope", "S2", "--t3-materials", "1", "--t3-depositions", "2", "--material-fronts", "2", "--front-evaluations", "12"]
+    bundle = build_bundle.build_bundle(build_bundle.get_args([*args, "--front-seeds", "1", "--front-population", "6", *SMALL]))
+
+    t6 = load_dataset(bundle.tests["T6"])
+    assert t6.generator == "simulator-fronts-materials"
+    assert len(np.unique(t6.full_material(), axis=0)) == 2
+    assert t6.repeats == 2
