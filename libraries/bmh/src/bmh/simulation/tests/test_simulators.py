@@ -1,6 +1,7 @@
 import pytest
 
 from ...helpers.simple import generate_material_deposition
+from ..bsl_blending_simulator import BslBlendingSimulator
 from ..mathematical_blending_simulator import MathematicalBlendingSimulator
 from ..smooth_blending_simulator import SmoothBlendingSimulator
 
@@ -17,6 +18,20 @@ def make_material_deposition():
         bed_size_x=BED_SIZE_X,
         bed_size_z=BED_SIZE_Z,
     )
+
+
+def test_bsl_get_heights_position():
+    sim = BslBlendingSimulator(bed_size_x=4, bed_size_z=3, reclaimangle=90.0, eight=0.0)
+    # A single particle on the empty bed stays in the cell it is dropped on
+    sim.stack(0.0, 2.0, 1.0, 1.0, [1.0])  # noqa: PD013
+
+    heights = sim.get_heights()
+
+    assert len(heights) == 3
+    for z, row in enumerate(heights):
+        assert len(row) == 4
+        for x, height in enumerate(row):
+            assert height == pytest.approx(1.0 if (x, z) == (2, 1) else 0.0)
 
 
 @pytest.mark.parametrize(
