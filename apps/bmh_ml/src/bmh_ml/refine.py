@@ -3,6 +3,9 @@
 A model trained on random depositions is wrong exactly where the optimizer goes, because the good solutions are far from random ones. Each
 round optimizes the current model, simulates the solutions it finds and perturbations around them, adds them to the training data and trains
 again. The rounds are nested runs of one parent run, whose metrics show the effect of each round (step = round).
+
+An interrupted loop continues with `--resume` (same arguments): the finished rounds are kept, the round that was interrupted starts again.
+The rounds after the resume draw from new random streams, so the result is a valid loop but not identical to an uninterrupted one.
 """
 
 import argparse
@@ -52,9 +55,10 @@ class RefineConfig:
     reference_set: str = "T2"
     n_jobs: int | None = None
     materials_per_round: int = 0  # 0: the fixed material of the reference set; else new random materials each round (scope S2)
+    resume: bool = False  # continue an interrupted loop of the same name after its last finished round
 
     def params_to_log(self) -> dict:
-        skip = {"params", "transfer", "n_jobs"}
+        skip = {"params", "transfer", "n_jobs", "resume"}
         return {f"refine.{key}": value for key, value in self.__dict__.items() if key not in skip and value is not None} | self.params
 
 
@@ -108,31 +112,109 @@ def train_round(config: RefineConfig, bundle: str, run_name: str, round_number: 
     return result.run_id, result.metrics
 
 
+def get_round_bundle_name(config: RefineConfig, round_number: int) -> str:
+    return config.name if round_number == config.rounds else f"{config.name}-r{round_number}"
+
+
+@dataclass
+class ResumeState:
+    parent_run: str
+    run_ids: list[str]  # the training runs of the finished rounds, round 0 first
+    added: list[str]  # the datasets the finished rounds added
+    pending_bundle: bool  # the interrupted round had saved its bundle already, only its training is missing
+
+
+def get_resume_state(config: RefineConfig, base: Bundle) -> ResumeState:
+    """What an interrupted loop of the same name left: its parent run, the finished rounds and their data. The runs it left open (the
+    parent and the interrupted round) are closed as KILLED."""
+    mlflow = configure_mlflow()
+    client = mlflow.MlflowClient()
+    experiment = get_experiment_id(get_experiment_name(base.scope))
+    parents = client.search_runs(
+        [experiment], f"attributes.run_name = 'refine-{config.name}' and tags.refine = '{config.name}'", order_by=["attributes.start_time DESC"]
+    )
+    if not parents:
+        raise ValueError(f"No refinement loop {config.name} to resume")
+    parent = parents[0].info.run_id
+    rounds = {}
+    for run in client.search_runs([experiment], f"tags.refine = '{config.name}' and tags.`mlflow.parentRunId` = '{parent}'"):
+        if run.info.status == "FINISHED":
+            rounds[int(run.data.tags["round"])] = run.info.run_id
+        elif run.info.status == "RUNNING":
+            client.set_terminated(run.info.run_id, "KILLED")
+    if parents[0].info.status == "RUNNING":
+        client.set_terminated(parent, "KILLED")
+    if not (config.start_run or 0 in rounds):
+        raise ValueError(f"Refinement loop {config.name} was interrupted in round 0, start it again under a new name")
+    run_ids = [config.start_run or rounds[0]]
+    while len(run_ids) in rounds:
+        run_ids.append(rounds[len(run_ids)])
+    finished = len(run_ids) - 1
+    if finished == config.rounds:
+        raise ValueError(f"Refinement loop {config.name} has finished all {config.rounds} rounds")
+    pending_bundle = bundle_exists(get_round_bundle_name(config, finished + 1))
+    last = get_round_bundle_name(config, finished + 1 if pending_bundle else finished) if finished or pending_bundle else None
+    added = list(load_bundle(last).train_extra[len(base.train_extra) :]) if last else []
+    return ResumeState(parent, run_ids, added, pending_bundle)
+
+
+def get_valop_depositions(config: RefineConfig, base: Bundle, material: np.ndarray | None, run_ids: list[str], added: list[str]) -> list:
+    """The validation optimizations of finished rounds again: the model of the round before, the materials the round added, the same
+    seeds. They were only kept in memory by the interrupted loop."""
+    depositions = []
+    for k, dataset_id in enumerate(added, start=1):
+        round_materials = [material] if material is not None else [m[None, :] for m in np.unique(load_dataset(dataset_id).full_material(), axis=0)]
+        seeds = get_round_seeds(k, config.valop_optimizations, VALOP_SEED_OFFSET)
+        fronts = optimize_model_many(
+            load_run_model(run_ids[k - 1]), base.scope, round_materials, seeds, config.population_size, config.evaluations, config.n_jobs
+        )
+        depositions += [(round_material, found) for round_material, (found, _, _) in zip(round_materials, fronts, strict=True)]
+    return depositions
+
+
 def refine(config: RefineConfig) -> list[str]:
     """Runs the loop and returns the ids of the training runs, one per round (round 0 is the model on the base bundle)."""
     base = load_bundle(config.base)
     names = [f"{config.name}-r{k}" for k in range(1, config.rounds)] + [config.name] + ([f"{config.name}-control"] if config.control else [])
     existing = [name for name in names if bundle_exists(name)]
-    if existing:
-        raise FileExistsError(f"Bundles {existing} exist already, choose another name")
+    if existing and not config.resume:
+        raise FileExistsError(f"Bundles {existing} exist already, choose another name or continue the loop with --resume")
     material = get_fixed_material(base, config.reference_set) if not config.materials_per_round else None
-    rng = np.random.default_rng(config.seed)
-    material_rng = np.random.default_rng([config.seed, 7])  # its own stream, so the perturbations do not depend on the material count
     with_profiles = has_profiles(base)  # the added data keeps what the base data has, so a profile model can train on all of it
     mlflow = configure_mlflow()
+    state = get_resume_state(config, base) if config.resume else None
+    first = len(state.run_ids) if state else 1
+    # Own streams, so the perturbations do not depend on the material count; a resumed loop continues with new streams
+    rng = np.random.default_rng([config.seed, first] if state else config.seed)
+    material_rng = np.random.default_rng([config.seed, 7, first] if state else [config.seed, 7])
 
-    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(base.scope)), run_name=f"refine-{config.name}") as parent:
-        mlflow.log_params(config.params_to_log())
-        mlflow.set_tags({"refine": config.name})
-        if config.start_run:
-            run_id, metrics = config.start_run, mlflow.get_run(config.start_run).data.metrics
+    run_options = (
+        {"run_id": state.parent_run} if state else {"experiment_id": get_experiment_id(get_experiment_name(base.scope)), "run_name": f"refine-{config.name}"}
+    )
+    with mlflow.start_run(**run_options) as parent:
+        if state:
+            run_ids, added = list(state.run_ids), list(state.added)
+            run_id = run_ids[-1]
+            valop_depositions = get_valop_depositions(config, base, material, run_ids, added)  # with the interrupted round if it saved its data
+            logging.info(f"Resuming {config.name} after round {first - 1}")
         else:
-            run_id, metrics = train_round(config, base.name, f"{config.name}-r0", 0)
-        mlflow.log_metrics(get_finite_metrics(get_round_metrics(metrics)), step=0)
-        run_ids, added, valop_depositions = [run_id], [], []
+            mlflow.log_params(config.params_to_log())
+            mlflow.set_tags({"refine": config.name})
+            if config.start_run:
+                run_id, metrics = config.start_run, mlflow.get_run(config.start_run).data.metrics
+            else:
+                run_id, metrics = train_round(config, base.name, f"{config.name}-r0", 0)
+            mlflow.log_metrics(get_finite_metrics(get_round_metrics(metrics)), step=0)
+            run_ids, added, valop_depositions = [run_id], [], []
 
-        for k in range(1, config.rounds + 1):
+        for k in range(first, config.rounds + 1):
             start = time.perf_counter()
+            name = get_round_bundle_name(config, k)
+            if state and state.pending_bundle and k == first:  # interrupted after saving the round's data: only train again
+                run_id, metrics = train_round(config, name, f"{config.name}-r{k}", k, source_run=run_id)
+                run_ids.append(run_id)
+                mlflow.log_metrics(get_finite_metrics({**get_round_metrics(metrics), "refine/round_seconds": time.perf_counter() - start}), step=k)
+                continue
             model = load_run_model(run_id)
             seeds = get_round_seeds(k, config.optimizations)
             valop_seeds = get_round_seeds(k, config.valop_optimizations, VALOP_SEED_OFFSET)
@@ -166,7 +248,6 @@ def refine(config: RefineConfig) -> list[str]:
             val_extra = dict(base.val_extra)
             if k == config.rounds:
                 val_extra[VALOP] = build_valop(config, base, material, valop_depositions, run_ids)
-            name = config.name if k == config.rounds else f"{config.name}-r{k}"
             notes = {"refine": config.name, "round": k, "base": base.name, "model": config.model, "params": config.params}
             save_bundle(Bundle(name, base.scope, base.train, base.val, base.tests, notes, [*base.train_extra, *added], val_extra))
 
@@ -253,6 +334,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--reference-set", default=defaults.reference_set, help="Test set that defines the material and the transfer reference")
     parser.add_argument("--n-jobs", type=int, help="Processes for the simulation (default: all cores)")
     parser.add_argument("--materials-per-round", type=int, default=0, help="Scope S2: optimize the model for this many new random materials each round")
+    parser.add_argument("--resume", action="store_true", help="Continue an interrupted loop of this name after its last finished round")
     args = parser.parse_args(argv)
     args.params = parse_parameters(args.param)
     return args

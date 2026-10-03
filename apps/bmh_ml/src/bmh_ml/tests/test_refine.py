@@ -132,3 +132,63 @@ def test_the_loop_can_draw_new_materials_every_round():
     control = load_dataset(load_bundle("M-control").train_extra[0])
     assert len(control) == len(first) + len(second)
     assert len(np.unique(control.full_material(), axis=0)) == len(control)
+
+
+@pytest.mark.parametrize("interrupted_in", ["training", "optimization"])
+def test_an_interrupted_loop_resumes_after_its_last_finished_round(interrupted_in, monkeypatch):
+    mlflow = pytest.importorskip("mlflow")
+    pytest.importorskip("sklearn")
+    from bmh_ml import refine as refine_module
+
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "base", "--scope", "S2", "--t3-materials", "1", "--t3-depositions", "2", *SMALL]))
+    config = RefineConfig(
+        base="base",
+        name="I",
+        model="ridge",
+        params={},
+        rounds=2,
+        optimizations=1,
+        population_size=6,
+        evaluations=12,
+        perturbations=1,
+        valop_optimizations=1,
+        valop_repeats=2,
+        control=True,
+        materials_per_round=2,
+        n_jobs=1,
+    )
+    target = "train_round" if interrupted_in == "training" else "optimize_model_many"
+    original = getattr(refine_module, target)
+
+    def interrupt_in_round_two(*args, **kwargs):
+        is_round_two = args[3] == 2 if target == "train_round" else min(args[3]) >= 2 * refine_module.SEED_STRIDE
+        if is_round_two:
+            raise KeyboardInterrupt  # what stopping the job does
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(refine_module, target, interrupt_in_round_two)
+    with pytest.raises(KeyboardInterrupt):
+        refine(config)
+    monkeypatch.setattr(refine_module, target, original)
+    first_round = load_bundle("I-r1")
+    with pytest.raises(FileExistsError, match="--resume"):
+        refine(config)
+
+    run_ids = refine(RefineConfig(**{**config.__dict__, "resume": True}))
+
+    assert len(run_ids) == 4  # rounds 0, 1, 2 and the control
+    final = load_bundle("I")
+    assert final.train_extra[:1] == first_round.train_extra  # the finished round is kept
+    assert len(final.train_extra) == 2
+    valop = load_dataset(final.val_extra["valop"])
+    assert len(np.unique(valop.full_material(), axis=0)) == 4  # the validation optimizations of both rounds, two materials each
+    runs = [mlflow.get_run(run_id) for run_id in run_ids]
+    parents = {run.data.tags["mlflow.parentRunId"] for run in runs}
+    assert len(parents) == 1  # the resumed loop continues in its parent run
+    parent = mlflow.get_run(parents.pop())
+    assert parent.info.status == "FINISHED"
+    assert parent.data.tags["final_run"] == run_ids[2]
+    history = mlflow.MlflowClient().get_metric_history(parent.info.run_id, "val/F1/nrmse")
+    assert sorted(metric.step for metric in history) == [0, 1, 2]
+    statuses = [run.info.status for run in mlflow.search_runs(filter_string="tags.refine = 'I'", output_format="list", search_all_experiments=True)]
+    assert "RUNNING" not in statuses
