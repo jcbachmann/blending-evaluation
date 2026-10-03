@@ -161,3 +161,78 @@ def test_each_objective_can_come_from_the_profile_or_the_direct_output():
     assert not np.allclose(first[:, 0], second[:, 0])
     assert np.all(first >= 0)
     assert np.all(second >= 0)
+
+
+@pytest.fixture(scope="module")
+def many_materials():
+    """Simulated inputs with a random material each (scope S2), with profiles; the validation data repeated for the noise correction."""
+    rng = np.random.default_rng(3)
+    train = build_dataset("t", "random", 0, random_materials(300, rng), random_depositions(300, rng), n_jobs=1, with_profiles=True)
+    val = build_dataset("v", "random", 0, random_materials(60, rng), random_depositions(60, rng), repeats=2, n_jobs=1, with_profiles=True)
+    return train, val
+
+
+def scaled_material(x: np.ndarray, factor: float, offset: float) -> np.ndarray:
+    """The same inputs with every material curve stretched around its mean by `factor` and shifted by `offset`."""
+    from bmh_ml.settings import MATERIAL_LENGTH
+
+    x = x.copy()
+    material = x[:, :MATERIAL_LENGTH]
+    x[:, :MATERIAL_LENGTH] = factor * (material - material.mean(axis=1, keepdims=True)) + material.mean(axis=1, keepdims=True) + offset
+    return x
+
+
+@pytest.mark.parametrize(
+    ("name", "params"),
+    [
+        ("profile_mlp", {"material_scaling": True}),
+        ("mixing_mlp", {"rank": 4}),
+        ("mixing_mlp", {"rank": 4, "quality_weight": 0.0}),
+    ],
+)
+def test_models_relative_to_the_material_scale_f1_with_it_and_survive_saving(name, params, many_materials, tmp_path):
+    pytest.importorskip("keras")
+    pytest.importorskip("tensorflow")
+    train, val = many_materials
+    x, x_val = train.features("S2"), val.features("S2")
+    model = create_model(name, width=32, depth=2, epochs=20, batch_size=64, **params)
+
+    info = model.fit(x, train.y, x_val, val.y, seed=0, profiles_train=train.profiles, profiles_val=val.profiles, val_repeats=2)
+    prediction = model.predict(x_val)
+
+    assert prediction.shape == (60, 2)
+    assert np.all(np.isfinite(prediction))
+    assert np.all(prediction >= 0)
+    assert info["F2/noise_correction"] > 0
+    # the simulator's F1 scales with the spread of the material and ignores its mean (measured), these models do so by construction
+    stretched = model.predict(scaled_material(x_val, 2.0, 1.5))
+    assert np.allclose(stretched[:, 0], 2.0 * prediction[:, 0], rtol=1e-3, atol=1e-5)
+    assert np.allclose(stretched[:, 1], prediction[:, 1], rtol=1e-4)
+    assert model.predict_profiles(x_val[:5]).shape == (5, 2, PROFILE_LENGTH)
+    model.save(tmp_path / "model")
+    assert np.allclose(load_model(tmp_path / "model").predict(x_val), prediction, atol=1e-4)
+
+
+def test_the_mixing_model_learns_f1_of_unseen_materials():
+    pytest.importorskip("keras")
+    pytest.importorskip("tensorflow")
+    rng = np.random.default_rng(3)
+    train = build_dataset("t", "random", 0, random_materials(2000, rng), random_depositions(2000, rng), n_jobs=1, with_profiles=True)
+    val = build_dataset("v", "random", 0, random_materials(100, rng), random_depositions(100, rng), repeats=2, n_jobs=1, with_profiles=True)
+    x, x_val = train.features("S2"), val.features("S2")
+    model = create_model("mixing_mlp", width=64, depth=2, rank=8, epochs=60, patience=10, batch_size=64)
+
+    model.fit(x, train.y, x_val, val.y, seed=0, profiles_train=train.profiles, profiles_val=val.profiles, val_repeats=2)
+    prediction = model.predict(x_val)
+
+    r2 = 1 - np.sum((val.y[:, 0] - prediction[:, 0]) ** 2) / np.sum((val.y[:, 0] - val.y[:, 0].mean()) ** 2)
+    assert r2 > 0.25  # every validation material is new; measured 0.37 to 0.43 over 5 seeds (300 rows gave -0.26 to 0.31)
+
+
+def test_scaling_by_the_material_needs_the_material_in_the_features(simulated):
+    pytest.importorskip("keras")
+    _, deposition, y, _, profiles = simulated
+    model = create_model("profile_mlp", width=8, depth=1, epochs=1, material_scaling=True)
+
+    with pytest.raises(ValueError, match="scope S2"):
+        model.fit(deposition, y, deposition, y, seed=0, profiles_train=profiles, profiles_val=profiles)
