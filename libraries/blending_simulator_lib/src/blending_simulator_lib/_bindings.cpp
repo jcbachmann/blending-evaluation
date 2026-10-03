@@ -136,9 +136,9 @@ class BlendingSimulatorLibPython
 			auto heapMapSize = simulator->getHeapMapSize();
 			std::vector<std::vector<float>> heights;
 			heights.reserve(heapMapSize.second);
-			const float* heapMap = simulator->getHeapMap(); // +1 for Y coordinate
-			for (int z = 0; z < heapMapSize.second; z++) {
-				heights.emplace_back(heapMap + z * heapMapSize.first + 1, heapMap + z * heapMapSize.first + 1 + heapMapSize.first);
+			const float* heapMap = simulator->getHeapMap();
+			for (unsigned int z = 0; z < heapMapSize.second; z++) {
+				heights.emplace_back(heapMap + z * heapMapSize.first, heapMap + (z + 1) * heapMapSize.first);
 			}
 
 			return heights;
