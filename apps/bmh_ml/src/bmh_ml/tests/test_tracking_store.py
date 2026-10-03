@@ -34,8 +34,17 @@ def test_subdirectories_are_created_inside_the_store(tmp_path, monkeypatch):
 
 def test_tracking_database_is_a_sqlite_file_in_the_store(tmp_path, monkeypatch):
     monkeypatch.setenv("BMH_ML_STORE", str(tmp_path))
+    monkeypatch.delenv("BMH_ML_TRACKING_URI", raising=False)
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "sqlite:////elsewhere/mlflow.db")  # set by MLflow for an earlier store, must not count
 
     assert store.get_tracking_uri() == f"sqlite:///{(tmp_path / 'mlflow.db').as_posix()}"
+
+
+def test_a_tracking_server_replaces_the_database_of_the_store(tmp_path, monkeypatch):
+    monkeypatch.setenv("BMH_ML_STORE", str(tmp_path))
+    monkeypatch.setenv("BMH_ML_TRACKING_URI", "http://127.0.0.1:5055")
+
+    assert store.get_tracking_uri() == "http://127.0.0.1:5055"
 
 
 def test_artifacts_are_stored_in_the_store(tmp_path, monkeypatch):
