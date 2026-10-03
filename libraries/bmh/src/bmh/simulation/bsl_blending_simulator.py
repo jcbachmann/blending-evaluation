@@ -59,7 +59,11 @@ class BslBlendingSimulator(BlendingSimulator):
         self.bsl.stack(timestamp, x, z, volume, parameter)  # noqa: PD013
 
     def reclaim(self) -> list[list[float | list[float]]]:
-        raise NotImplementedError()
+        data_dict = self.bsl.reclaim()
+        x = data_dict.pop("x")
+        volume = data_dict.pop("volume")
+        parameters = list(zip(*data_dict.values(), strict=True)) if data_dict else [()] * len(x)
+        return [[p, v, list(q)] for p, v, q in zip(x, volume, parameters, strict=True)]
 
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """
