@@ -13,3 +13,10 @@ the package directory:
 ```bash
 uv run pybind11-stubgen blending_simulator_lib._blending_simulator_lib -o src
 ```
+
+The C++ simulator is fetched from the `blending-simulation` repository at the tag set in `CMakeLists.txt`. To build against a local
+checkout instead, for example while changing both, point CMake's `FetchContent` to it:
+
+```bash
+SKBUILD_CMAKE_DEFINE="FETCHCONTENT_SOURCE_DIR_BLENDING-SIMULATION=/path/to/BlendingSimulator" uv sync --reinstall-package blending_simulator_lib
+```

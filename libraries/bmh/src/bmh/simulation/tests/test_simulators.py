@@ -1,4 +1,5 @@
 import pytest
+from pandas.testing import assert_frame_equal
 
 from ...helpers.simple import generate_material_deposition
 from ..bsl_blending_simulator import BslBlendingSimulator
@@ -32,6 +33,19 @@ def test_bsl_get_heights_position():
         assert len(row) == 4
         for x, height in enumerate(row):
             assert height == pytest.approx(1.0 if (x, z) == (2, 1) else 0.0)
+
+
+def bsl_stack_reclaim_with_seed(seed: int):
+    sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, eight=0.5, seed=seed)
+    return sim.stack_reclaim(make_material_deposition()).data
+
+
+def test_bsl_seed_repeatable():
+    assert_frame_equal(bsl_stack_reclaim_with_seed(42), bsl_stack_reclaim_with_seed(42))
+
+
+def test_bsl_seed_different():
+    assert not bsl_stack_reclaim_with_seed(1).equals(bsl_stack_reclaim_with_seed(2))
 
 
 @pytest.mark.parametrize(
