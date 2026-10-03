@@ -48,6 +48,20 @@ def test_bsl_seed_different():
     assert not bsl_stack_reclaim_with_seed(1).equals(bsl_stack_reclaim_with_seed(2))
 
 
+def test_bsl_stack_reclaim():
+    sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=0)
+    sim.stack(0.0, 20.0, 5.0, 100.0, [1.0, 10.0])  # noqa: PD013
+    sim.stack(1.0, 40.0, 5.0, 100.0, [3.0, 30.0])  # noqa: PD013
+
+    reclaimed = sim.reclaim()
+
+    volume = sum(v for _, v, _ in reclaimed)
+    assert volume == pytest.approx(200.0)
+    for i, expected in enumerate([2.0, 20.0]):
+        assert sum(v * q[i] for _, v, q in reclaimed) / volume == pytest.approx(expected)
+    assert all(len(q) == 2 for _, _, q in reclaimed)
+
+
 def test_bsl_reclaim_parameter_names():
     sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=0)
     sim.stack(0.0, 20.0, 5.0, 10.0, [1.0, 2.0])  # noqa: PD013
