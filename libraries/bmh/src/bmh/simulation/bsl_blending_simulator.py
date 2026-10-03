@@ -19,6 +19,7 @@ class BslBlendingSimulator(BlendingSimulator):
         dropheight: float | None = None,
         detailed: bool | None = None,
         reclaimincrement: float | None = None,
+        seed: int | None = None,
     ):
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
@@ -49,6 +50,7 @@ class BslBlendingSimulator(BlendingSimulator):
             dropheight,
             detailed,
             reclaimincrement,
+            seed,
         )
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:

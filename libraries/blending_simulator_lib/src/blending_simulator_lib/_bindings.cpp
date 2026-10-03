@@ -1,4 +1,7 @@
+#include <cstdint>
 #include <iostream>
+#include <optional>
+#include <stdexcept>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -19,21 +22,21 @@ class BlendingSimulatorLibPython
 {
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
-			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement)
+			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
-			bs::SimulationParameters simulationParameters{
-				heapWorldSizeX,
-				heapWorldSizeZ,
-				reclaimAngle,
-				particlesPerCubicMeter,
-				circular,
-				eightLikelihood,
-				false, // visualize - not available in python library
-				bulkDensityFactor,
-				dropHeight
-			};
+			bs::SimulationParameters simulationParameters;
+			simulationParameters.heapWorldSizeX = heapWorldSizeX;
+			simulationParameters.heapWorldSizeZ = heapWorldSizeZ;
+			simulationParameters.reclaimAngle = reclaimAngle;
+			simulationParameters.particlesPerCubicMeter = particlesPerCubicMeter;
+			simulationParameters.circular = circular;
+			simulationParameters.eightLikelihood = eightLikelihood;
+			simulationParameters.visualize = false; // Not available in python library
+			simulationParameters.bulkDensityFactor = bulkDensityFactor;
+			simulationParameters.dropHeight = dropHeight;
+			simulationParameters.seed = seed;
 
 			if (detailed) {
 #ifdef BUILD_DETAILED_SIMULATOR
@@ -165,7 +168,20 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 	m.doc() = "Blending Simulator Lib for Python";
 
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
-		.def(py::init<float, float, float, float, bool, float, float, float, bool, float>())
+		.def(
+			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>>(),
+			"heap_world_size_x"_a,
+			"heap_world_size_z"_a,
+			"reclaim_angle"_a,
+			"particles_per_cubic_meter"_a,
+			"circular"_a,
+			"eight_likelihood"_a,
+			"bulk_density_factor"_a,
+			"drop_height"_a,
+			"detailed"_a,
+			"reclaim_increment"_a,
+			"seed"_a = py::none()
+		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
 		.def("reclaim", &BlendingSimulatorLibPython::reclaim)
