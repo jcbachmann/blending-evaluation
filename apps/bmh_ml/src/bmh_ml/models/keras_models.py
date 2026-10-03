@@ -1,5 +1,6 @@
 """Neural networks with Keras: the multilayer perceptron, the LSTM of the first experiments, and the models that predict the reclaimed profile."""
 
+import logging
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -23,6 +24,28 @@ def limit_keras_threads() -> None:
             tf.config.threading.set_inter_op_parallelism_threads(min(limit, 2))
         except RuntimeError:  # TensorFlow already runs, the limit of the environment variables applies
             pass
+
+
+def get_training_callbacks(patience: int) -> list:
+    """Early stopping if `patience` > 0, and the progress of every epoch: a line on stdout and, inside an MLflow run, the metrics
+    `epoch/loss` and `epoch/val_loss`, so a long training can be followed in the log and as live curves in the UI."""
+    import sys
+
+    import keras
+
+    class Progress(keras.callbacks.Callback):
+        def on_epoch_end(self, epoch, logs=None):
+            losses = {f"epoch/{key}": float(value) for key, value in (logs or {}).items() if key in ("loss", "val_loss")}
+            run = sys.modules["mlflow"].active_run() if "mlflow" in sys.modules else None  # the objectives of a PerObjectiveModel fit without a run
+            print(f"{run.info.run_name if run else 'training'} epoch {epoch + 1}: " + ", ".join(f"{k[6:]} {v:.4g}" for k, v in losses.items()), flush=True)
+            if run:
+                try:
+                    sys.modules["mlflow"].log_metrics(losses, step=epoch + 1)
+                except Exception:  # progress is not worth a failed training
+                    logging.debug("The progress of epoch %d could not be logged", epoch + 1, exc_info=True)
+
+    callbacks: list = [keras.callbacks.EarlyStopping(patience=patience, restore_best_weights=True)] if patience > 0 else []
+    return [*callbacks, Progress()]
 
 
 class KerasModel(PerObjectiveModel):
@@ -55,9 +78,7 @@ class KerasModel(PerObjectiveModel):
 
         model = self.build(x_train.shape[1])
         model.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss="mean_squared_error")
-        callbacks = []
-        if params["patience"] > 0:
-            callbacks.append(keras.callbacks.EarlyStopping(patience=params["patience"], restore_best_weights=True))
+        callbacks = get_training_callbacks(params["patience"])
         history = model.fit(
             self.reshape(x_scaler.transform(x_train)),
             (y_train - y_mean) / y_std,
@@ -240,7 +261,7 @@ class ProfileMLPModel(Model):
 
         self.network = self.build(x_train.shape[1], targets.shape[1])
         self.network.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss=weighted_mse)
-        callbacks = [keras.callbacks.EarlyStopping(patience=params["patience"], restore_best_weights=True)] if params["patience"] > 0 else []
+        callbacks = get_training_callbacks(params["patience"])
         history = self.network.fit(
             self.scale_inputs(x_train),
             (targets - self.scaling["t_mean"]) / self.scaling["t_std"],
@@ -418,7 +439,7 @@ class MixingMLPModel(ProfileMLPModel):
 
         self.network = self.build(n_slices)
         self.network.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss=loss)
-        callbacks = [keras.callbacks.EarlyStopping(patience=params["patience"], restore_best_weights=True)] if params["patience"] > 0 else []
+        callbacks = get_training_callbacks(params["patience"])
         history = self.network.fit(
             self.scale_inputs(x_train),
             self.get_targets(x_train, y_train, profiles_train),
