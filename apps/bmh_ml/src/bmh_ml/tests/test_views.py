@@ -24,6 +24,16 @@ def test_every_chart_belongs_to_a_section_of_its_view():
         assert all(chart["metricSectionId"] in sections for chart in state.get("compareRunCharts", [])), name
 
 
+def test_each_scope_shows_the_test_sets_that_matter_for_it():
+    s1, s2 = (json.dumps(get_views(scope)) for scope in ("S1", "S2"))
+
+    assert "T2/F2/r2" in s1  # the operating region of the fixed material
+    assert "T6" not in s1
+    assert "T6/F1/r2" in s2  # the new materials of the transfer test
+    assert "transfer/hv_ratio_material_min" in s2
+    assert "T2/" not in s2
+
+
 def test_installing_again_updates_the_views_instead_of_adding_copies():
     mlflow = pytest.importorskip("mlflow")
     from bmh_ml.tracking.runs import get_experiment_id

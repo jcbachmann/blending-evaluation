@@ -113,17 +113,35 @@ LEADERBOARD_COLUMNS = [
     metric_column("train/seconds"),
     *map(param_column, ["model", "bundle", "seed"]),
 ]
+# Any material: the transfer test runs on the 8 new materials of T6 and is read per optimization run and for the worst material; T6 is
+# the operating region of new materials, T3 their random depositions
+S2_LEADERBOARD_COLUMNS = [
+    "attributes.`Description`",
+    *map(metric_column, ["transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/hv_ratio_material_min", "transfer/hv_ratio"]),
+    *map(metric_column, ["transfer/F1/bias", "transfer/F2/bias", "T6/F1/r2", "T6/F2/r2", "T3/F1/r2", "T3/F2/r2", "val/F1/nrmse", "val/F2/nrmse"]),
+    *map(metric_column, ["budget/simulations", "train/seconds"]),
+    *map(param_column, ["model", "bundle", "seed", "material_scaling", "quality_weight"]),
+]
 HAS_TRANSFER = "metrics.`transfer/hv_ratio` >= 0"
 
 
-def get_views() -> dict[str, tuple[str, dict]]:
-    """id: (name, state). The names start with a number so the menu lists them in the order they are meant to be used."""
+def get_views(scope: str = "S1") -> dict[str, tuple[str, dict]]:
+    """id: (name, state) for the experiment of a scope. The names start with a number so the menu lists them in the order they are meant
+    to be used."""
+    general = scope == "S2"
+    accuracy_r2 = ["T6/F1/r2", "T6/F2/r2", "T3/F1/r2", "T3/F2/r2"] if general else ["T2/F1/r2", "T2/F2/r2", "T2s/F1/r2", "T2s/F2/r2", "T1/F1/r2", "T1/F2/r2"]
+    accuracy_nrmse = ["T6/F1/nrmse", "T6/F2/nrmse", "T3/F1/nrmse", "T3/F2/nrmse"] if general else ["T2/F1/nrmse", "T2/F2/nrmse", "T1/F1/nrmse", "T1/F2/nrmse"]
+    transfer = ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/chevron_hv", "transfer/negative_rate"]
+    if general:
+        transfer = ["transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/hv_ratio_material_min", "transfer/hv_ratio"]
+    leaderboard = S2_LEADERBOARD_COLUMNS if general else LEADERBOARD_COLUMNS
+    ranking = metric_column("transfer/hv_ratio_run_mean" if general else "transfer/hv_ratio")
     refine_sections = [
         (
             "transfer",
             "Transfer test: optimize the model, simulate what it finds (higher hv is better)",
             "LINE",
-            ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/chevron_hv", "transfer/negative_rate"],
+            transfer,
         ),
         (
             "front",
@@ -131,7 +149,7 @@ def get_views() -> dict[str, tuple[str, dict]]:
             "LINE",
             ["refine/F1/front_bias", "refine/F2/front_bias", "refine/front_negative_rate"],
         ),
-        ("accuracy", "Accuracy on the test sets (R2, 1 is perfect)", "LINE", ["T2/F1/r2", "T2/F2/r2", "T2s/F1/r2", "T2s/F2/r2", "T1/F1/r2", "T1/F2/r2"]),
+        ("accuracy", "Accuracy on the test sets (R2, 1 is perfect)", "LINE", accuracy_r2),
         ("cost", "Cost of a round", "LINE", ["refine/rows_added", "refine/round_seconds"]),
     ]
     comparison_sections = [
@@ -139,13 +157,13 @@ def get_views() -> dict[str, tuple[str, dict]]:
             "transfer",
             "Transfer test (higher hv is better, negative rate and bias should be 0)",
             "BAR",
-            ["transfer/hv_ratio", "transfer/hv_ratio_run_mean", "transfer/chevron_beaten_rate", "transfer/chevron_hv", "transfer/negative_rate"],
+            transfer,
         ),
         (
             "accuracy",
             "Accuracy in the operating region and on random inputs (nrmse, lower is better, 0.25 perfect)",
             "BAR",
-            ["T2/F1/nrmse", "T2/F2/nrmse", "T1/F1/nrmse", "T1/F2/nrmse"],
+            accuracy_nrmse,
         ),
     ]
     sweep_columns = [
@@ -157,18 +175,18 @@ def get_views() -> dict[str, tuple[str, dict]]:
     return {
         "bmhml1leaderboard": (
             "1 Leaderboard: transfer test and accuracy",
-            base_state(HAS_TRANSFER, metric_column("transfer/hv_ratio"), False, LEADERBOARD_COLUMNS),
+            base_state(HAS_TRANSFER, ranking, False, leaderboard),
         ),
         "bmhml2comparison": (
             "2 Comparison charts: transfer test and accuracy (chart tab)",
-            {**base_state(HAS_TRANSFER, metric_column("transfer/hv_ratio"), False, LEADERBOARD_COLUMNS), **charts_state(comparison_sections)},
+            {**base_state(HAS_TRANSFER, ranking, False, leaderboard), **charts_state(comparison_sections)},
         ),
         "bmhml3refinement": (
             "3 Refinement loops, round by round (chart tab)",
             {**base_state("attributes.run_name LIKE 'refine-%'", columns=["attributes.`Description`"]), **charts_state(refine_sections)},
         ),
         "bmhml4sweeps": ("4 Sweep trials: parameters and validation", base_state("tags.trial LIKE '%'", metric_column("valop/F2/nrmse"), True, sweep_columns)),
-        "bmhml5all": ("5 All runs, newest first", base_state(columns=LEADERBOARD_COLUMNS)),
+        "bmhml5all": ("5 All runs, newest first", base_state(columns=leaderboard)),
     }
 
 
@@ -186,11 +204,11 @@ def install_views(url: str = DEFAULT_URL) -> list[str]:
     client = configure_mlflow().MlflowClient()
     links = []
     now = int(time.time() * 1000)
-    for experiment_name in EXPERIMENT_NAMES.values():
+    for scope, experiment_name in EXPERIMENT_NAMES.items():
         experiment = client.get_experiment_by_name(experiment_name)
         if experiment is None:
             continue
-        for view_id, (name, state) in get_views().items():
+        for view_id, (name, state) in get_views(scope).items():
             existing = experiment.tags.get(TAG_PREFIX + view_id)
             created = json.loads(existing)["createdAt"] if existing else now
             value = {"name": name, "createdAt": created, "updatedAt": now, "state": encode_state(state)}
