@@ -114,13 +114,9 @@ transfer test decides. Objectives are also reported relative to Chevron stacking
   -49). No model transfers on new materials from random data alone, even with 500k; F2 (deposition only) improves with data but reaches
   only R2 about 0 on optimized depositions. Data from the optimizer's region is needed, which the refinement loops test.
 
-### Running (job queue on micha-pc and the laptop, started 2026-10-03 19:00)
+### Running
 
-* Refinement over many materials with the mixing model without quality output (`refine-S2-v1-rmixnq`, from `s2-mixing-noquality-seed1`,
-  4 rounds of 20 materials, transfer test per round) and with the material-scaled hybrid (`refine-S2-v1-rrel`, from
-  `s2-hybrid-relative-seed1`).
-* Two more seeds of the material-scaled refinement (`refine-S2-v1-rrel-s2`, `refine-S2-v1-rrel-s3`, the latter with the control: as
-  many random rows as the loop adds), on the laptop.
+Nothing; the queues were stopped on 2026-10-03 at 22:00. Results of the refinement loops: section 9, last row.
 
 ## 3. Next steps and open tasks
 
@@ -402,3 +398,4 @@ ceilings next to every metric, seed spreads before stating an effect); the store
 simulations, 3 seeds each): material scaling is the most data-efficient (T3 F1 R2 0.77 / 0.83 / 0.90 / 0.95 against 0.67 / 0.75 / 0.85 /
 0.93 for the hybrid) and halves the F1 optimism; the mixing model is not more data-efficient; nothing transfers to new materials from random
 data alone (per run at most 0.04). |
+| 2026-10-03 | **Refinement over many materials, second attempt** (20 new random materials per round, 2 NSGA-III runs each, transfer test on T6 per round; the loops `rrel-s2` and `rrel-s3` were stopped for the night after round 3, `--resume` continues them). Transfer ratio per run, round 0 -> best round (beats Chevron): material-scaled hybrid, 3 seeds: 0.013 -> 0.060 (48 -> 71 %), 0.043 -> 0.078 (65 -> 63 %), 0.049 -> 0.066 (51 -> 60 %); mixing model without quality output: 0.048 -> 0.039 (53 -> 50 %, no gain); for comparison the plain hybrid's loop of 2026-10-02 0.045 -> 0.074 (43 -> 56 %). The worst material stays at 0 in every round of every loop, T6 F1 R2 at best -5, F1 bias on the solutions found -0.04 to -0.08 (material-scaled) and -0.10 to -0.13 (mixing). NSGA-III on the simulator per material: 0.16 with 5,000 and 0.47 with 10,000 simulations. **Refinement over many materials buys at most a small, noisy gain; a model trained once does not reach the optimizer's region of a new material. Material scaling is the only change that helps consistently.** |
