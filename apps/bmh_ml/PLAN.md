@@ -139,9 +139,10 @@ Nothing; the queues were stopped on 2026-10-03 at 22:00. Results of the refineme
    the ideal half cones, so part of every F2 is a fixed offset. Is that expected (reclaimer or slice coordinates of the simulator), and
    should F2 use the integrated derivation of the vault? Profiles are stored, so F2 can be recomputed for any definition without
    simulating.
-2. **Where the store lives.** Since 2026-10-03 the store that receives new runs is `~agent/offload/BlendingEvaluation/workdir/bmh-ml-store`
-   on micha-pc; the copy in the synced `workdir/bmh-ml-store` is from 2026-10-02. Copy it back after this phase, or keep the master on
-   micha-pc and sync only reports?
+2. **Where the store lives.** Runs are logged into `~agent/offload/BlendingEvaluation/workdir/bmh-ml-store` on micha-pc. On
+   2026-10-03 at 22:30 it was copied completely to the synced `workdir/bmh-ml-store` (161 runs, 3.1 GB, paths fixed), so both are
+   identical. Keep this pattern (micha-pc logs, the synced copy is refreshed at the end of a working day), or move the store out of the
+   synced folder?
 3. **Linearity in the detailed simulation.** The mixing model assumes that quality is a passive label of the particles. Very likely true
    for the detailed and physics simulations as well, but worth checking once with a few runs there before relying on it.
 4. **GPU** (Navi 10, no ROCm): only worth an unofficial ROCm setup for larger models or ensembles (B5); a system change, Micha's call.
@@ -277,8 +278,12 @@ more threads per job. LightGBM is fastest with 8 to 12 threads.
   `rsync -a --delete --exclude-from=.gitignore --exclude=.git ./ <host>:~/offload/BlendingEvaluation/` (git-ignored data separately).
 * **Store** (datasets, bundles, MLflow database and artifacts): selected with `BMH_ML_STORE`; without it a new empty store starts at
   `~/bmh-ml-store`. The store that receives new runs is `~agent/offload/BlendingEvaluation/workdir/bmh-ml-store` on micha-pc. The
-  laptop's agent has a copy of its datasets and bundles (no database, no artifacts). The synced `workdir/bmh-ml-store` is the state of
-  2026-10-02 (open question 2).
+  laptop's agent has a copy of its datasets, bundles and artifacts (no database). The synced `workdir/bmh-ml-store` was refreshed from
+  micha-pc on 2026-10-03 22:30 and is identical to it then (open question 2). To refresh it: snapshot the database on micha-pc with
+  SQLite's backup (`python3 -c "import sqlite3; sqlite3.connect('mlflow.db').backup(sqlite3.connect('/home/agent/offload/mlflow-snapshot.db'))"`
+  in the store, safe while the server runs), rsync the store without `mlflow.db` and the snapshot as `mlflow.db` into the synced
+  `workdir/bmh-ml-store`, then run `workdir/fix-mlflow-store-paths.py` on it. 23 runs have no artifact directory on purpose (refinement
+  parents, runs killed before they saved anything).
 * **MLflow server** on micha-pc over that store: `python -m bmh_ml.ui --port 5055` in the scope `mlflow`, localhost only. Jobs log to it
   with `BMH_ML_TRACKING_URI=http://127.0.0.1:<port>`, which `tracking/store.py` prefers over the SQLite file (not
   `MLFLOW_TRACKING_URI`: MLflow sets that one itself). The laptop's agent reaches it
@@ -289,7 +294,8 @@ more threads per job. LightGBM is fastest with 8 to 12 threads.
 
 ### 7.3 Running jobs
 
-Long jobs go through the job queue (`~/offload/queue/` on both hosts, documented in `~/.claude/CLAUDE.md`): write a job script into
+Long jobs go through the job queue (`~/offload/queue/` on both hosts, documented in `~/.claude/CLAUDE.md`; a copy of its scripts is in
+`workdir/offload-queue/`, the job logs of 2026-10-03 in `workdir/logs/queue-2026-10-03/`): write a job script into
 micha-pc's `~/offload/queue/pending/`, the runners start it when cores are free, the laptop takes jobs that do not write datasets. A job
 for this project starts with `source ~/offload/queue/env.sh` (checkout, store, MLflow port, `R="$HOME/offload/env/bin/python -m"`) and
 declares `# cores: N`. The laptop copies new datasets, bundles and run artifacts from micha-pc before a job and back after it (datasets
