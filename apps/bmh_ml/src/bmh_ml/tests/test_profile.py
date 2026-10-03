@@ -126,6 +126,10 @@ def test_training_a_profile_model_needs_a_bundle_with_profiles():
 
     assert "T1/F2/nrmse" in result.metrics
     assert "train/F2/noise_correction" in result.metrics
+    import mlflow
+
+    history = mlflow.MlflowClient().get_metric_history(result.run_id, "epoch/val_loss")  # the progress of every epoch, live in the UI
+    assert [metric.step for metric in history] == [1, 2]
 
 
 def test_the_noise_correction_comes_from_repeated_data_alone(simulated):
