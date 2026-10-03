@@ -48,6 +48,45 @@ def test_bsl_seed_different():
     assert not bsl_stack_reclaim_with_seed(1).equals(bsl_stack_reclaim_with_seed(2))
 
 
+def test_bsl_reclaim_parameter_names():
+    sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=0)
+    sim.stack(0.0, 20.0, 5.0, 10.0, [1.0, 2.0])  # noqa: PD013
+
+    assert list(sim.bsl.reclaim().keys()) == ["x", "volume", "p_1", "p_2"]
+
+
+def test_bsl_parameter_count_mismatch():
+    sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z)
+    sim.stack(0.0, 20.0, 5.0, 10.0, [1.0])  # noqa: PD013
+
+    with pytest.raises(ValueError, match="expected 1 parameters"):
+        sim.stack(1.0, 20.0, 5.0, 10.0, [1.0, 2.0])  # noqa: PD013
+
+
+def test_bsl_stack_list_twice():
+    material_deposition = make_material_deposition()
+    data = material_deposition.data
+    sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=0)
+
+    half = len(data) // 2
+    sim.bsl.stack_list(data.iloc[:half].to_numpy(), data.columns.to_list())
+    sim.bsl.stack_list(data.iloc[half:].to_numpy(), data.columns.to_list())
+    reclaimed = sim.bsl.reclaim()
+
+    parameter_columns = [c for c in data.columns if c not in ("timestamp", "x", "z", "volume")]
+    assert list(reclaimed.keys()) == ["x", "volume", *parameter_columns]
+
+
+def test_bsl_stack_list_different_columns():
+    data = make_material_deposition().data
+    sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z)
+    sim.bsl.stack_list(data.to_numpy(), data.columns.to_list())
+
+    renamed = data.rename(columns={"quality": "other"})
+    with pytest.raises(ValueError, match="parameter columns differ"):
+        sim.bsl.stack_list(renamed.to_numpy(), renamed.columns.to_list())
+
+
 @pytest.mark.parametrize(
     "sim",
     [
