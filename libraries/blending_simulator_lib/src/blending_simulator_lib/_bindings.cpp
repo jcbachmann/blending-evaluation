@@ -56,6 +56,7 @@ class BlendingSimulatorLibPython
 
 		void stack(double timestamp, float x, float z, double volume, const std::vector<double>& parameter)
 		{
+			useParameterCount(parameter.size());
 			simulator->stack(x, z, bs::AveragedParameters(volume, parameter));
 		}
 
@@ -66,6 +67,7 @@ class BlendingSimulatorLibPython
 			int zCol = -1;
 			int volumeCol = -1;
 			std::vector<int> parameterColumnIndices;
+			std::vector<std::string> names;
 
 			for (int i = 0; i < columns.size(); i++) {
 				if (columns[i] == "timestamp") {
@@ -78,9 +80,15 @@ class BlendingSimulatorLibPython
 					volumeCol = i;
 				} else {
 					parameterColumnIndices.push_back(i);
-					parameterColumns.push_back(columns[i]);
+					names.push_back(columns[i]);
 				}
 			}
+
+			if (xCol < 0 || zCol < 0 || volumeCol < 0) {
+				throw std::invalid_argument("columns x, z and volume are required");
+			}
+
+			useParameterColumns(names);
 
 			auto dataRef = data.unchecked<2>();
 
@@ -151,7 +159,34 @@ class BlendingSimulatorLibPython
 		bs::BlendingSimulator<bs::AveragedParameters>* simulator;
 		float reclaimIncrement;
 		std::vector<std::string> parameterColumns;
+		bool parameterColumnsKnown = false;
 		bool verbose;
+
+		// Parameter names from stack_list, all stacked material has to provide the same parameters
+		void useParameterColumns(const std::vector<std::string>& columns)
+		{
+			if (!parameterColumnsKnown) {
+				parameterColumns = columns;
+				parameterColumnsKnown = true;
+			} else if (columns != parameterColumns) {
+				throw std::invalid_argument("parameter columns differ from the material stacked before");
+			}
+		}
+
+		// Parameters from stack without names are named p_1, p_2, ... like in the CLI reclaim output
+		void useParameterCount(std::size_t count)
+		{
+			if (!parameterColumnsKnown) {
+				for (std::size_t i = 0; i < count; i++) {
+					parameterColumns.push_back("p_" + std::to_string(i + 1));
+				}
+				parameterColumnsKnown = true;
+			} else if (count != parameterColumns.size()) {
+				throw std::invalid_argument(
+					"expected " + std::to_string(parameterColumns.size()) + " parameters like the material stacked before, got " + std::to_string(count)
+				);
+			}
+		}
 
 		void finishStacking()
 		{
