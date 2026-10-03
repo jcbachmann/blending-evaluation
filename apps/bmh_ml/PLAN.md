@@ -126,6 +126,9 @@ transfer test decides. Objectives are also reported relative to Chevron stacking
 
 ### For the agent, in order
 
+0. The queues were stopped on 2026-10-03 at 22:00 for the night (section 7.3). Restart the server and the runners, check
+   `~/offload/queue/failed/` on micha-pc and the laptop, and queue every interrupted refinement loop again with `--resume` (the jobs
+   `10-`, `40-`, `41-`, `42-refine-*.sh`; those that finished all rounds need nothing).
 1. Evaluate the refinement loops (section 2) and record them in section 9: does refinement over many materials make the material-scaled
    hybrid or the mixing model transfer to new materials, against the control with random rows, over three seeds?
 2. Seeds and a control (random rows of the same amount) for whatever helps; then the fair S2 comparison per new material: a model trained
@@ -298,6 +301,15 @@ are content-addressed and bundle names unique, so this is safe); bundle and refi
 host's own checkout: after changing code, sync it to **both** hosts before queueing jobs that need it. Jobs that need a bundle
 another job builds declare `# needs: ~/offload/BlendingEvaluation/workdir/bmh-ml-store/bundles/<name>.json`. On micha-pc every process of
 a closed SSH login is killed, so anything started by hand must use `systemd-run --user --scope --unit=<name> tmux new -d -s <name> "..."`.
+
+**Stopping and restarting.** `bash ~/offload/queue/stop-jobs.sh [grace seconds]` on each host stops its queue gracefully (no new jobs,
+Ctrl+C to the running ones, terminated after the grace period; the laptop still copies its results back), then
+`bash ~/offload/queue/stop-server.sh` on micha-pc waits until no job runs anywhere, closes runs left open as KILLED and stops the MLflow
+server. Nothing of this survives a reboot. To start again: on micha-pc the MLflow server
+(`systemd-run --user --scope --unit=mlflow tmux new -d -s mlflow "cd ~/offload/BlendingEvaluation && BMH_ML_STORE=$PWD/workdir/bmh-ml-store ~/offload/env/bin/python -m bmh_ml.ui --port 5055 > ~/offload/logs/mlflow-server.log 2>&1"`),
+then remove `~/offload/queue/stop` on both hosts and start the runners (micha-pc: `systemd-run --user --scope --unit=queue tmux new -d -s queue
+"bash ~/offload/queue/runner.sh"`; laptop: the same with `QUEUE_HOST=laptop QUEUE_REMOTE=micha-pc QUEUE_MLFLOW_PORT=5057 nice -n 19 ionice -c 3`
+before `bash`). An interrupted refinement loop is queued again with its original command plus `--resume`.
 
 ### 7.4 Commands
 
