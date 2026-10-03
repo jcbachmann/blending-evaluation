@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 
 STORE_ENVIRONMENT_VARIABLE = "BMH_ML_STORE"
+TRACKING_URI_ENVIRONMENT_VARIABLE = "BMH_ML_TRACKING_URI"
 DEFAULT_STORE = "~/bmh-ml-store"
 
 
@@ -37,8 +38,10 @@ def get_reports_directory() -> Path:
 
 
 def get_tracking_uri() -> str:
-    """The MLflow tracking database, a SQLite file in the store."""
-    return f"sqlite:///{(get_store() / 'mlflow.db').as_posix()}"
+    """The MLflow tracking database, a SQLite file in the store, or the tracking server BMH_ML_TRACKING_URI names (runs of several
+    machines logged into one store; the datasets are then read from each machine's own copy of the store). Not MLFLOW_TRACKING_URI:
+    MLflow sets that variable itself when a tracking URI is set, so it would keep pointing at the first store a process configured."""
+    return os.environ.get(TRACKING_URI_ENVIRONMENT_VARIABLE) or f"sqlite:///{(get_store() / 'mlflow.db').as_posix()}"
 
 
 def get_artifact_root() -> str:
