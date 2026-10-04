@@ -68,8 +68,7 @@ METHODS = {
     "mathematical": "Mathematical (closed form binning, bmh)",
     "smooth": "Smooth (Gaussian kernel, bmh)",
     "fast": "Fast (C++ height grid, blending_simulator_lib)",
-    "grid": "Grid (Python port of fast, particles exported)",
-    "hcp": "HCP lattice (Python port of hexsim, compressed to 45°)",
+    "hcp": "HCP lattice (C++ port of hexsim compressed to 45°, blending_simulator_lib)",
     "detailed": "Detailed (C++ Bullet physics, blending_simulator_lib)",
 }
 

@@ -5,7 +5,7 @@ import math
 import numpy as np
 import pytest
 
-from ..particle_simulators import GridSimulator, LatticeSimulator, ParticleBuffer
+from ..particle_simulators import LatticeSimulator, ParticleBuffer
 from ..run_comparison import run_one
 from ..scenarios import DURATION, X_MIN, get_start_cone_volume, make_material_deposition
 
@@ -18,32 +18,6 @@ def test_particle_buffer():
     particles = list(buffer.pop_all())
     assert particles == [pytest.approx([3.6]), pytest.approx([3.6])]
     assert buffer.volume == pytest.approx(0.5)
-
-
-def test_grid_single_particle():
-    sim = GridSimulator(4.0, 3.0, ppm3=1.0, reclaim_angle=90.0)
-    sim.stack(0.0, 2.0, 1.0, 1.0, [1.0])
-    assert sim.positions == [pytest.approx((2.5, 0.0, 1.5))]
-    reclaimed = sim.reclaim()
-    assert [v for _, v, _ in reclaimed] == [0.0, 0.0, 1.0, 0.0]
-
-
-def test_grid_particle_wider_than_slice():
-    sim = GridSimulator(6.0, 4.0, ppm3=0.125, reclaim_angle=90.0)
-    # Like the C++ code, x = 2 m rounds to cell 1, which spans x from 2 m to 4 m
-    sim.stack(0.0, 2.0, 2.0, 8.0, [1.0])
-    # The 2 m particle splits its 8 m³ over two 1 m slices
-    assert [v for _, v, _ in sim.reclaim()] == pytest.approx([0.0, 0.0, 4.0, 4.0, 0.0, 0.0])
-
-
-def test_grid_seed_repeatable():
-    def stack(seed):
-        sim = GridSimulator(20.0, 20.0, ppm3=1.0, eight_likelihood=0.5, seed=seed)
-        sim.stack(0.0, 10.0, 10.0, 300.0, [1.0])
-        return sim.positions
-
-    assert stack(3) == stack(3)
-    assert stack(3) != stack(4)
 
 
 @pytest.mark.parametrize("angle", [None, 45.0, 30.0])
@@ -83,7 +57,7 @@ def test_lattice_particles_supported():
     assert distances.min() == pytest.approx(sim.a, rel=1e-6)
 
 
-@pytest.mark.parametrize("method", ["grid", "hcp", "mathematical", "fast"])
+@pytest.mark.parametrize("method", ["hcp", "mathematical", "fast"])
 def test_run_one(tmp_path, method):
     result = run_one(tmp_path, "chevron-1", "low", method)
 
