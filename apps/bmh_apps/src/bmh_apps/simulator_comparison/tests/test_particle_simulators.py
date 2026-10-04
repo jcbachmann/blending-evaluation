@@ -109,3 +109,25 @@ def test_chevron_start_cone(layers):
     # Up to one material step of 5046.8 m³ / 4000
     assert at_start["volume"].sum() == pytest.approx(cone_volume, abs=1.3)
     assert data["x"].iloc[len(at_start) + 10] > X_MIN
+
+
+@pytest.mark.parametrize(("ppm3", "angle"), [(1.0, 45.0), (8.0, 45.0), (8.0, 30.0)])
+def test_cpp_lattice_matches_python(ppm3, angle):
+    from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
+
+    python = LatticeSimulator(20.0, 10.0, ppm3=ppm3, angle_of_repose=angle)
+    cpp = BslBlendingSimulator(bed_size_x=20.0, bed_size_z=10.0, ppm3=ppm3, lattice=True, latticeangle=angle, record_particles=True)
+    rng = np.random.default_rng(0)
+    # One particle per call, along a chevron path and at random spots including the bed edges
+    xs = np.concatenate([np.linspace(2.0, 18.0, 300), np.linspace(18.0, 2.0, 300), rng.uniform(0.0, 20.0, 400)])
+    zs = np.concatenate([np.full(600, 5.0), rng.uniform(0.0, 10.0, 400)])
+    for i, (x, z) in enumerate(zip(xs, zs, strict=True)):
+        python.stack(float(i), float(x), float(z), 1.0 / ppm3, [float(i)])
+        cpp.stack(float(i), float(x), float(z), 1.0 / ppm3, [float(i)])
+
+    particles = cpp.get_particles()
+    p = np.asarray(python.positions)
+    centers = p + np.array([0.0, 0.5 * python.particle_height, 0.0])
+    assert len(particles["position"]) == len(p) > 900
+    np.testing.assert_allclose(particles["position"], centers, atol=1e-6)
+    np.testing.assert_allclose(particles["parameters"][:, 0], np.asarray(python.parameters)[:, 0])
