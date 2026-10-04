@@ -7,8 +7,6 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from ..helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
-
 
 def read_data_file(data_file: str) -> DataFrame:
     """
@@ -368,31 +366,7 @@ class MaterialDeposition:
         # Copy material data
         data = material_df.copy()
 
-        # Add cone deposition to the beginning of every layer
-        # deposition_df = MaterialDeposition.add_cone_per_layer(deposition_df, material_df)
-
         data["x"] = np.interp(data["timestamp"], deposition_df["timestamp"], deposition_df["x"])
         data["z"] = np.interp(data["timestamp"], deposition_df["timestamp"], deposition_df["z"])
 
         return data
-
-    @staticmethod
-    def add_cone_per_layer(dep_df: DataFrame, mat_df: DataFrame) -> DataFrame:
-        dep_df["t_end"] = dep_df["timestamp"].shift(-1)
-        dep_df["v_layer"] = dep_df.apply(
-            lambda row: mat_df[(mat_df["timestamp"] >= row["timestamp"]) & (mat_df["timestamp"] < row["t_end"])]["volume"].sum(), axis=1
-        )
-        dep_df["t_diff"] = dep_df["timestamp"].shift(-1) - dep_df["timestamp"]
-        dep_df["core_length"] = abs(dep_df["x"].shift(-1) - dep_df["x"])
-
-        dep_df["height"] = get_stockpile_height(dep_df["v_layer"], dep_df["core_length"])
-        dep_df["v_cone"] = get_stockpile_volume(dep_df["height"], 0.0)
-        dep_df["t_wait"] = 6.0 * dep_df["t_diff"] * dep_df["v_cone"] / dep_df["v_layer"]  # TODO why 6.0? two pi??
-
-        waits = dep_df.copy()
-        waits["timestamp"] += dep_df["t_wait"]
-        dep_df = pd.concat([dep_df, waits], ignore_index=True)
-        dep_df = dep_df.sort_values(["timestamp"])
-
-        dep_df = dep_df[["timestamp", "x", "z"]].copy()
-        return dep_df.dropna()
