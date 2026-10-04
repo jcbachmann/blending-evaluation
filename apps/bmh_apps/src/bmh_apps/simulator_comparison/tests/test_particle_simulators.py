@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from ..particle_simulators import LatticeSimulator, ParticleBuffer
-from ..run_comparison import run_one
+from ..run_comparison import cone_angle, run_one
 from ..scenarios import DURATION, X_MIN, get_start_cone_volume, make_material_deposition
 
 
@@ -28,7 +28,7 @@ def test_lattice_particle_volume(angle):
 
 
 def test_lattice_angle_of_repose():
-    scale = math.tan(math.radians(45.0)) / math.tan(math.radians(LatticeSimulator.NATIVE_ANGLE_OF_REPOSE))
+    scale = math.tan(math.radians(45.0)) / LatticeSimulator.NATIVE_TAN_ANGLE_OF_REPOSE
     compressed = LatticeSimulator(20.0, 20.0, ppm3=8.0, angle_of_repose=45.0)
     # Same horizontal spacing: the uncompressed particles have the volume of the compressed ones divided by the scale
     native = LatticeSimulator(20.0, 20.0, ppm3=8.0 * scale, angle_of_repose=None)
@@ -55,6 +55,21 @@ def test_lattice_particles_supported():
     p = np.asarray(sim.positions)
     distances = np.linalg.norm(p[:, None, :] - p[None, :, :], axis=-1) + np.eye(len(p)) * 1e9
     assert distances.min() == pytest.approx(sim.a, rel=1e-6)
+
+
+@pytest.mark.parametrize(("hexagonal", "holes"), [(False, False), (True, False), (False, True)])
+def test_cone_angle(hexagonal, holes):
+    x, z = np.meshgrid(np.arange(-80, 80) + 0.5, np.arange(-80, 80) + 0.5)
+    if hexagonal:
+        # Hexagon of apothem 1 and area 2 sqrt(3) per unit height, the radius of the circle with the same area is sqrt(2 sqrt(3) / pi)
+        radius = np.max([np.abs(x * math.cos(a) + z * math.sin(a)) for a in np.radians([0, 60, 120])], axis=0) * math.sqrt(2 * math.sqrt(3) / math.pi)
+    else:
+        radius = np.hypot(x, z)
+    heights = np.maximum(0.0, 60.0 - radius * math.tan(math.radians(40.0)))
+    if holes:
+        # Most cells empty, like the height map of the detailed simulation that marks only the cells holding a particle center
+        heights[np.random.default_rng(0).random(heights.shape) < 0.7] = 0.0
+    assert cone_angle(heights, cell=1.0) == pytest.approx(40.0, abs=0.3)
 
 
 @pytest.mark.parametrize("method", ["hcp", "mathematical", "fast"])
