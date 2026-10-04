@@ -1,0 +1,64 @@
+[
+  {
+    "title": "What the comparison shows",
+    "items": [
+      {
+        "lead": "The angle of repose depends on the method.",
+        "text": "At 0.25 m the fast cone has about 44° (27° with 2 m particles). The HCP lattice natively builds 60° cones; compressed vertically it reaches 45° at 0.25 m and 42° at 1 m. The detailed cubes settle at about 30°, close to the arctangent of their friction coefficient 0.5."
+      },
+      {
+        "lead": "Stops at every turning point keep the ridge level.",
+        "text": "With the derived stops the ridge varies by only 0.01 to 0.07 m along the core and F2 is 3.6 to 5.9 m³ for 5 to 500 layers, as low as for one layer with its start cone. Play the stacking and watch the long section stay flat after every layer."
+      },
+      {
+        "lead": "Shrinking turning points blend better.",
+        "text": "With turning points that move inwards as the pile grows, F1 is 0.031 to 0.045 instead of 0.066 to 0.072 with fixed ones, because the end cones are built while travelling over the longer early cores instead of while standing."
+      },
+      {
+        "lead": "The ends dominate F1.",
+        "text": "Between x = 15 m and 45 m the reclaimed quality varies by only 0.003 to 0.007, and beyond 25 layers nothing changes. The linear quality trend of this input is easy to blend; more layers would mainly pay off for fluctuating inputs."
+      },
+      {
+        "lead": "The closed form models miss the geometry.",
+        "text": "Mathematical and Smooth have no stockpile geometry: their F1 is off by a factor of 2 to 3 in both directions, every stop lands in a single slice of the mathematical model (F2 around 98 m³), and a cone ends up in one slice."
+      },
+      {
+        "lead": "Particle methods converge with resolution.",
+        "text": "At 0.25 m the core quality curves of Grid and Fast correlate with 0.99 to 1.00, HCP with 0.94 to 1.00. The C++ fast simulator stacks and reclaims 323,000 particles in 0.3 to 2 s, the unoptimized Python ports need 6 to 67 s."
+      }
+    ]
+  },
+  {
+    "title": "How to read this page",
+    "items": [
+      {
+        "lead": "Time slider:",
+        "text": "shows the stockpile at any moment of the stacking, with the stacker as a marker. Particle methods show exactly the particles stacked so far, Fast and Detailed the latest of 32 evenly spaced snapshots plus up to 32 at layer ends. The cross and long sections follow the slider; the output curves always show the finished pile."
+      },
+      {
+        "lead": "Turning points:",
+        "text": "chevrons follow the stacking schedule derived in the Entropy note Chevron Stacking Schedule, with stops at every turning point. Fixed turning points stay at the ends of the core, shrinking ones move inwards as the pile grows so that its toe stays in place. For one layer both reduce to the start cone."
+      },
+      {
+        "lead": "Reclaim face:",
+        "text": "the slider removes everything a 45° reclaimer has taken up to that position, so the face shows the layer structure the reclaimer cuts through. The z cut removes the near side of the pile."
+      },
+      {
+        "lead": "Particles and surfaces:",
+        "text": "Grid and HCP export every particle. Fast and Detailed come through the Python library, which only exports a height map; for Detailed it is the height of the frozen particle centers. Mathematical and Smooth have no geometry: each reclaim slice is drawn as a 45° ridge holding its volume."
+      },
+      {
+        "lead": "Ridge σ:",
+        "text": "standard deviation of the pile height along the core center line at the end of every layer, averaged over the layers."
+      },
+      {
+        "lead": "Detailed:",
+        "text": "only the cone and the 1 layer chevron with 1 m particles, dropped from 16 m. The default drop height of half the bed depth equals the pile height, and the pile then grows towards the side the particles are thrown from."
+      },
+      {
+        "lead": "Known artifact:",
+        "text": "the fast simulator rounds a drop position to the nearest cell index but treats cells as starting at that index, which shifts its piles by half a particle in x and z (1 m with 2 m particles). The Grid port reproduces this on purpose."
+      }
+    ]
+  }
+]

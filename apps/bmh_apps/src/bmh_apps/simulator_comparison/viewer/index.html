@@ -1,0 +1,867 @@
+<title>Stockpile Simulator Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control strip, then a 3D viewport beside a fact sheet, then a grid of comparison charts and the metrics table. */
+:root {
+  --page: #f4f5f6;
+  --surface: #fcfcfb;
+  --ink: #0f1419;
+  --ink-2: #4c5560;
+  --muted: #7d858f;
+  --grid: #e3e5e8;
+  --axis: #c2c7cd;
+  --line: rgba(15, 20, 25, 0.12);
+  --accent: #2a78d6;
+  --viewport: #e9ecef;
+  --terrain: #b9b2a6;
+  --chip: #eceef1;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0e1013; --surface: #1a1b1d; --ink: #f4f5f6; --ink-2: #c3c7cc; --muted: #8b929a; --grid: #2b2d30; --axis: #3b3e42;
+    --line: rgba(255, 255, 255, 0.12); --accent: #3987e5; --viewport: #15171a; --terrain: #6f685e; --chip: #24262a;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0e1013; --surface: #1a1b1d; --ink: #f4f5f6; --ink-2: #c3c7cc; --muted: #8b929a; --grid: #2b2d30; --axis: #3b3e42;
+  --line: rgba(255, 255, 255, 0.12); --accent: #3987e5; --viewport: #15171a; --terrain: #6f685e; --chip: #24262a;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.5; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 20px 48px; display: grid; gap: 18px; }
+header { display: grid; gap: 4px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 30px; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 0; letter-spacing: 0.01em; }
+.lede { color: var(--ink-2); max-width: 75ch; margin: 0; }
+.mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 14px 24px; align-items: flex-end; }
+.control { display: grid; gap: 4px; min-width: 0; }
+.control > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.seg button { font: inherit; font-size: 13px; color: var(--ink-2); background: var(--chip); border: 1px solid transparent; border-radius: 6px; padding: 5px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.seg button:hover { color: var(--ink); border-color: var(--line); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); border-color: var(--ink-2); font-weight: 500; }
+.seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+.seg button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; }
+.viewport { position: relative; background: var(--viewport); border-radius: 10px; overflow: hidden; min-height: 460px; aspect-ratio: 16 / 9; max-width: 100%; }
+.viewport canvas { display: block; width: 100%; height: 100%; }
+.viewport .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--ink-2); }
+.viewport .empty p { max-width: 42ch; margin: 0; }
+.overlay { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; background: color-mix(in srgb, var(--surface) 86%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--ink-2); }
+.overlay label { display: flex; align-items: center; gap: 8px; }
+.overlay input[type="range"] { width: 140px; accent-color: var(--accent); }
+.ramp { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.timeline { display: flex; align-items: center; gap: 10px; width: 100%; }
+.timeline input[type="range"] { flex: 1; width: auto; min-width: 0; }
+.timeline button { font: inherit; font-size: 12px; color: var(--ink); background: var(--chip); border: 1px solid var(--line); border-radius: 6px; padding: 3px 10px; cursor: pointer; min-width: 58px; }
+.timeline button:hover { border-color: var(--ink-2); }
+.timeline .num { min-width: 12ch; }
+.ramp i { display: block; width: 90px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, #cde2fb, #86b6ef, #3987e5, #1c5cab, #0d366b); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.loading { position: absolute; top: 12px; left: 12px; font-size: 12px; color: var(--ink-2); background: var(--surface); border-radius: 6px; padding: 3px 8px; border: 1px solid var(--line); }
+
+.facts { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.facts h2 { display: flex; align-items: center; gap: 8px; }
+.facts p { margin: 0; color: var(--ink-2); font-size: 13px; }
+dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+dt { color: var(--muted); font-size: 12.5px; }
+dd { margin: 0; text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+.charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px 10px; display: grid; gap: 6px; min-width: 0; }
+.card .sub { color: var(--muted); font-size: 12.5px; margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: block; width: 14px; height: 0; border-top: 2px solid; }
+.legend i.dash { border-top-style: dashed; }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; overflow: visible; }
+.chart text { fill: var(--muted); font-family: var(--mono); font-size: 10.5px; }
+.chart .axis-title { fill: var(--ink-2); font-family: var(--body); font-size: 11px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); min-width: 140px; z-index: 2; }
+.tip .row { display: flex; align-items: center; gap: 6px; }
+.tip .row b { font-family: var(--mono); font-weight: 500; margin-left: auto; padding-left: 12px; }
+.tip .head { color: var(--muted); font-family: var(--mono); margin-bottom: 2px; }
+
+.table-card { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 6px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+thead th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+td button { font: inherit; font-family: var(--mono); background: none; border: 0; color: var(--ink); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+td button:hover { background: var(--chip); }
+td.current button { outline: 1.5px solid var(--ink-2); }
+td .na { color: var(--muted); }
+.table-head { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; }
+
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--ink-2); }
+.notes li strong { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 960px) {
+  .stage, .charts, .notes { grid-template-columns: minmax(0, 1fr); }
+  .viewport { min-height: 320px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+
+<div class="wrap">
+  <header>
+    <h1>Stockpile Simulator Comparison</h1>
+    <p class="lede">Six ways to simulate stacking and reclaiming, run on the same bed: 60 m long, 20 m deep, built up to an ideal 10 m pile. Material quality rises linearly from 0 to 1 over the deposition time, so color shows the order in which material arrived. Reclaiming cuts at 45° from x = 0 towards x = 60 m in 1 m slices. The time slider shows the stockpile at any moment of the stacking.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Run selection">
+    <div class="control"><span id="l-pattern">Deposition</span><div class="seg" id="pattern" aria-labelledby="l-pattern"></div></div>
+    <div class="control"><span id="l-ends">Pile ends</span><div class="seg" id="ends" aria-labelledby="l-ends"></div></div>
+    <div class="control"><span id="l-resolution">Particle size</span><div class="seg" id="resolution" aria-labelledby="l-resolution"></div></div>
+    <div class="control"><span id="l-method">Method</span><div class="seg" id="method" aria-labelledby="l-method"></div></div>
+  </div>
+
+  <section class="stage">
+    <div class="viewport" id="viewport">
+      <canvas id="scene" aria-label="3D view of the simulated stockpile"></canvas>
+      <div class="empty" id="empty" hidden><p id="empty-text"></p></div>
+      <div class="loading" id="loading" hidden>Loading…</div>
+      <div class="overlay">
+        <div class="timeline">
+          <button type="button" id="play" aria-label="Play the stacking process">Play</button>
+          <label for="time" class="visually-hidden">Stacking time</label>
+          <input type="range" id="time" min="0" max="1000" step="1" value="1000" aria-label="Stacking time">
+          <span class="num" id="time-value">24.0 h</span>
+        </div>
+        <label for="reclaim">Reclaim face at x <input type="range" id="reclaim" min="-10" max="60" step="0.5" value="-10"><span class="num" id="reclaim-value">start</span></label>
+        <label for="cut">Cut at z <input type="range" id="cut" min="0" max="20" step="0.25" value="0"><span class="num" id="cut-value">none</span></label>
+        <span class="ramp" aria-hidden="true">quality 0 <i></i> 1</span>
+      </div>
+    </div>
+    <aside class="facts" aria-live="polite">
+      <h2 id="fact-title"><span class="swatch" id="fact-swatch"></span><span id="fact-name">–</span></h2>
+      <p id="fact-desc"></p>
+      <dl id="fact-list"></dl>
+      <p id="fact-note"></p>
+    </aside>
+  </section>
+
+  <section class="charts">
+    <div class="card">
+      <h2>Input: material quality</h2>
+      <p class="sub">Quality of the stacked material over the deposition time</p>
+      <div class="chart" id="c-input-q"></div>
+    </div>
+    <div class="card">
+      <h2>Input: stacker position</h2>
+      <p class="sub">Position x along the bed over the deposition time</p>
+      <div class="chart" id="c-input-x"></div>
+    </div>
+    <div class="card">
+      <h2>Output: reclaimed volume</h2>
+      <p class="sub">Volume per 1 m slice of the selected method against the ideal stockpile (chevron only)</p>
+      <div class="legend" id="lg-volume"></div>
+      <div class="chart" id="c-volume"></div>
+    </div>
+    <div class="card">
+      <h2>Output: reclaimed quality</h2>
+      <p class="sub">Volume-weighted quality per slice, every method at this particle size</p>
+      <div class="legend" id="lg-quality"></div>
+      <div class="chart" id="c-quality"></div>
+    </div>
+    <div class="card">
+      <h2>Cross section at x = 30 m</h2>
+      <p class="sub" id="cross-sub">Pile height across the bed at the selected stacking time</p>
+      <div class="legend" id="lg-cross"></div>
+      <div class="chart" id="c-cross"></div>
+    </div>
+    <div class="card">
+      <h2>Long section at z = 10 m</h2>
+      <p class="sub" id="long-sub">Ridge height along the bed at the selected stacking time</p>
+      <div class="legend" id="lg-long"></div>
+      <div class="chart" id="c-long"></div>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-head">
+      <h2 id="table-title">All runs</h2>
+      <div class="seg" id="metric" aria-label="Metric"></div>
+    </div>
+    <p class="sub" id="table-sub"></p>
+    <table id="table"></table>
+  </section>
+
+  <section class="notes" id="notes"></section>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const METHOD_ORDER = ['mathematical', 'smooth', 'fast', 'grid', 'hcp', 'detailed'];
+const RESOLUTION_LABELS = { low: '2 m', mid: '1 m', high: '0.5 m', 'very-high': '0.25 m' };
+const RAMP = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b'];
+const METRICS = {
+  F1: { label: 'F1 quality σ', fmt: v => v.toFixed(4), sub: 'F1: volume-weighted standard deviation of the reclaimed quality, lower is better blended.' },
+  F2: { label: 'F2 volume σ', fmt: v => v.toFixed(2), sub: 'F2: standard deviation of the slice volumes from the ideal stockpile in m³ (chevron patterns only).' },
+  angle: { label: 'Repose angle', fmt: v => v.toFixed(1) + '°', sub: 'Effective angle of repose, measured on the cone and shown for every deposition, fitted between 20 % and 80 % of the peak height.' },
+  ridge: { label: 'Ridge σ', fmt: v => v.toFixed(3) + ' m', sub: 'Ridge σ: standard deviation of the pile height along the core center line at the end of each layer, averaged over the layers. Zero means the ridge stays level like in an ideal stockpile.' },
+  runtime: { label: 'Runtime', fmt: v => v < 10 ? v.toFixed(2) + ' s' : v < 600 ? v.toFixed(0) + ' s' : (v / 60).toFixed(0) + ' min', sub: 'Wall-clock time of stacking and reclaiming, Python ports unoptimized, on one core of an i9-9900K.' },
+};
+
+const state = { base: 'chevron-5', ends: '', resolution: 'mid', method: 'hcp', metric: 'F1', index: null, time: 1 };
+const LAYERED = ['chevron-5', 'chevron-25', 'chevron-100', 'chevron-500'];
+const patternId = () => state.base + (LAYERED.includes(state.base) && state.ends ? '-' + state.ends : '');
+Object.defineProperty(state, 'pattern', { get: patternId });
+const cache = new Map();
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const methodColor = m => css('--s' + (METHOD_ORDER.indexOf(m) + 1));
+const $ = id => document.getElementById(id);
+
+function fetchJson(path) {
+  if (!cache.has(path)) cache.set(path, fetch(path).then(r => { if (!r.ok) throw new Error(path + ': ' + r.status); return r.json(); }));
+  return cache.get(path);
+}
+// Particles come as base64 text, since artifact hosts serve no binary files
+function fetchBin(path) {
+  if (!cache.has(path)) cache.set(path, fetch(path).then(r => { if (!r.ok) throw new Error(path + ': ' + r.status); return r.text(); }).then(text => {
+    const raw = atob(text.trim());
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    return bytes.buffer;
+  }));
+  return cache.get(path);
+}
+function findRun(pattern, resolution, method) {
+  return state.index.runs.find(r => r.pattern === pattern && r.method === method && (r.resolution === null || r.resolution === resolution));
+}
+function rampColor(q) {
+  const t = Math.min(1, Math.max(0, q)) * (RAMP.length - 1);
+  const i = Math.min(RAMP.length - 2, Math.floor(t));
+  return new THREE.Color(RAMP[i]).lerp(new THREE.Color(RAMP[i + 1]), t - i);
+}
+
+/* ---------- Controls ---------- */
+function segmented(el, items, current, onPick, extra) {
+  el.replaceChildren();
+  for (const [key, label] of items) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-pressed', String(key === current));
+    if (extra) extra(b, key);
+    b.append(document.createTextNode(label));
+    b.addEventListener('click', () => onPick(key));
+    el.append(b);
+  }
+}
+function renderControls() {
+  const idx = state.index;
+  segmented($('pattern'), Object.entries(idx.base_patterns), state.base, k => { state.base = k; update(); });
+  segmented($('ends'), Object.entries(idx.end_variants), state.ends, k => { state.ends = k; update(); }, b => {
+    if (!LAYERED.includes(state.base)) { b.disabled = true; b.title = 'Only for chevrons with several layers'; }
+  });
+  segmented($('resolution'), Object.keys(idx.resolutions).map(k => [k, RESOLUTION_LABELS[k] || k]), state.resolution, k => { state.resolution = k; update(); });
+  segmented($('method'), METHOD_ORDER.map(m => [m, shortName(m)]), state.method, k => { state.method = k; update(); }, (b, m) => {
+    const s = document.createElement('span'); s.className = 'swatch'; s.style.background = methodColor(m); b.append(s);
+    if (!findRun(state.pattern, state.resolution, m)) { b.disabled = true; b.title = 'Not run for this pattern and particle size'; }
+  });
+  segmented($('metric'), Object.entries(METRICS).map(([k, v]) => [k, v.label]), state.metric, k => { state.metric = k; renderTable(); renderControls(); });
+}
+function shortName(m) {
+  return { mathematical: 'Mathematical', smooth: 'Smooth', fast: 'Fast (C++)', grid: 'Grid (Python)', hcp: 'HCP lattice', detailed: 'Detailed' }[m];
+}
+
+/* ---------- 3D scene ---------- */
+const canvas = $('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+renderer.localClippingEnabled = true;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 16 / 9, 0.5, 500);
+camera.position.set(-14, 34, 52);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(30, 3, 10);
+controls.enableDamping = true;
+controls.update();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x666666, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(-30, 60, 40);
+scene.add(sun);
+
+const reclaimPlane = new THREE.Plane(new THREE.Vector3(1, -1, 0).normalize(), 10 / Math.SQRT2);
+const cutPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+const clipping = [reclaimPlane, cutPlane];
+
+const bedGroup = new THREE.Group();
+scene.add(bedGroup);
+let content = null;
+let faceMesh = null;
+
+function buildBed() {
+  bedGroup.clear();
+  const lineColor = new THREE.Color(css('--axis'));
+  const pts = [[0, 0], [60, 0], [60, 20], [0, 20], [0, 0]].map(([x, z]) => new THREE.Vector3(x, 0.01, z));
+  bedGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: lineColor })));
+  const ticks = [];
+  for (let x = 10; x < 60; x += 10) ticks.push(new THREE.Vector3(x, 0.01, 0), new THREE.Vector3(x, 0.01, 20));
+  bedGroup.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ticks), new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: 0.45 })));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 20), new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--viewport')).offsetHSL(0, 0, -0.03) }));
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.set(30, 0, 10);
+  bedGroup.add(ground);
+  // Reclaim face: a translucent 45° plane through the ground position of the slider
+  const face = new THREE.BufferGeometry().setFromPoints([[0, 0, 0], [0, 0, 20], [15, 15, 20], [0, 0, 0], [15, 15, 20], [15, 15, 0]].map(v => new THREE.Vector3(...v)));
+  faceMesh = new THREE.Mesh(face, new THREE.MeshBasicMaterial({ color: new THREE.Color(css('--accent')), transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false }));
+  bedGroup.add(faceMesh);
+  scene.background = new THREE.Color(css('--viewport'));
+  updateClipping();
+}
+
+function updateClipping() {
+  const p = Number($('reclaim').value);
+  const c = Number($('cut').value);
+  reclaimPlane.constant = -p / Math.SQRT2;
+  cutPlane.constant = -c;
+  $('reclaim-value').textContent = p <= -10 ? 'start' : p.toFixed(1) + ' m';
+  $('cut-value').textContent = c <= 0 ? 'none' : c.toFixed(2) + ' m';
+  if (faceMesh) {
+    faceMesh.visible = p > -10;
+    faceMesh.position.set(p, 0, 0);
+  }
+}
+$('reclaim').addEventListener('input', updateClipping);
+$('cut').addEventListener('input', updateClipping);
+
+function disposeContent() {
+  if (!content) return;
+  scene.remove(content);
+  content.traverse(o => { o.geometry?.dispose(); o.material?.dispose?.(); });
+  content = null;
+}
+
+function particleMesh(buffer, info) {
+  const n = info.count;
+  const pos = new Int16Array(buffer, 0, n * 3);
+  const qual = new Uint8Array(buffer, n * 6, n);
+  const size = info.size, height = info.height ?? info.size;
+  const geometry = info.shape === 'sphere' ? new THREE.IcosahedronGeometry(0.5, n > 150000 ? 0 : 1) : new THREE.BoxGeometry(0.96, 0.96, 0.96);
+  const material = new THREE.MeshLambertMaterial({ clippingPlanes: clipping, clipShadows: true });
+  const mesh = new THREE.InstancedMesh(geometry, material, n);
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const s = new THREE.Vector3(size, height, size);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    v.set(pos[3 * i] / 100, pos[3 * i + 1] / 100, pos[3 * i + 2] / 100);
+    m.compose(v, q, s);
+    mesh.setMatrixAt(i, m);
+    mesh.setColorAt(i, rampColor(qual[i] / 255));
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  return mesh;
+}
+
+// Models without geometry: every reclaim slice as a 45° ridge holding its volume, colored by its quality
+function sliceMesh(reclaim) {
+  const positions = [], colors = [];
+  const width = reclaim.x.length > 1 ? reclaim.x[1] - reclaim.x[0] : 1;
+  reclaim.x.forEach((xEnd, i) => {
+    const v = reclaim.volume[i];
+    if (v <= 0) return;
+    const h = Math.sqrt(v / width), x0 = xEnd - width, x1 = xEnd, zc = 10;
+    const tri = [[zc - h, 0], [zc, h], [zc + h, 0]];
+    const quad = (a, b) => [[x0, ...a], [x1, ...a], [x1, ...b], [x0, ...a], [x1, ...b], [x0, ...b]];
+    const faces = [...quad(tri[0], tri[1]), ...quad(tri[1], tri[2]), ...quad(tri[2], tri[0]),
+      [x0, ...tri[0]], [x0, ...tri[2]], [x0, ...tri[1]], [x1, ...tri[0]], [x1, ...tri[1]], [x1, ...tri[2]]];
+    const c = rampColor(reclaim.quality[i]);
+    for (const [x, z, y] of faces) { positions.push(x, y, z); colors.push(c.r, c.g, c.b); }
+  });
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals();
+  return new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ vertexColors: true, clippingPlanes: clipping, side: THREE.DoubleSide }));
+}
+
+function surfaceMesh(heightMap) {
+  const values = heightMap.values;
+  const nz = values.length, nx = values[0].length, cell = heightMap.cell;
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(nx * nz * 3);
+  for (let z = 0; z < nz; z++) for (let x = 0; x < nx; x++) {
+    const i = (z * nx + x) * 3;
+    positions[i] = (x + 0.5) * cell; positions[i + 1] = values[z][x]; positions[i + 2] = (z + 0.5) * cell;
+  }
+  const indices = [];
+  for (let z = 0; z < nz - 1; z++) for (let x = 0; x < nx - 1; x++) {
+    const a = z * nx + x, b = a + 1, c = a + nx, d = c + 1;
+    indices.push(a, c, b, b, c, d);
+  }
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ color: new THREE.Color(css('--terrain')), clippingPlanes: clipping, side: THREE.DoubleSide }));
+}
+
+// What the scene shows for the current run, updated by the time slider
+const view = { kind: null, data: null, frames: null, input: null };
+const stacker = new THREE.Group();
+scene.add(stacker);
+
+// Height map snapshots of the methods without particles, base64 int16 heights in cm inside the JSON
+function loadFrames(data) {
+  if (!data.snapshots?.frames) return null;
+  if (!data._frames) {
+    const raw = atob(data.snapshots.frames);
+    const bytes = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    data._frames = new Int16Array(bytes.buffer);
+  }
+  return data._frames;
+}
+
+function snapshotIndex(data, t) {
+  const times = data.snapshots.times;
+  let k = -1;
+  while (k + 1 < times.length && times[k + 1] <= t + 1e-6) k++;
+  return k;
+}
+
+// Height map at stacking time t: the final map at the end, otherwise the latest snapshot (empty bed before the first one)
+function heightMapAt(data, frames, t) {
+  const snap = data.snapshots;
+  if (!snap || !frames || t >= data.duration - 1e-6) return data.height_map;
+  const k = snapshotIndex(data, t);
+  const size = snap.nx * snap.nz, values = [];
+  for (let z = 0; z < snap.nz; z++) {
+    const row = new Array(snap.nx);
+    for (let x = 0; x < snap.nx; x++) row[x] = k < 0 ? 0 : frames[k * size + z * snap.nx + x] / 100;
+    values.push(row);
+  }
+  return { cell: snap.cell, values };
+}
+
+function slicesAt(data, t) {
+  const snap = data.slice_snapshots;
+  if (!snap || t >= data.duration - 1e-6) return data.reclaim;
+  let k = -1;
+  while (k + 1 < snap.times.length && snap.times[k + 1] <= t + 1e-6) k++;
+  if (k < 0) return { x: data.reclaim.x, volume: data.reclaim.x.map(() => 0), quality: data.reclaim.x.map(() => 0) };
+  return { x: data.reclaim.x, volume: snap.volume[k], quality: snap.quality[k] };
+}
+
+function interpolate(xs, ys, x) {
+  if (x <= xs[0]) return ys[0];
+  for (let i = 1; i < xs.length; i++) if (x <= xs[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (x - xs[i - 1]) / (xs[i] - xs[i - 1] || 1);
+  return ys[ys.length - 1];
+}
+
+function currentTime() {
+  return state.time * (view.data?.duration ?? 86400);
+}
+
+function applyTime() {
+  const t = currentTime();
+  const duration = view.data?.duration ?? 86400;
+  const layers = view.data?.snapshots?.layer_end_times ?? [];
+  const layer = layers.length ? Math.min(layers.length, layers.filter(e => e < t - 1e-6).length + 1) : 0;
+  $('time-value').textContent = `${(t / 3600).toFixed(1)} h` + (layers.length ? ` · layer ${layer}/${layers.length}` : '');
+  if (view.kind === 'particles' && content) {
+    content.count = Math.round(interpolate(view.data.particles.count_times, view.data.particles.counts, t));
+  } else if (view.kind === 'surface') {
+    replaceContent(surfaceMesh(heightMapAt(view.data, view.frames, t)));
+  } else if (view.kind === 'slices') {
+    replaceContent(sliceMesh(slicesAt(view.data, t)));
+  }
+  updateStacker(t < duration - 1e-6 ? t : null);
+}
+
+function replaceContent(mesh) {
+  disposeContent();
+  content = mesh;
+  scene.add(content);
+}
+
+function updateStacker(t) {
+  stacker.clear();
+  if (t === null || !view.input) return;
+  const x = interpolate(view.input.timestamp, view.input.x, t);
+  const color = new THREE.Color(css('--accent'));
+  stacker.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, 0, 10), new THREE.Vector3(x, 17, 10)]), new THREE.LineBasicMaterial({ color })));
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.6, 16), new THREE.MeshBasicMaterial({ color }));
+  head.position.set(x, 17.8, 10);
+  head.rotation.x = Math.PI;
+  stacker.add(head);
+}
+
+let renderToken = 0;
+async function renderScene(run, data) {
+  const token = ++renderToken;
+  disposeContent();
+  view.kind = null;
+  view.data = data;
+  view.frames = null;
+  view.input = await fetchJson(`runs/${state.pattern}/input.json`);
+  if (token !== renderToken) return;
+  $('empty').hidden = true;
+  if (!run) {
+    $('empty').hidden = false;
+    $('empty-text').textContent = state.method === 'detailed'
+      ? 'Not run: the detailed simulation takes minutes to hours per run and only ran for the cone and the 1 layer chevron with 1 m particles.'
+      : 'This run is not available.';
+    return;
+  }
+  if (!data.height_map) {
+    view.kind = 'slices';
+  } else if (data.particles) {
+    $('loading').hidden = false;
+    const buffer = await fetchBin(run.path.replace(/[^/]+\.json$/, data.particles.file));
+    if (token !== renderToken) return;
+    content = particleMesh(buffer, data.particles);
+    scene.add(content);
+    view.kind = 'particles';
+    $('loading').hidden = true;
+  } else {
+    view.frames = loadFrames(data);
+    view.kind = 'surface';
+  }
+  applyTime();
+}
+
+let playing = null;
+function setTime(fraction) {
+  state.time = Math.min(1, Math.max(0, fraction));
+  $('time').value = Math.round(state.time * 1000);
+  applyTime();
+  scheduleSectionCharts();
+}
+$('time').addEventListener('input', () => { stopPlaying(); setTime(Number($('time').value) / 1000); });
+function stopPlaying() {
+  if (playing) cancelAnimationFrame(playing);
+  playing = null;
+  $('play').textContent = 'Play';
+}
+$('play').addEventListener('click', () => {
+  if (playing) { stopPlaying(); return; }
+  if (state.time >= 1) setTime(0);
+  $('play').textContent = 'Pause';
+  let last = performance.now();
+  const step = now => {
+    // The whole stacking process plays in 20 seconds
+    setTime(state.time + (now - last) / 20000);
+    last = now;
+    if (state.time >= 1) { stopPlaying(); return; }
+    playing = requestAnimationFrame(step);
+  };
+  playing = requestAnimationFrame(step);
+});
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) {
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+}
+renderer.setAnimationLoop(() => { resize(); controls.update(); renderer.render(scene, camera); });
+
+/* ---------- Charts ---------- */
+function niceTicks(min, max, count) {
+  const span = max - min || 1;
+  const step0 = span / count, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1, 2, 2.5, 5, 10].map(f => f * mag).find(s => span / s <= count) || 10 * mag;
+  const ticks = [];
+  for (let t = Math.ceil(min / step - 1e-9) * step; t <= max + 1e-9; t += step) ticks.push(+t.toFixed(10));
+  return ticks;
+}
+const fmtNum = v => Math.abs(v) >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.abs(v) >= 10 ? v.toFixed(0) : Math.abs(v) >= 1 ? v.toFixed(1) : v.toFixed(2);
+
+function lineChart(el, { series, xLabel, yLabel, height = 220, yMin = 0, yMax = null, xFmt = fmtNum, yFmt = fmtNum, unitX = '', unitY = '', marker = null }) {
+  el.replaceChildren();
+  const width = Math.max(260, el.clientWidth);
+  const m = { l: 46, r: 10, t: 22, b: 34 };
+  const xs = series.flatMap(s => s.x), ys = series.flatMap(s => s.y.filter(v => v !== null && Number.isFinite(v)));
+  if (!xs.length || !ys.length) { el.textContent = 'No data'; return; }
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(yMin, ...ys), y1 = yMax ?? (Math.max(...ys) * 1.06 || 1);
+  const X = v => m.l + (v - x0) / (x1 - x0 || 1) * (width - m.l - m.r);
+  const Y = v => height - m.b - (v - y0) / (y1 - y0 || 1) * (height - m.t - m.b);
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('height', height);
+  const add = (tag, attrs, parent = svg) => { const e = document.createElementNS(ns, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.append(e); return e; };
+  for (const t of niceTicks(y0, y1, 4)) {
+    add('line', { x1: m.l, x2: width - m.r, y1: Y(t), y2: Y(t), stroke: css('--grid'), 'stroke-width': 1 });
+    add('text', { x: m.l - 6, y: Y(t) + 3.5, 'text-anchor': 'end' }).textContent = yFmt(t);
+  }
+  add('line', { x1: m.l, x2: width - m.r, y1: Y(y0), y2: Y(y0), stroke: css('--axis'), 'stroke-width': 1 });
+  for (const t of niceTicks(x0, x1, Math.max(3, Math.floor(width / 90)))) {
+    add('text', { x: X(t), y: height - m.b + 15, 'text-anchor': 'middle' }).textContent = xFmt(t);
+  }
+  add('text', { x: width - m.r, y: height - 4, 'text-anchor': 'end', class: 'axis-title' }).textContent = xLabel;
+  add('text', { x: 0, y: 11, class: 'axis-title', 'text-anchor': 'start' }).textContent = yLabel;
+  const ordered = [...series].sort((a, b) => (a.emph ? 1 : 0) - (b.emph ? 1 : 0));
+  for (const s of ordered) {
+    let d = '', pen = false;
+    s.x.forEach((xv, i) => { const yv = s.y[i]; if (yv === null || !Number.isFinite(yv)) { pen = false; return; } d += (pen ? 'L' : 'M') + X(xv).toFixed(1) + ' ' + Y(yv).toFixed(1); pen = true; });
+    add('path', { d, fill: 'none', stroke: s.color, 'stroke-width': s.emph ? 2.4 : 1.5, 'stroke-dasharray': s.dash ? '5 4' : 'none', 'stroke-linejoin': 'round', opacity: s.faded ? 0.55 : 1 });
+    // A value without neighbors draws no line, mark it with a dot
+    s.x.forEach((xv, i) => {
+      const ok = k => k >= 0 && k < s.y.length && s.y[k] !== null && Number.isFinite(s.y[k]);
+      if (ok(i) && !ok(i - 1) && !ok(i + 1)) add('circle', { cx: X(xv), cy: Y(s.y[i]), r: s.emph ? 4 : 3, fill: s.color, opacity: s.faded ? 0.55 : 1 });
+    });
+  }
+  if (marker !== null) add('line', { x1: X(marker), x2: X(marker), y1: m.t, y2: height - m.b, stroke: css('--accent'), 'stroke-width': 1.5, 'stroke-dasharray': '3 3' });
+  const cross = add('line', { y1: m.t, y2: height - m.b, stroke: css('--ink-2'), 'stroke-width': 1, visibility: 'hidden' });
+  const dots = series.map(s => add('circle', { r: 4, fill: s.color, stroke: css('--surface'), 'stroke-width': 2, visibility: 'hidden' }));
+  const hit = add('rect', { x: m.l, y: m.t, width: width - m.l - m.r, height: height - m.t - m.b, fill: 'transparent' });
+  el.append(svg);
+  const tip = document.createElement('div');
+  tip.className = 'tip'; tip.hidden = true;
+  el.append(tip);
+  const nearest = (arr, v) => { let lo = 0, hi = arr.length - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (arr[mid] < v) lo = mid; else hi = mid; } return Math.abs(arr[lo] - v) <= Math.abs(arr[hi] - v) ? lo : hi; };
+  const move = ev => {
+    const rect = svg.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * width / rect.width;
+    const xv = x0 + (px - m.l) / (width - m.l - m.r) * (x1 - x0);
+    tip.replaceChildren();
+    const head = document.createElement('div'); head.className = 'head'; head.textContent = `${xLabel.split(' ')[0]} ${xFmt(xv)}${unitX}`; tip.append(head);
+    let snapX = null;
+    series.forEach((s, k) => {
+      const i = nearest(s.x, xv); const yv = s.y[i];
+      if (yv === null || !Number.isFinite(yv)) { dots[k].setAttribute('visibility', 'hidden'); return; }
+      snapX ??= s.x[i];
+      dots[k].setAttribute('cx', X(s.x[i])); dots[k].setAttribute('cy', Y(yv)); dots[k].setAttribute('visibility', 'visible');
+      const row = document.createElement('div'); row.className = 'row';
+      const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = s.color;
+      const b = document.createElement('b'); b.textContent = yFmt(yv) + unitY;
+      row.append(sw, document.createTextNode(s.name), b); tip.append(row);
+    });
+    if (snapX !== null) { cross.setAttribute('x1', X(snapX)); cross.setAttribute('x2', X(snapX)); cross.setAttribute('visibility', 'visible'); }
+    tip.hidden = false;
+    const left = (X(snapX ?? xv) / width) * rect.width;
+    tip.style.top = '8px';
+    tip.style.left = (left > rect.width / 2 ? left - tip.offsetWidth - 12 : left + 12) + 'px';
+  };
+  hit.addEventListener('pointermove', move);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dots.forEach(d => d.setAttribute('visibility', 'hidden')); });
+}
+
+function legend(el, series) {
+  el.replaceChildren();
+  if (series.length < 2) return;
+  for (const s of series) {
+    const span = document.createElement('span');
+    const i = document.createElement('i'); i.style.borderTopColor = s.color; if (s.dash) i.className = 'dash';
+    span.append(i, document.createTextNode(s.name));
+    el.append(span);
+  }
+}
+
+function profile(heightMap, axis) {
+  const v = heightMap.values, cell = heightMap.cell, nz = v.length, nx = v[0].length;
+  if (axis === 'cross') {
+    const xi = Math.min(nx - 1, Math.floor(30 / cell));
+    return { x: v.map((_, z) => (z + 0.5) * cell), y: v.map(row => row[xi]) };
+  }
+  const zi = Math.min(nz - 1, Math.floor(10 / cell));
+  return { x: v[zi].map((_, x) => (x + 0.5) * cell), y: v[zi] };
+}
+
+async function renderInputCharts() {
+  const input = await fetchJson(`runs/${state.pattern}/input.json`);
+  const hours = input.timestamp.map(t => t / 3600);
+  const marker = state.time < 1 ? currentTime() / 3600 : null;
+  lineChart($('c-input-q'), { series: [{ name: 'Quality', color: css('--s1'), x: hours, y: input.quality }], xLabel: 'time in h', yLabel: 'quality', xFmt: v => v.toFixed(0), marker });
+  lineChart($('c-input-x'), { series: [{ name: 'Stacker x', color: css('--s1'), x: hours, y: input.x }], xLabel: 'time in h', yLabel: 'x in m', xFmt: v => v.toFixed(0), unitY: ' m', marker });
+}
+
+// Section of the finished pile, or the stored section of the latest snapshot (empty bed before the first one)
+function sectionAt(data, axis, t) {
+  const snap = data.snapshots;
+  if (!snap || t >= data.duration - 1e-6) return profile(data.height_map, axis);
+  const k = snapshotIndex(data, t);
+  const n = axis === 'cross' ? snap.nz : snap.nx;
+  return { x: Array.from({ length: n }, (_, i) => (i + 0.5) * snap.cell), y: k < 0 ? new Array(n).fill(0) : snap[axis][k] };
+}
+
+async function renderSectionCharts(others) {
+  const t = currentTime();
+  for (const axis of ['cross', 'long']) {
+    const s = [];
+    let top = 0;
+    for (const [m, d] of others) {
+      if (!d.height_map) continue;
+      s.push({ name: shortName(m), color: methodColor(m), ...sectionAt(d, axis, t), emph: m === state.method, faded: m !== state.method });
+      top = Math.max(top, ...profile(d.height_map, axis).y);
+    }
+    legend($('lg-' + axis), s);
+    // Fixed height scale while the time changes
+    lineChart($('c-' + axis), { series: s, xLabel: axis === 'cross' ? 'z in m' : 'x in m', yLabel: 'height in m', unitY: ' m', yFmt: v => v.toFixed(1), yMax: top * 1.06 || 1 });
+  }
+  const when = state.time < 1 ? `after ${(t / 3600).toFixed(1)} h of stacking` : 'at the end of stacking';
+  $('cross-sub').textContent = `Pile height across the bed ${when}`;
+  $('long-sub').textContent = `Ridge height along the bed ${when}`;
+}
+
+let sectionTimer = null;
+function scheduleSectionCharts() {
+  if (sectionTimer) return;
+  sectionTimer = setTimeout(() => {
+    sectionTimer = null;
+    if (lastCharts) { renderSectionCharts(lastCharts[1]); renderInputCharts(); }
+  }, 120);
+}
+
+async function renderCharts(data, others) {
+  await renderInputCharts();
+
+  const volumeSeries = [];
+  if (data) volumeSeries.push({ name: shortName(state.method), color: methodColor(state.method), x: data.reclaim.x, y: data.reclaim.volume, emph: true });
+  if (data?.ideal_volume) volumeSeries.push({ name: 'Ideal stockpile', color: css('--ink-2'), x: data.reclaim.x, y: data.ideal_volume, dash: true });
+  legend($('lg-volume'), volumeSeries);
+  lineChart($('c-volume'), { series: volumeSeries, xLabel: 'x in m', yLabel: 'volume in m³', unitY: ' m³' });
+
+  const qualitySeries = others.map(([m, d]) => ({ name: shortName(m), color: methodColor(m), x: d.reclaim.x, y: d.reclaim.quality.map((q, i) => d.reclaim.volume[i] > 0 ? q : null), emph: m === state.method, faded: m !== state.method }));
+  legend($('lg-quality'), qualitySeries);
+  lineChart($('c-quality'), { series: qualitySeries, xLabel: 'x in m', yLabel: 'quality', yFmt: v => v.toFixed(2) });
+
+  await renderSectionCharts(others);
+}
+
+/* ---------- Facts and table ---------- */
+function renderFacts(run, data) {
+  $('fact-swatch').style.background = methodColor(state.method);
+  $('fact-name').textContent = shortName(state.method);
+  $('fact-desc').textContent = state.index.methods[state.method];
+  const list = $('fact-list');
+  list.replaceChildren();
+  const rows = [];
+  if (run) {
+    const p = run.particles, mt = run.metrics;
+    rows.push(['Runtime', METRICS.runtime.fmt(run.runtime)]);
+    if (p) rows.push(['Particles', p.count.toLocaleString('en')], [p.shape === 'sphere' ? 'Sphere diameter' : 'Box edge', p.size.toFixed(3) + ' m']);
+    if (data?.ppm3) rows.push(['Particles per m³', String(data.ppm3)]);
+    rows.push(['Reclaimed volume', mt.volume.toFixed(1) + ' m³'], ['F1 quality σ', mt.F1.toFixed(4)]);
+    if (mt.F2 !== null) rows.push(['F2 volume σ', mt.F2.toFixed(2) + ' m³']);
+    if (mt.angle !== null) rows.push(['Repose angle', mt.angle.toFixed(1) + '°']);
+    if (mt.ridge !== null && mt.ridge !== undefined) rows.push(['Ridge σ', mt.ridge.toFixed(3) + ' m']);
+    if (p && p.lost) rows.push(['Particles lost', String(p.lost)]);
+  }
+  for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; list.append(dt, dd); }
+  const notes = {
+    mathematical: 'Bins each increment into the slice under the stacker. It has no stockpile geometry: the 3D view draws each reclaim slice as a 45° ridge holding its volume. Independent of particle size.',
+    smooth: 'Spreads each increment along x with a Gaussian of σ = 5 m, then reclaims vertically. No stockpile geometry: the 3D view draws each slice as a 45° ridge. Independent of particle size.',
+    fast: 'The production simulator through the Python library. Shows only the surface: the library does not export particles.',
+    grid: 'The algorithm of Fast ported to Python to export every particle. Same rules, different random numbers, so its curves match Fast statistically.',
+    hcp: 'Close-packed spheroids stacked ABAB. A particle rests only when all three sites below it are filled; the lattice is compressed vertically so that cones reach 45°.',
+    detailed: 'Bullet rigid-body cubes thrown from the stacker belt. The surface is the top of the frozen particle centers.',
+  };
+  $('fact-note').textContent = notes[state.method];
+}
+
+function renderTable() {
+  const idx = state.index, metric = METRICS[state.metric];
+  // The angle of repose is measured on the cone, whatever deposition is selected
+  const pattern = state.metric === 'angle' ? 'cone' : state.pattern;
+  $('table-title').textContent = `All runs: ${idx.patterns[pattern]}`;
+  $('table-sub').textContent = metric.sub + ' Select a value to show that run.';
+  const table = $('table');
+  table.replaceChildren();
+  const head = table.createTHead().insertRow();
+  const th0 = document.createElement('th'); th0.textContent = 'Method'; head.append(th0);
+  for (const r of Object.keys(idx.resolutions)) { const th = document.createElement('th'); th.textContent = RESOLUTION_LABELS[r]; head.append(th); }
+  const body = table.createTBody();
+  for (const m of METHOD_ORDER) {
+    const tr = body.insertRow();
+    const td0 = tr.insertCell(); const sw = document.createElement('span'); sw.className = 'swatch'; sw.style.background = methodColor(m); sw.style.display = 'inline-block'; sw.style.marginRight = '8px';
+    td0.append(sw, document.createTextNode(shortName(m)));
+    for (const r of Object.keys(idx.resolutions)) {
+      const td = tr.insertCell();
+      const run = findRun(pattern, r, m);
+      const key = state.metric === 'runtime' ? run?.runtime : run?.metrics[state.metric];
+      if (run && key !== null && key !== undefined) {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = metric.fmt(key);
+        b.addEventListener('click', () => { if (pattern === 'cone') state.base = 'cone'; state.method = m; state.resolution = r; update(); });
+        td.append(b);
+        if (m === state.method && r === state.resolution && pattern === state.pattern) td.className = 'current';
+      } else {
+        const s = document.createElement('span'); s.className = 'na'; s.textContent = run ? 'n/a' : (state.index.status?.[`${pattern}/${r}/${m}`]?.state || 'not run'); td.append(s);
+      }
+    }
+  }
+}
+
+async function renderNotes() {
+  const el = $('notes');
+  el.replaceChildren();
+  const notes = await fetchJson('notes.json').catch(() => []);
+  for (const block of notes) {
+    const card = document.createElement('div'); card.className = 'card';
+    const h = document.createElement('h2'); h.textContent = block.title; card.append(h);
+    const ul = document.createElement('ul');
+    for (const item of block.items) {
+      const li = document.createElement('li');
+      if (item.lead) { const s = document.createElement('strong'); s.textContent = item.lead + ' '; li.append(s); }
+      li.append(document.createTextNode(item.text)); ul.append(li);
+    }
+    card.append(ul); el.append(card);
+  }
+}
+
+/* ---------- Update ---------- */
+let lastCharts = null;
+async function update() {
+  renderControls();
+  renderTable();
+  const run = findRun(state.pattern, state.resolution, state.method);
+  const data = run ? await fetchJson(run.path) : null;
+  renderFacts(run, data);
+  renderScene(run, data);
+  const others = [];
+  for (const m of METHOD_ORDER) {
+    const r = findRun(state.pattern, state.resolution, m);
+    if (r) others.push([m, await fetchJson(r.path)]);
+  }
+  lastCharts = [data, others];
+  await renderCharts(data, others);
+}
+
+let resizeTimer;
+new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => lastCharts && renderCharts(...lastCharts), 150); }).observe(document.querySelector('.charts'));
+const retheme = () => { if (!state.index) return; buildBed(); update(); };
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+fetchJson('index.json').then(index => {
+  state.index = index;
+  buildBed();
+  renderNotes();
+  update();
+}).catch(err => {
+  $('empty').hidden = false;
+  $('empty-text').textContent = 'The comparison data could not be loaded: ' + err.message;
+});
+</script>
