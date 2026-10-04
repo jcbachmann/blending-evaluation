@@ -15,7 +15,7 @@ from datetime import UTC, datetime
 import numpy as np
 
 from bmh_ml.datasets.simulate import simulate
-from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, TOTAL_VOLUME, X_MAX, X_MIN
+from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, TOTAL_VOLUME, X_MAX, X_MIN, SimulatorSettings, get_simulator_settings
 from bmh_ml.tracking.environment import get_code_version
 from bmh_ml.tracking.store import get_subdirectory
 
@@ -30,6 +30,9 @@ def chevron_deposition() -> np.ndarray:
 def get_reference_key(material: np.ndarray, repeats: int) -> str:
     digest = hashlib.sha256(np.ascontiguousarray(material, dtype=np.float64).tobytes())
     digest.update(json.dumps([BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME, DEPOSITION_LENGTH, X_MIN, X_MAX, repeats]).encode())
+    simulator = get_simulator_settings()
+    if simulator != SimulatorSettings():  # references cached before detail levels existed keep their keys
+        digest.update(json.dumps(simulator.as_dict(), sort_keys=True).encode())
     return digest.hexdigest()[:16]
 
 
@@ -47,7 +50,7 @@ def get_chevron_objectives(material: np.ndarray, repeats: int = CHEVRON_REPEATS,
         "repeats": repeats,
         "deposition": chevron_deposition()[0].tolist(),
         "material": material[0].tolist(),
-        "settings": {"bed_size_x": BED_SIZE_X, "bed_size_z": BED_SIZE_Z, "total_volume": TOTAL_VOLUME},
+        "settings": {"bed_size_x": BED_SIZE_X, "bed_size_z": BED_SIZE_Z, "total_volume": TOTAL_VOLUME, "simulator": get_simulator_settings().as_dict()},
         "code_version": get_code_version(),
         "created": datetime.now(UTC).isoformat(timespec="seconds"),
     }

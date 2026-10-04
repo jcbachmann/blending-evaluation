@@ -14,9 +14,9 @@ from bmh_ml.datasets.generators import (
 )
 from bmh_ml.datasets.manifest import SCOPE_FIXED_MATERIAL, SCOPE_GENERAL_MATERIAL, SCOPES
 from bmh_ml.datasets.simulate import build_dataset
-from bmh_ml.datasets.store import Bundle, bundle_exists, get_evaluation_sets, load_bundle, load_dataset, save_bundle, save_dataset
+from bmh_ml.datasets.store import Bundle, bundle_exists, get_bundle_simulator, get_evaluation_sets, load_bundle, load_dataset, save_bundle, save_dataset
 from bmh_ml.evaluation.noise import format_noise_table, get_noise_summary
-from bmh_ml.settings import DEPOSITION_LENGTH, TRAINING_DATA_FILE
+from bmh_ml.settings import DEPOSITION_LENGTH, TRAINING_DATA_FILE, SimulatorSettings, use_simulator_settings
 
 
 def get_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -46,6 +46,9 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--tests-from", help="Use the validation and test sets of this bundle (same scope) and only generate new training data")
     parser.add_argument("--new-val", action="store_true", help="With --tests-from: generate a new validation set, keep only the test sets")
     parser.add_argument("--profiles", action="store_true", help="Store the reclaimed profiles of the training and validation data (for profile models)")
+    parser.add_argument("--ppm3", type=float, default=1.0, help="Detail level of the simulator: particles per cubic meter (reclaim step fixed at 1 m)")
+    parser.add_argument("--cross-from", help="Also label the inputs of test sets of this bundle at this bundle's level, as test sets <set>x")
+    parser.add_argument("--cross-sets", nargs="+", default=["T6"], help="The test sets of --cross-from to label again (default: T6)")
     return parser.parse_args(argv)
 
 
@@ -63,6 +66,8 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
     rngs = {name: np.random.default_rng(seed) for name, seed in zip(names, seeds, strict=True)}
     scope = args.scope
     settings = {"scope": scope}
+    simulator = SimulatorSettings(ppm3=args.ppm3)
+    use_simulator_settings(simulator)  # every dataset of the bundle, the T6 fronts included, is simulated at this level
 
     fixed_material, material_source = None, {}
     needs_material = scope == SCOPE_FIXED_MATERIAL or args.fronts or args.surrogate_fronts
@@ -97,13 +102,30 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
         other = load_bundle(args.tests_from)
         if other.scope != scope:
             raise ValueError(f"Bundle {other.name} has scope {other.scope}, not {scope}")
+        if get_bundle_simulator(other) != simulator:
+            raise ValueError(f"The test sets of {other.name} were labeled with other simulator settings; use --cross-from to label them again")
         val = build_val() if args.new_val else other.val
-        return finish(args, Bundle(args.name, scope, train, val, other.tests, {"tests_from": other.name}, val_extra=other.val_extra))
+        tests = {**other.tests, **build_cross_sets(args, build)}
+        return finish(args, Bundle(args.name, scope, train, val, tests, {"tests_from": other.name}, val_extra=other.val_extra))
 
     val = build_val()
 
-    tests = build_tests(args, scope, rngs, fixed_material, build)
+    tests = {**build_tests(args, scope, rngs, fixed_material, build), **build_cross_sets(args, build)}
     return finish(args, Bundle(args.name, scope, train, val, tests))
+
+
+def build_cross_sets(args: argparse.Namespace, build) -> dict[str, str]:
+    """The inputs of test sets of another bundle, labeled at this bundle's level (`<set>x`): the same solutions at two detail levels, e.g.
+    the fronts optimized at one level evaluated at another."""
+    if not args.cross_from:
+        return {}
+    other = load_bundle(args.cross_from)
+    sets = {}
+    for name in args.cross_sets:
+        dataset = load_dataset(other.tests[name])
+        source = {"cross_from": other.name, "set": name, "dataset": other.tests[name], "simulator": get_bundle_simulator(other).as_dict()}
+        sets[f"{name}x"] = build(f"{name}x", f"{dataset.generator}-cross", dataset.material, dataset.deposition, args.test_repeats, source)
+    return sets
 
 
 def build_tests(args: argparse.Namespace, scope: str, rngs: dict, fixed_material: np.ndarray | None, build) -> dict[str, str]:

@@ -10,7 +10,7 @@ import numpy as np
 import yaml
 
 from bmh_ml.datasets.manifest import Dataset
-from bmh_ml.datasets.store import Bundle, get_evaluation_sets, load_bundle, load_dataset, load_training_dataset
+from bmh_ml.datasets.store import Bundle, get_evaluation_sets, load_bundle, load_dataset, load_training_dataset, use_bundle_simulator
 from bmh_ml.evaluation.evaluate import SetResult, evaluate_datasets, measure_throughput
 from bmh_ml.evaluation.plots import close_figure, plot_predictions
 from bmh_ml.evaluation.transfer import TransferConfig, log_transfer, run_transfer_test
@@ -74,6 +74,7 @@ def run_training(
     run was made, it goes into the run's description (see `tracking.annotate`).
     """
     bundle = load_bundle(bundle_name)
+    simulator = use_bundle_simulator(bundle)  # the transfer test simulates at the level the bundle was labeled at
     train, evaluation = load_bundle_datasets(bundle)
     validation = evaluation[VALIDATION]
     x_train, x_val = train.features(bundle.scope), validation.features(bundle.scope)
@@ -97,6 +98,7 @@ def run_training(
                 **({"train_extra_datasets": ",".join(bundle.train_extra)} if bundle.train_extra else {}),
                 **{f"{name}_dataset": dataset_id for name, dataset_id in get_evaluation_sets(bundle).items()},
                 "train_repeats": train.repeats,
+                "simulator_ppm3": simulator.ppm3,
             }
         )
         code_version = get_code_version()

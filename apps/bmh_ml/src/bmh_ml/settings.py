@@ -1,7 +1,10 @@
 """Settings shared by all scripts, they must match the parameters the training data was generated with (see the defaults of generate_training_data)."""
 
 import argparse
+import json
+import os
 import re
+from dataclasses import asdict, dataclass
 
 MATERIAL_LENGTH: int = 50  # Length of material variables array
 DEPOSITION_LENGTH: int = 20  # Length of deposition variables array
@@ -15,6 +18,38 @@ MATERIAL_MAX: int = 10
 # Deposition positions are limited to the core of the stockpile
 X_MIN: float = 0.5 * BED_SIZE_Z
 X_MAX: float = BED_SIZE_X - X_MIN
+
+
+SIMULATOR_ENVIRONMENT_VARIABLE = "BMH_ML_SIMULATOR"
+
+
+@dataclass(frozen=True)
+class SimulatorSettings:
+    """The detail level of the simulator. `ppm3` is the number of particles per cubic meter; the reclaim step is fixed at 1 m, so every
+    level reclaims the same 60 slices (the simulator's own default step, 1/sqrt(ppm3), would make the slices thinner and F2 smaller just
+    by their width). The defaults are the settings of all data before 2026-10-04."""
+
+    ppm3: float = 1.0
+    reclaim_increment: float = 1.0
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, values: dict | None) -> "SimulatorSettings":
+        return cls(**(values or {}))
+
+
+def get_simulator_settings() -> SimulatorSettings:
+    """The settings every simulation of this process uses: those activated with `use_simulator_settings`, else the defaults."""
+    value = os.environ.get(SIMULATOR_ENVIRONMENT_VARIABLE)
+    return SimulatorSettings.from_dict(json.loads(value)) if value else SimulatorSettings()
+
+
+def use_simulator_settings(settings: SimulatorSettings) -> None:
+    """Activates the settings for this process and the processes it starts afterwards (they inherit the environment)."""
+    os.environ[SIMULATOR_ENVIRONMENT_VARIABLE] = json.dumps(settings.as_dict())
+
 
 # All scripts read and write relative to the working directory
 DATA_DIR = "data"
