@@ -46,6 +46,7 @@ def recompute_transfer(run_id: str, with_plots: bool = True) -> dict[str, float]
     mlflow = configure_mlflow()
     run = mlflow.get_run(run_id)
     bundle = load_bundle(run.data.params["bundle"])
+    use_bundle_simulator(bundle)  # Chevron at the level of the test
     reference_dataset = load_dataset(bundle.tests[run.data.params.get("transfer.reference_set", "T2")])
     with tempfile.TemporaryDirectory() as directory:
         path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path="transfer/solutions.npz", dst_path=directory)

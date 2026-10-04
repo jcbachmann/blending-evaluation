@@ -50,6 +50,24 @@ def test_the_reference_front_scores_one_and_worse_or_better_fronts_are_told_apar
     assert get_front_metrics(REFERENCE * 10, REFERENCE)["hv_ratio"] == 0  # beyond the reference point
 
 
+def test_the_share_of_the_improvement_over_chevron_does_not_depend_on_the_span_of_the_reference_front():
+    pytest.importorskip("pymoo")
+    from bmh_ml.evaluation.transfer import get_transfer_metrics
+
+    chevron = np.array([1.0, 1.0])
+    reference = np.array([[0.5, 0.9], [0.52, 0.5]])  # spans only 0.02 in F1, as several real reference fronts do
+    slightly_worse = reference + np.array([0.03, 0.0])
+    seeds = np.array([1, 2])
+
+    own = get_transfer_metrics(seeds, reference, reference, reference, chevron)
+    worse = get_transfer_metrics(seeds, slightly_worse, slightly_worse, reference, chevron)
+
+    assert own["chevron_hv_ratio"] == pytest.approx(1.0)
+    assert worse["hv_ratio"] == 0.0  # normalized to the narrow front, 0.03 worse in F1 is outside the counted box
+    assert worse["chevron_hv_ratio"] == pytest.approx(0.227 / 0.242, rel=1e-3)  # but it reaches 94 % of the improvement over Chevron
+    assert worse["chevron_hv_ratio_run_min"] <= worse["chevron_hv_ratio_run_mean"]
+
+
 def test_the_reference_front_is_the_non_dominated_part_of_the_reference_set():
     assert np.array_equal(get_reference_front(make_reference_dataset()), REFERENCE)
 
@@ -89,7 +107,7 @@ def test_the_transfer_test_optimizes_the_model_and_simulates_what_it_finds():
     assert result.chevron is not None
     assert result.metrics["chevron_F1"] == result.chevron[0]
     names = ("hv_ratio", "hv_ratio_run_mean", "igd_plus", "predicted_hv_ratio", "negative_rate", "F1/bias", "F2/rmse", "optimize_seconds")
-    for name in (*names, "chevron_hv", "chevron_beaten_rate", "chevron_best_F2", "reference_chevron_hv", "chevron_hv_run_mean"):
+    for name in (*names, "chevron_hv", "chevron_beaten_rate", "chevron_best_F2", "reference_chevron_hv", "chevron_hv_run_mean", "chevron_hv_ratio"):
         assert np.isfinite(result.metrics[name]), name
     assert result.metrics["solutions"] == len(result.deposition)
 
