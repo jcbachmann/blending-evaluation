@@ -34,6 +34,7 @@ target_link_libraries(
     _blending_simulator_lib PRIVATE
     BlendingSimulator::Lib
     BlendingSimulator::FastLib
+    BlendingSimulator::LatticeLib
     pybind11::pybind11
 )
 
