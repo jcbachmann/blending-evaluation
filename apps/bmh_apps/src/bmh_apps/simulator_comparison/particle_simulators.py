@@ -1,20 +1,16 @@
 """
-Particle based stockpile simulators for comparing simulation methods.
+Python reference implementation of the lattice simulator.
 
-Pure Python ports that keep every particle for visualization, deliberately unoptimized and close to their originals:
+LatticeSimulator ports the hexsim proof of concept (Code/hexsim/sim.py) close to its original and unoptimized: particles on a hexagonal
+close-packed (hcp) lattice come to rest when all three lattice sites below them are filled, the lattice is compressed vertically to reach
+a given angle of repose. BlendingSimulatorLatticeLib of BlendingSimulator implements the same rules in C++ and is tested against it.
 
-- GridSimulator: the fast simulator of BlendingSimulator (BlendingSimulatorFast.impl.h), particles on a square height grid that fall to
-  a lower one of 4 or 8 neighbors.
-- LatticeSimulator: the hexsim proof of concept (Code/hexsim/sim.py), particles on a hexagonal close-packed (hcp) lattice that come to
-  rest when all three lattice sites below them are filled, compressed vertically to reach a given angle of repose.
-
-Both implement the BlendingSimulator interface of bmh. Reclaiming follows the C++ library: a particle whose base is at height y above
+It implements the BlendingSimulator interface of bmh. Reclaiming follows the C++ library: a particle whose base is at height y above
 ground position x is reclaimed at position x - y / tan(reclaim angle), positions are clamped to the bed. Its volume is spread over its
 size along the reclaim position, as the C++ library spreads its slices of particle size over finer reclaim increments.
 """
 
 import math
-import random
 from collections.abc import Iterator
 
 import numpy as np
@@ -119,56 +115,6 @@ class ParticleSimulator(BlendingSimulator):
         qualities = np.divide(sums, volumes[:, None], out=np.zeros_like(sums), where=volumes[:, None] > 0)
         # Like the C++ library, each slice is reported at the reclaimer position after reclaiming it
         return [[(i + 1) * self.reclaim_increment, float(volumes[i]), qualities[i].tolist()] for i in range(slice_count)]
-
-
-class GridSimulator(ParticleSimulator):
-    """Port of the fast simulator of BlendingSimulator: a square grid of particle columns."""
-
-    shape = "box"
-
-    # Same order as in BlendingSimulatorFast.impl.h, the first four are the direct neighbors
-    OFFSETS = ((-1, 0), (0, -1), (0, 1), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1))
-
-    def __init__(self, bed_size_x: float, bed_size_z: float, *, ppm3: float, eight_likelihood: float = 0.87, seed: int | None = None, **kwargs):
-        super().__init__(bed_size_x, bed_size_z, ppm3=ppm3, **kwargs)
-        self.size = ppm3 ** (-1.0 / 3.0)
-        self.eight_likelihood = eight_likelihood
-        self.random = random.Random(seed)
-        self.size_x = int(bed_size_x / self.size + 0.5)
-        self.size_z = int(bed_size_z / self.size + 0.5)
-        # Particle count per column with a border of walls, indexed [x][z] with an offset of 1 like in the C++ code
-        wall = 2**62
-        self.heights = [[wall] * (self.size_z + 2)]
-        self.heights += [[wall] + [0] * self.size_z + [wall] for _ in range(self.size_x)]
-        self.heights += [[wall] * (self.size_z + 2)]
-
-    @property
-    def particle_size(self) -> float:
-        return self.size
-
-    def drop(self, x: float, z: float) -> tuple[float, float, float]:
-        heights = self.heights
-        xi = max(0, min(int(x / self.size + 0.5), self.size_x - 1)) + 1
-        zi = max(0, min(int(z / self.size + 0.5), self.size_z - 1)) + 1
-        min_height = heights[xi][zi]
-
-        while True:
-            # Considering 8 instead of 4 directions results in cones instead of pyramids
-            count = 4 if self.random.random() > self.eight_likelihood else 8
-            r = self.random.randrange(8)
-            next_x = -1
-            next_z = -1
-            for o in range(count):
-                dx, dz = self.OFFSETS[(o + r) % count]
-                h = heights[xi + dx][zi + dz]
-                if h < min_height:
-                    next_x, next_z, min_height = xi + dx, zi + dz, h
-            if next_x < 0:
-                break
-            xi, zi = next_x, next_z
-
-        heights[xi][zi] = min_height + 1
-        return (xi - 0.5) * self.size, min_height * self.size, (zi - 0.5) * self.size
 
 
 class LatticeSimulator(ParticleSimulator):

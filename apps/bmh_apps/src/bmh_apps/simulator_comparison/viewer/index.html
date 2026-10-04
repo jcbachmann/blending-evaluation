@@ -217,7 +217,7 @@ td .na { color: var(--muted); }
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-const METHOD_ORDER = ['mathematical', 'smooth', 'fast', 'grid', 'hcp', 'detailed'];
+const METHOD_ORDER = ['mathematical', 'smooth', 'fast', 'hcp', 'detailed'];
 const RESOLUTION_LABELS = { low: '2 m', mid: '1 m', high: '0.5 m', 'very-high': '0.25 m' };
 const RAMP = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281', '#0d366b'];
 const METRICS = {
@@ -225,7 +225,7 @@ const METRICS = {
   F2: { label: 'F2 volume σ', fmt: v => v.toFixed(2), sub: 'F2: standard deviation of the slice volumes from the ideal stockpile in m³ (chevron patterns only).' },
   angle: { label: 'Repose angle', fmt: v => v.toFixed(1) + '°', sub: 'Effective angle of repose, measured on the cone and shown for every deposition, fitted between 20 % and 80 % of the peak height.' },
   ridge: { label: 'Ridge σ', fmt: v => v.toFixed(3) + ' m', sub: 'Ridge σ: standard deviation of the pile height along the core center line at the end of each layer, averaged over the layers. Zero means the ridge stays level like in an ideal stockpile.' },
-  runtime: { label: 'Runtime', fmt: v => v < 10 ? v.toFixed(2) + ' s' : v < 600 ? v.toFixed(0) + ' s' : (v / 60).toFixed(0) + ' min', sub: 'Wall-clock time of stacking and reclaiming, Python ports unoptimized, on one core of an i9-9900K.' },
+  runtime: { label: 'Runtime', fmt: v => v < 10 ? v.toFixed(2) + ' s' : v < 600 ? v.toFixed(0) + ' s' : (v / 60).toFixed(0) + ' min', sub: 'Wall-clock time of stacking and reclaiming including the height map snapshots for the time slider, on one core of an i9-9900K.' },
 };
 
 const state = { base: 'chevron-5', ends: '', resolution: 'mid', method: 'hcp', metric: 'F1', index: null, time: 1 };
@@ -287,7 +287,7 @@ function renderControls() {
   segmented($('metric'), Object.entries(METRICS).map(([k, v]) => [k, v.label]), state.metric, k => { state.metric = k; renderTable(); renderControls(); });
 }
 function shortName(m) {
-  return { mathematical: 'Mathematical', smooth: 'Smooth', fast: 'Fast (C++)', grid: 'Grid (Python)', hcp: 'HCP lattice', detailed: 'Detailed' }[m];
+  return { mathematical: 'Mathematical', smooth: 'Smooth', fast: 'Fast', hcp: 'HCP lattice', detailed: 'Detailed' }[m];
 }
 
 /* ---------- 3D scene ---------- */
@@ -774,9 +774,8 @@ function renderFacts(run, data) {
   const notes = {
     mathematical: 'Bins each increment into the slice under the stacker. It has no stockpile geometry: the 3D view draws each reclaim slice as a 45° ridge holding its volume. Independent of particle size.',
     smooth: 'Spreads each increment along x with a Gaussian of σ = 5 m, then reclaims vertically. No stockpile geometry: the 3D view draws each slice as a 45° ridge. Independent of particle size.',
-    fast: 'The production simulator through the Python library. Shows only the surface: the library does not export particles.',
-    grid: 'The algorithm of Fast ported to Python to export every particle. Same rules, different random numbers, so its curves match Fast statistically.',
-    hcp: 'Close-packed spheroids stacked ABAB. A particle rests only when all three sites below it are filled; the lattice is compressed vertically so that cones reach 45°.',
+    fast: 'The production simulator through the Python library: cubes in columns of a square grid, each falls to a lower neighbor column until none is lower.',
+    hcp: 'Close-packed spheroids stacked ABAB (C++ lattice simulator). A particle rests only when all three sites below it are filled; the lattice is compressed vertically so that cones reach 45°.',
     detailed: 'Bullet rigid-body cubes thrown from the stacker belt. The surface is the top of the frozen particle centers.',
   };
   $('fact-note').textContent = notes[state.method];
