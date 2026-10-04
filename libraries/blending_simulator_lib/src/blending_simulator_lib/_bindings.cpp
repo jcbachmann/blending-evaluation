@@ -24,7 +24,7 @@ class BlendingSimulatorLibPython
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
 			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
-			bool lattice, float latticeAngleOfRepose, bool recordParticles)
+			bool lattice, bool recordParticles)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -40,7 +40,6 @@ class BlendingSimulatorLibPython
 			simulationParameters.bulkDensityFactor = bulkDensityFactor;
 			simulationParameters.dropHeight = dropHeight;
 			simulationParameters.seed = seed;
-			simulationParameters.latticeAngleOfRepose = latticeAngleOfRepose;
 
 			if (detailed && lattice) {
 				throw std::invalid_argument("choose either the detailed or the lattice simulator");
@@ -249,7 +248,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
-			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, float, bool>(),
+			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -262,7 +261,6 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"reclaim_increment"_a,
 			"seed"_a = py::none(),
 			"lattice"_a = false,
-			"lattice_angle_of_repose"_a = 45.0f,
 			"record_particles"_a = false
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)

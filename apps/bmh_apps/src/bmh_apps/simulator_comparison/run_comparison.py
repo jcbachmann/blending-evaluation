@@ -56,7 +56,6 @@ RECLAIM_INCREMENT = 1.0
 # The detailed simulator creates particles at this absolute height 5 m before the stacker position and throws them along z; 16 m lets
 # them land at the stacker position on flat ground, while the default of half the bed depth equals the pile height and shifts the pile
 DETAILED_DROP_HEIGHT = 16.0
-LATTICE_ANGLE_OF_REPOSE = 45.0
 # Methods whose particles are exported for the viewer
 PARTICLE_METHODS = ("fast", "hcp")
 HEIGHT_MAP_CELL = 0.25
@@ -91,7 +90,6 @@ def create_simulator(method: str, ppm3: float):
             dropheight=DETAILED_DROP_HEIGHT if detailed else None,
             seed=SEED,
             lattice=method == "hcp",
-            latticeangle=LATTICE_ANGLE_OF_REPOSE,
             record_particles=method in PARTICLE_METHODS,
         )
     raise ValueError(f"unknown method {method}")
