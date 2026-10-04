@@ -265,6 +265,27 @@ about 30: F1 depends on fine detail of the quality profile, the reason why F1 fr
 change the definitions of F1 and F2 (both are defined on the 1 m slices). Part of the fine detail is particle noise; to be measured
 again at L4 (phase 0), where predicting about 30 components instead of 120 values becomes a variant for phase 2.
 
+**The transfer metric for new materials** (phase 0 (c), 2026-10-04). `hv_ratio` normalizes each material to the span of its reference
+front; for 5 of the 8 T6 materials that front spans only 0.02 to 0.05 in F1 (material 4: 0.046 to 0.064), so a solution 0.003 worse
+than its worst F1 already counts nothing. That is why the worst material scored 0 for every model, also where 70 to 100 % of the found
+solutions beat Chevron. The transfer test therefore reports **`chevron_hv_ratio`**, the hypervolume beyond Chevron divided by the
+reference front's: the share of the known improvement over Chevron that the solutions reach (primary metric from now on; all 60 earlier
+S2 tests recomputed from their stored solutions, no simulations). Per optimization run (pooled over the 5 runs per material in brackets):
+
+| | `chevron_hv_ratio` per run (pooled) |
+|---|---|
+| NSGA-III on the simulator, 1,000 / 2,000 / 5,000 / 10,000 simulations per material | 0.11 / 0.27 / 0.62 / 0.82 (0.19 / 0.38 / 0.77 / 0.91) |
+| hybrid, 500k random, 3 seeds | 0.25 to 0.30 (0.41 to 0.45) |
+| material-scaled hybrid, 500k random | 0.29 to 0.39 (0.43 to 0.56) |
+| mixing model with / without quality output | 0.27 to 0.28 / 0.26 (0.40 to 0.44 / 0.38 to 0.44) |
+| material-scaled hybrid after refinement over many materials (best round of 3 seeds) | 0.38 (0.54 to 0.56) |
+| learning curve hybrid 10k / 30k / 100k | 0.06 / 0.13 / 0.18 (0.13 / 0.23 / 0.30) |
+| learning curve material-scaled 10k / 30k / 100k | 0.12 / 0.14 / 0.23 (0.19 / 0.24 / 0.35) |
+
+A model trained once reaches per run what NSGA-III on the simulator reaches with about 1,500 to 2,000 simulations of the new material;
+material scaling and refinement help consistently, the mixing model does not. The gap that remains: the median F1 of the found
+solutions is about 0.2, the reference fronts reach 0.05 to 0.1.
+
 **Ideal stockpile of F2** (2026-10-01): F2 uses `bmh.helpers.stockpile_math.get_ideal_stockpile_volumes` (the vault note "Ideal
 Stockpile", the cut area at one point per slice). The newer derivation in the vault (`Concepts/Stockpile Math/Ideal Stockpile
 Derivation`, integrated over each slice) ramps about one slice later and sums exactly to the total volume (the point rule gives 2503.5 for
@@ -443,3 +464,4 @@ simulations, 3 seeds each): material scaling is the most data-efficient (T3 F1 R
 data alone (per run at most 0.04). |
 | 2026-10-03 | **Refinement over many materials, second attempt** (20 new random materials per round, 2 NSGA-III runs each, transfer test on T6 per round; the loops `rrel-s2` and `rrel-s3` were stopped for the night after round 3, `--resume` continues them). Transfer ratio per run, round 0 -> best round (beats Chevron): material-scaled hybrid, 3 seeds: 0.013 -> 0.060 (48 -> 71 %), 0.043 -> 0.078 (65 -> 63 %), 0.049 -> 0.066 (51 -> 60 %); mixing model without quality output: 0.048 -> 0.039 (53 -> 50 %, no gain); for comparison the plain hybrid's loop of 2026-10-02 0.045 -> 0.074 (43 -> 56 %). The worst material stays at 0 in every round of every loop, T6 F1 R2 at best -5, F1 bias on the solutions found -0.04 to -0.08 (material-scaled) and -0.10 to -0.13 (mixing). NSGA-III on the simulator per material: 0.16 with 5,000 and 0.47 with 10,000 simulations. **Refinement over many materials buys at most a small, noisy gain; a model trained once does not reach the optimizer's region of a new material. Material scaling is the only change that helps consistently.** |
 | 2026-10-04 | **Goals and evaluation revised with Micha** (section 1, section 3): fast models that represent a slower simulation inside the optimizer, material-independent (S2 only; S1 is background), shown with the fast simulator at several detail levels; six phases, each re-planned after the results of the one before. Measured the detail levels (section 5): with the default reclaim step F2 shrinks with `ppm3` only because the slices get thinner; with a fixed 1 m step F2 and F1 change by at most 10 % between `ppm3` = 1 and 64, the noise falls tenfold, `ppm3` = 64 costs 91 ms per simulation (36 times `ppm3` = 1). |
+| 2026-10-04 | **Phase 0, first parts.** (a) Detail levels in the pipeline (`build_bundle --ppm3`, `--cross-from`; every dataset records its level; training, refinement, transfer test and Chevron simulate at the bundle's level); `python -m bmh_ml.fidelity` compares two levels. (c) The transfer metric was too strict for new materials (section 5): with `chevron_hv_ratio` a model trained once matches NSGA-III with about 1,500 to 2,000 simulations per new material and run, refined models 0.38 per run against 0.27 for 2,000 simulations. The S2 "wall" of 2026-10-02/03 was largely the metric. Building `S2-L4` (`ppm3` = 64, same inputs as S2-v1, T6 fronts optimized at L4, T6x the L1 fronts at L4); micha-pc limited to 12 of 16 cores from 22:00 to 08:00 (`workdir/offload-queue/quiet-hours.sh`). |
