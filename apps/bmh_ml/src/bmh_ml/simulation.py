@@ -1,8 +1,12 @@
+"""The fast blending simulator as the pipeline uses it, at a detail level (`SimulatorSettings`) that the bundles record."""
+
 import numpy as np
 import pandas as pd
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
+
+from bmh_ml.settings import get_simulator_settings
 
 
 def generate_material(
@@ -75,7 +79,8 @@ def evaluate_sim_with_profile(
         ),
     )
 
-    sim = BslBlendingSimulator(bed_size_x=bed_size_x, bed_size_z=bed_size_z)
+    settings = get_simulator_settings()
+    sim = BslBlendingSimulator(bed_size_x=bed_size_x, bed_size_z=bed_size_z, ppm3=settings.ppm3, reclaimincrement=settings.reclaim_increment)
     reclaimed_material = sim.stack_reclaim(material_deposition)
 
     evaluator = ReclaimedMaterialEvaluator(reclaimed=reclaimed_material, x_min=x_min, x_max=x_max)

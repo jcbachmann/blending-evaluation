@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 import numpy as np
 
 from bmh_ml.datasets.manifest import Dataset, concatenate_datasets, manifest_to_json
+from bmh_ml.settings import SimulatorSettings, use_simulator_settings
 from bmh_ml.tracking.store import get_bundles_directory, get_datasets_directory
 
 
@@ -122,3 +123,21 @@ def get_evaluation_sets(bundle: Bundle) -> dict[str, str]:
 
 def list_bundles() -> list[str]:
     return sorted(path.stem for path in get_bundles_directory().glob("*.json"))
+
+
+def get_bundle_simulator(bundle: Bundle) -> SimulatorSettings:
+    """The detail level of the simulator that labeled the datasets of a bundle. A bundle has one level: its models are trained and evaluated
+    at it, and everything simulated for it (refinement, transfer test, Chevron) has to use it too."""
+    ids = [bundle.train, *bundle.train_extra, *get_evaluation_sets(bundle).values()]
+    levels = {dataset_id: SimulatorSettings.from_dict(load_manifest(dataset_id)["settings"].get("simulator")) for dataset_id in ids}
+    distinct = set(levels.values())
+    if len(distinct) > 1:
+        raise ValueError(f"Bundle {bundle.name} mixes simulator settings: {levels}")
+    return distinct.pop()
+
+
+def use_bundle_simulator(bundle: Bundle) -> SimulatorSettings:
+    """Activates the bundle's simulator settings for this process and the processes it starts."""
+    settings = get_bundle_simulator(bundle)
+    use_simulator_settings(settings)
+    return settings

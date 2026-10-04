@@ -18,7 +18,7 @@ import numpy as np
 from bmh_ml.datasets.generators import random_materials
 from bmh_ml.datasets.manifest import SCOPE_FIXED_MATERIAL
 from bmh_ml.datasets.simulate import build_dataset
-from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, load_manifest, save_bundle, save_dataset
+from bmh_ml.datasets.store import Bundle, bundle_exists, load_bundle, load_dataset, load_manifest, save_bundle, save_dataset, use_bundle_simulator
 from bmh_ml.evaluate_run import evaluate_run, load_run_model
 from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.evaluation.transfer import TransferConfig, optimize_model_many
@@ -175,6 +175,7 @@ def get_valop_depositions(config: RefineConfig, base: Bundle, material: np.ndarr
 def refine(config: RefineConfig) -> list[str]:
     """Runs the loop and returns the ids of the training runs, one per round (round 0 is the model on the base bundle)."""
     base = load_bundle(config.base)
+    use_bundle_simulator(base)  # the added rows are labeled at the level of the base data
     names = [f"{config.name}-r{k}" for k in range(1, config.rounds)] + [config.name] + ([f"{config.name}-control"] if config.control else [])
     existing = [name for name in names if bundle_exists(name)]
     if existing and not config.resume:

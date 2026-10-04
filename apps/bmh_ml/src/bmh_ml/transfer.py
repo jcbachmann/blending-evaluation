@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 
 from bmh_ml.datasets.generators import find_result_files
-from bmh_ml.datasets.store import load_bundle, load_dataset
+from bmh_ml.datasets.store import load_bundle, load_dataset, use_bundle_simulator
 from bmh_ml.evaluate_run import load_run_model
 from bmh_ml.evaluation.chevron import get_chevron_objectives
 from bmh_ml.evaluation.transfer import (
@@ -29,6 +29,7 @@ def transfer_run(run_id: str, config: TransferConfig, with_plots: bool = True) -
     mlflow = configure_mlflow()
     run = mlflow.get_run(run_id)
     bundle = load_bundle(run.data.params["bundle"])
+    use_bundle_simulator(bundle)
     if config.reference_set not in bundle.tests:
         raise ValueError(f"The transfer test needs the test set {config.reference_set}, bundle {bundle.name} has {sorted(bundle.tests)}")
     result = run_transfer_test(load_run_model(run_id), bundle.scope, load_dataset(bundle.tests[config.reference_set]), config)
@@ -94,6 +95,7 @@ def simulator_baseline(bundle_name: str, config: TransferConfig, with_plots: boo
     from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
 
     bundle = load_bundle(bundle_name)
+    use_bundle_simulator(bundle)
     result = run_simulator_baseline(load_dataset(bundle.tests[config.reference_set]), config)
     mlflow = configure_mlflow()
     name = f"simulator-nsga3-{config.evaluations}"
@@ -151,7 +153,9 @@ def main(argv: list[str] | None = None):
     args = get_args(argv)
     logging.basicConfig(level=logging.INFO)
     if args.simulator_runs:
-        reference = load_dataset(load_bundle(args.bundle).tests[args.reference_set])
+        bundle = load_bundle(args.bundle)
+        use_bundle_simulator(bundle)
+        reference = load_dataset(bundle.tests[args.reference_set])
         chevron = get_chevron_objectives(reference.material[:1], n_jobs=args.n_jobs)
         metrics = get_simulator_run_metrics(find_result_files(args.simulator_runs), reference, chevron)
         print(f"{len(metrics['hv_ratio'])} runs on the simulator, Chevron F1 {chevron[0]:.4f} F2 {chevron[1]:.3f}:")

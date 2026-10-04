@@ -8,7 +8,7 @@ import numpy as np
 
 from bmh_ml.datasets.manifest import Dataset
 from bmh_ml.parallel import get_cpu_count
-from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, PROFILE_LENGTH, TOTAL_VOLUME
+from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, PROFILE_LENGTH, TOTAL_VOLUME, get_simulator_settings
 from bmh_ml.simulation import evaluate_sim_with_profile
 
 
@@ -80,6 +80,7 @@ def build_dataset(
     material = np.atleast_2d(np.asarray(material, dtype=float))
     deposition = np.asarray(deposition, dtype=float)
     y, y_noise_sd, profiles = simulate_with_profiles(material, deposition, repeats, n_jobs, with_profiles=with_profiles)
+    settings = {**(settings or {}), "simulator": get_simulator_settings().as_dict()}  # the detail level the labels come from
     return Dataset(
         name=name,
         generator=generator,
