@@ -22,8 +22,7 @@ sim = BlendingSimulatorLib(
     False,  # detailed
     1.0,  # reclaim_increment in m
     seed=1,  # optional, random if not given
-    lattice=True,  # lattice simulation on a hexagonal close-packed lattice instead of the fast one
-    lattice_angle_of_repose=45.0,
+    lattice=True,  # lattice simulation on a hexagonal close-packed lattice (angle of repose 45°) instead of the fast one
     record_particles=True,  # keep every particle for get_particles()
 )
 sim.stack_list(data, ["timestamp", "x", "z", "volume", "quality"])  # numpy array, one row per increment; other columns are parameters

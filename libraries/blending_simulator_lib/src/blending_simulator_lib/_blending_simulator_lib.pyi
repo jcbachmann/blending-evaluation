@@ -27,7 +27,6 @@ class BlendingSimulatorLib:
         reclaim_increment: typing.SupportsFloat | typing.SupportsIndex,
         seed: typing.SupportsInt | typing.SupportsIndex | None = None,
         lattice: bool = False,
-        lattice_angle_of_repose: typing.SupportsFloat | typing.SupportsIndex = 45.0,
         record_particles: bool = False,
     ) -> None: ...
     def get_heights(self) -> list[list[float]]: ...

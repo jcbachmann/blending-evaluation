@@ -6,14 +6,14 @@ from pandas import DataFrame
 from .blending_simulator import BlendingSimulator, Material, MaterialDeposition
 
 
-def optional_arguments(seed: int | None, lattice: bool, latticeangle: float, record_particles: bool) -> tuple[tuple, dict]:
+def optional_arguments(seed: int | None, lattice: bool, record_particles: bool) -> tuple[tuple, dict]:
     """
     Arguments of newer simulator versions, only when used: the released simulator (v2026.1) has no seed, lattice and particle recording
     """
     seed_argument = () if seed is None else (seed,)
     options: dict = {}
     if lattice:
-        options.update(lattice=True, lattice_angle_of_repose=latticeangle)
+        options["lattice"] = True
     if record_particles:
         options["record_particles"] = True
     return seed_argument, options
@@ -34,7 +34,6 @@ class BslBlendingSimulator(BlendingSimulator):
         reclaimincrement: float | None = None,
         seed: int | None = None,
         lattice: bool = False,
-        latticeangle: float = 45.0,
         record_particles: bool = False,
     ):
         super().__init__(bed_size_x, bed_size_z)
@@ -55,7 +54,7 @@ class BslBlendingSimulator(BlendingSimulator):
         if reclaimincrement is None:
             reclaimincrement = 1.0 / math.sqrt(ppm3)
 
-        seed_argument, options = optional_arguments(seed, lattice, latticeangle, record_particles)
+        seed_argument, options = optional_arguments(seed, lattice, record_particles)
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
             bed_size_z,

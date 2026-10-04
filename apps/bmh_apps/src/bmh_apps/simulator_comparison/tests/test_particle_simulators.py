@@ -100,12 +100,12 @@ def test_chevron_start_cone(layers):
     assert data["x"].iloc[len(at_start) + 10] > X_MIN
 
 
-@pytest.mark.parametrize(("ppm3", "angle"), [(1.0, 45.0), (8.0, 45.0), (8.0, 30.0)])
-def test_cpp_lattice_matches_python(ppm3, angle):
+@pytest.mark.parametrize("ppm3", [1.0, 8.0])
+def test_cpp_lattice_matches_python(ppm3):
     from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
-    python = LatticeSimulator(20.0, 10.0, ppm3=ppm3, angle_of_repose=angle)
-    cpp = BslBlendingSimulator(bed_size_x=20.0, bed_size_z=10.0, ppm3=ppm3, lattice=True, latticeangle=angle, record_particles=True)
+    python = LatticeSimulator(20.0, 10.0, ppm3=ppm3, angle_of_repose=45.0)
+    cpp = BslBlendingSimulator(bed_size_x=20.0, bed_size_z=10.0, ppm3=ppm3, lattice=True, record_particles=True)
     rng = np.random.default_rng(0)
     # One particle per call, along a chevron path and at random spots including the bed edges
     xs = np.concatenate([np.linspace(2.0, 18.0, 300), np.linspace(18.0, 2.0, 300), rng.uniform(0.0, 20.0, 400)])
