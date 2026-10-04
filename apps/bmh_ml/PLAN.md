@@ -17,11 +17,15 @@ with their numbers. Infrastructure that is not specific to this project (the off
 
 ## 1. Goal and how a model is judged
 
-**Goal.** Models that predict the two objectives of the blending simulator well enough to **replace the simulator inside an optimizer**
-(NSGA-III over the 20 deposition positions): F1, the volume-weighted standard deviation of the reclaimed quality, and F2, the standard
-deviation of the reclaimed volume per slice from the ideal stockpile. And a pipeline that makes every attempt persisted and comparable
-without manual bookkeeping. Two scopes, tracked as separate MLflow experiments: **S1** one fixed material (input: the 20 deposition
-positions), **S2** any material (50 material values and 20 depositions).
+**Goal** (revised with Micha on 2026-10-04). Detailed stockpile simulations take too long for evolutionary optimization, which needs
+thousands to hundreds of thousands of evaluations within minutes to hours. The question is whether **fast machine-learning models can
+represent a slower, more detailed simulation well enough to replace it inside the optimizer** (NSGA-III over the 20 deposition positions),
+for F1 (the volume-weighted standard deviation of the reclaimed quality) and F2 (the standard deviation of the reclaimed volume per
+slice from the ideal stockpile). A model is trained for one stockpile setup and must be **material-independent**: evaluable on any
+material and deposition of the same lengths and volumes (scope **S2**, 50 material values and 20 depositions). Models for one fixed
+material (scope **S1**, the 20 depositions only) have no value of their own; their results are background. The proof of concept uses the
+fast simulator at several detail levels (`ppm3`, section 5): cheap levels produce training data, a higher level plays the slow target.
+And a pipeline that makes every attempt persisted and comparable without manual bookkeeping.
 
 **The simulator is a deliberately cheap stand-in.** It takes about 1.3 ms per run only because of coarse settings (a high ppm3, so few
 particles, and the simplest simulation type). The detailed simulation types take seconds to hours per run. This project is a proof of
@@ -120,18 +124,24 @@ Nothing; the queues were stopped on 2026-10-03 at 22:00. Results of the refineme
 
 ## 3. Next steps and open tasks
 
-### For the agent, in order
+### The evaluation plan (agreed 2026-10-04)
 
-0. The queues were stopped on 2026-10-03 at 22:00 for the night (section 7.3). Restart the server and the runners, check
-   `~/offload/queue/failed/` on micha-pc and the laptop, and queue every interrupted refinement loop again with `--resume` (the jobs
-   `10-`, `40-`, `41-`, `42-refine-*.sh`; those that finished all rounds need nothing).
-1. Evaluate the refinement loops (section 2) and record them in section 9: does refinement over many materials make the material-scaled
-   hybrid or the mixing model transfer to new materials, against the control with random rows, over three seeds?
-2. Seeds and a control (random rows of the same amount) for whatever helps; then the fair S2 comparison per new material: a model trained
-   once against NSGA-III on the simulator with a given budget (zero new simulations against about 10,000 per material).
-3. Keep material scaling where it helps (also inside a refined model). A sequence model over the material curve (1D convolution) is now
-   lower priority: the mixing model treats the material exactly; it stays an option for the hybrid.
-4. M4 and M5 (section 4).
+Everything is material-independent (S2). **After every phase the next one is re-planned in light of the results, not simply continued:**
+the results and the adjusted next phase go to Micha before work goes on. `detailed=True` of the fast simulator is not used (in the
+current configuration it is a concept, not a realistic simulation); the detail ladder uses `ppm3` with the reclaim step fixed at 1 m.
+Effort: implementation in human-equivalent days, compute in wall time on both machines.
+
+| Phase | Content | Implementation | Compute |
+|---|---|---|---|
+| **0 Foundations** | (a) The detail level (`ppm3`, reclaim step 1 m) as a setting of every dataset, test set, Chevron reference and transfer test; levels L1 = 1, L2 = 4, L3 = 16, L4 = 64 (target). (b) **Cross-fidelity study without ML** on new materials: random and optimized solutions (NSGA-III on L1 and on L4) evaluated at every level; rank correlations; fronts in both directions. This is the baseline "optimize on the cheap simulator". (c) Check the measuring instrument (the worst material is always 0). (d) Reference fronts and budget curves at L4. (e) Literature review (surrogate-assisted and offline model-based optimization, multi-fidelity, Pareto set learning) into the vault. | 2 days | about 1 day |
+| **1 Multi-fidelity** | The material-scaled hybrid trained on L1 only, L4 only, and L1 plus few L4 (fine-tuning, or learning only the difference); learning curves over the number of L4 simulations; evaluated at L4 (T3, T6, transfer test) | 1.5 days | 1 day |
+| **2 Surviving optimization** | F1 computed from the predicted quality profile (with linear mixing, material scaled) against direct F1; genuinely optimal solutions of many materials plus exploited ones in the training data; ensembles with an uncertainty penalty; conservative training; a small comparison of families and settings judged by the transfer test | 2.5 days | 1.5 days |
+| **3 Few simulations per new material** | only if phases 1 and 2 leave zero-shot short: warm start from the general model, simulate the best candidates, update; against NSGA-III at L4 | 2 days | 1 day |
+| **4 Solution generators** (exploratory) | a model proposes near-optimal depositions per material, directly and as the starting population of NSGA-III on the simulator; measured in simulations saved | 2 days | 1 day |
+| **5 Synthesis** | SSCI abstract (by about 25 October), vault overview, this plan | 1 day | |
+
+Leftover from 2026-10-03, decide in phase 0: the two material-scaled refinement loops `rrel-s2`, `rrel-s3` stopped after round 3 (they
+continue with `--resume`); they ran at L1 and are only worth finishing if L1 results still matter after the cross-fidelity study.
 
 ### Open questions for Micha
 
@@ -143,8 +153,8 @@ Nothing; the queues were stopped on 2026-10-03 at 22:00. Results of the refineme
    2026-10-03 at 22:30 it was copied completely to the synced `workdir/bmh-ml-store` (161 runs, 3.1 GB, paths fixed), so both are
    identical. Keep this pattern (micha-pc logs, the synced copy is refreshed at the end of a working day), or move the store out of the
    synced folder?
-3. **Linearity in the detailed simulation.** The mixing model assumes that quality is a passive label of the particles. Very likely true
-   for the detailed and physics simulations as well, but worth checking once with a few runs there before relying on it.
+3. **Linearity at higher detail.** The mixing model assumes that quality is a passive label of the particles; checked at `ppm3` = 1
+   only. Checked again at L4 in phase 0.
 4. **GPU** (Navi 10, no ROCm): only worth an unofficial ROCm setup for larger models or ensembles (B5); a system change, Micha's call.
 
 ### Tasks for Micha
@@ -228,6 +238,23 @@ S2 rows ranges from 0.17 to 2.1.
 **Profiles.** The simulator returns 60 reclaimed slices (volume and quality); F1 and F2 are exact functions of them. The F of a mean
 profile is slightly below the mean F of noisy simulations: about +0.001 in F1^2 and +1.1 in F2^2 (S1-v2), measured from repeated data
 alone (`get_noise_correction`).
+
+**Detail levels of the fast simulator** (2026-10-04; one material, 4 random depositions and Chevron, 4 to 8 repeats). `ppm3` is the
+number of particles per cubic meter (1.0 so far, about 2,500 particles for the pile). By default the reclaim step is `1/sqrt(ppm3)`, so
+at higher `ppm3` the simulator reclaims more, thinner slices (472 at `ppm3` = 64) and F2, a spread of volume per slice, shrinks with
+the slice width (about half per fourfold `ppm3`). With the reclaim step fixed at 1 m (60 slices, as the profile models expect):
+
+| `ppm3` | ms per simulation | F2 of the 5 inputs (Chevron last) | F1 of the 5 inputs | noise sd F1 / F2 |
+|---|---|---|---|---|
+| 1 | 2.5 | 30.6 25.1 24.2 25.4 12.6 | 0.252 0.380 0.331 0.267 0.373 | 0.0055 / 0.13 |
+| 4 | 4.7 | 30.8 24.5 23.6 26.2 11.6 | 0.231 0.373 0.322 0.260 0.363 | 0.0027 / 0.08 |
+| 16 | 17 | 31.3 24.5 23.9 26.4 11.5 | 0.226 0.371 0.330 0.267 0.371 | 0.0014 / 0.045 |
+| 64 | 91 | 32.0 24.9 24.1 27.0 11.4 | 0.231 0.365 0.331 0.264 0.372 | 0.0005 / 0.018 |
+
+So the real effect of detail on the objectives is small here (F2 up to 10 %, Chevron's F2 improves from 12.6 to 11.4; F1 up to 8 %),
+the noise falls tenfold, and the cost grows about linearly with the particles above `ppm3` = 4. Whether optimized solutions keep their
+order across levels is phase 0 (b). `detailed=True` costs about 64 s per run and changes F1 by 37 %, but in the current configuration it
+is a concept, not a realistic simulation, and is not used.
 
 **Ideal stockpile of F2** (2026-10-01): F2 uses `bmh.helpers.stockpile_math.get_ideal_stockpile_volumes` (the vault note "Ideal
 Stockpile", the cut area at one point per slice). The newer derivation in the vault (`Concepts/Stockpile Math/Ideal Stockpile
@@ -405,3 +432,4 @@ simulations, 3 seeds each): material scaling is the most data-efficient (T3 F1 R
 0.93 for the hybrid) and halves the F1 optimism; the mixing model is not more data-efficient; nothing transfers to new materials from random
 data alone (per run at most 0.04). |
 | 2026-10-03 | **Refinement over many materials, second attempt** (20 new random materials per round, 2 NSGA-III runs each, transfer test on T6 per round; the loops `rrel-s2` and `rrel-s3` were stopped for the night after round 3, `--resume` continues them). Transfer ratio per run, round 0 -> best round (beats Chevron): material-scaled hybrid, 3 seeds: 0.013 -> 0.060 (48 -> 71 %), 0.043 -> 0.078 (65 -> 63 %), 0.049 -> 0.066 (51 -> 60 %); mixing model without quality output: 0.048 -> 0.039 (53 -> 50 %, no gain); for comparison the plain hybrid's loop of 2026-10-02 0.045 -> 0.074 (43 -> 56 %). The worst material stays at 0 in every round of every loop, T6 F1 R2 at best -5, F1 bias on the solutions found -0.04 to -0.08 (material-scaled) and -0.10 to -0.13 (mixing). NSGA-III on the simulator per material: 0.16 with 5,000 and 0.47 with 10,000 simulations. **Refinement over many materials buys at most a small, noisy gain; a model trained once does not reach the optimizer's region of a new material. Material scaling is the only change that helps consistently.** |
+| 2026-10-04 | **Goals and evaluation revised with Micha** (section 1, section 3): fast models that represent a slower simulation inside the optimizer, material-independent (S2 only; S1 is background), shown with the fast simulator at several detail levels; six phases, each re-planned after the results of the one before. Measured the detail levels (section 5): with the default reclaim step F2 shrinks with `ppm3` only because the slices get thinner; with a fixed 1 m step F2 and F1 change by at most 10 % between `ppm3` = 1 and 64, the noise falls tenfold, `ppm3` = 64 costs 91 ms per simulation (36 times `ppm3` = 1). |
