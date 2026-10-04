@@ -11,6 +11,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 #include "BlendingSimulator/BlendingSimulatorFast.h"
+#include "BlendingSimulator/BlendingSimulatorLattice.h"
 #ifdef BUILD_DETAILED_SIMULATOR
 #include "BlendingSimulator/BlendingSimulatorDetailed.h"
 #endif
@@ -22,7 +23,8 @@ class BlendingSimulatorLibPython
 {
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
-			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed)
+			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
+			bool lattice, float latticeAngleOfRepose, bool recordParticles)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -33,12 +35,19 @@ class BlendingSimulatorLibPython
 			simulationParameters.particlesPerCubicMeter = particlesPerCubicMeter;
 			simulationParameters.circular = circular;
 			simulationParameters.eightLikelihood = eightLikelihood;
-			simulationParameters.visualize = false; // Not available in python library
+			// Without a visualizer, visualize only records the particles for get_particles
+			simulationParameters.visualize = recordParticles;
 			simulationParameters.bulkDensityFactor = bulkDensityFactor;
 			simulationParameters.dropHeight = dropHeight;
 			simulationParameters.seed = seed;
+			simulationParameters.latticeAngleOfRepose = latticeAngleOfRepose;
 
-			if (detailed) {
+			if (detailed && lattice) {
+				throw std::invalid_argument("choose either the detailed or the lattice simulator");
+			}
+			if (lattice) {
+				simulator = new bs::BlendingSimulatorLattice<bs::AveragedParameters>(simulationParameters);
+			} else if (detailed) {
 #ifdef BUILD_DETAILED_SIMULATOR
 				simulator = new bs::BlendingSimulatorDetailed<bs::AveragedParameters>(simulationParameters);
 #else
@@ -155,6 +164,42 @@ class BlendingSimulatorLibPython
 			return heights;
 		}
 
+		// Particles recorded with record_particles: centers, sizes and parameters, as numpy arrays in stacking order
+		py::dict getParticles()
+		{
+			finishStacking();
+
+			std::lock_guard<std::mutex> lock(simulator->outputParticlesMutex);
+			const auto& particles = simulator->inactiveOutputParticles;
+			const py::ssize_t n = static_cast<py::ssize_t>(particles.size());
+			const py::ssize_t m = static_cast<py::ssize_t>(parameterColumns.size());
+			py::array_t<double> position({n, py::ssize_t(3)});
+			py::array_t<double> size({n, py::ssize_t(3)});
+			py::array_t<double> parameters({n, m});
+			auto p = position.mutable_unchecked<2>();
+			auto s = size.mutable_unchecked<2>();
+			auto v = parameters.mutable_unchecked<2>();
+			py::ssize_t i = 0;
+			for (const auto* particle : particles) {
+				p(i, 0) = particle->position.x;
+				p(i, 1) = particle->position.y;
+				p(i, 2) = particle->position.z;
+				s(i, 0) = particle->size.x;
+				s(i, 1) = particle->size.y;
+				s(i, 2) = particle->size.z;
+				for (py::ssize_t j = 0; j < m; j++) {
+					v(i, j) = particle->parameters.getValue(static_cast<unsigned int>(j));
+				}
+				i++;
+			}
+
+			py::list columns;
+			for (const auto& c : parameterColumns) {
+				columns.append(c);
+			}
+			return py::dict("position"_a = position, "size"_a = size, "parameters"_a = parameters, "columns"_a = columns);
+		}
+
 	private:
 		bs::BlendingSimulator<bs::AveragedParameters>* simulator;
 		float reclaimIncrement;
@@ -204,7 +249,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
-			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>>(),
+			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, float, bool>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -215,10 +260,14 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"drop_height"_a,
 			"detailed"_a,
 			"reclaim_increment"_a,
-			"seed"_a = py::none()
+			"seed"_a = py::none(),
+			"lattice"_a = false,
+			"lattice_angle_of_repose"_a = 45.0f,
+			"record_particles"_a = false
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
 		.def("reclaim", &BlendingSimulatorLibPython::reclaim)
-		.def("get_heights", &BlendingSimulatorLibPython::getHeights);
+		.def("get_heights", &BlendingSimulatorLibPython::getHeights)
+		.def("get_particles", &BlendingSimulatorLibPython::getParticles);
 }
