@@ -256,6 +256,7 @@ def combine_results(results: list[TransferResult]) -> TransferResult:
     metrics["materials"] = float(len(results))
     metrics["hv_ratio_material_min"] = float(min(result.metrics["hv_ratio"] for result in results))
     metrics["chevron_beaten_rate_material_min"] = float(min(result.metrics["chevron_beaten_rate"] for result in results))
+    metrics["chevron_hv_ratio_material_min"] = float(min(result.metrics["chevron_hv_ratio"] for result in results))
     stack = lambda name: np.concatenate([getattr(result, name) for result in results])  # noqa: E731
     simulated_sd = stack("simulated_sd") if all(result.simulated_sd is not None for result in results) else None
     return TransferResult(
@@ -279,9 +280,16 @@ def get_transfer_metrics(seeds: np.ndarray, predicted: np.ndarray, simulated: np
     `predicted_hv_ratio`, what the model promised. Against Chevron (objectives divided by Chevron's, reference point (1, 1)): `chevron_hv`,
     `chevron_beaten_rate` (share of the solutions better than Chevron in both), `chevron_best_F1` and `chevron_best_F2`, per run
     `chevron_hv_run_mean`, the same for the reference front (`reference_chevron_hv`) and for the predictions (`predicted_chevron_hv`).
+    `chevron_hv_ratio` (pooled, per run `chevron_hv_ratio_run_mean` and `_run_min`): the hypervolume beyond Chevron divided by the reference
+    front's, the share of the known improvement over Chevron that the solutions reach. Unlike `hv_ratio` it does not depend on the span of
+    the reference front: normalized to a front that spans only 0.02 in F1, a solution 0.003 worse than its worst F1 already counts nothing
+    (measured 2026-10-04, PLAN.md section 5).
     """
     run_seeds = np.unique(seeds)
     metrics = get_front_metrics(simulated, reference)
+    reference_chevron_hv = get_chevron_metrics(reference, chevron)["chevron_hv"]
+    ratio = lambda objectives: get_chevron_metrics(objectives, chevron)["chevron_hv"] / reference_chevron_hv if reference_chevron_hv > 0 else np.nan  # noqa: E731
+    per_run_ratio = [ratio(simulated[seeds == seed]) for seed in run_seeds]
     per_run = [get_front_metrics(simulated[seeds == seed], reference)["hv_ratio"] for seed in run_seeds]
     metrics.update(
         {
@@ -292,7 +300,10 @@ def get_transfer_metrics(seeds: np.ndarray, predicted: np.ndarray, simulated: np
             "solutions": float(len(simulated)),
             **get_chevron_metrics(simulated, chevron),
             "chevron_hv_run_mean": float(np.mean([get_chevron_metrics(simulated[seeds == seed], chevron)["chevron_hv"] for seed in run_seeds])),
-            "reference_chevron_hv": get_chevron_metrics(reference, chevron)["chevron_hv"],
+            "reference_chevron_hv": reference_chevron_hv,
+            "chevron_hv_ratio": ratio(simulated),
+            "chevron_hv_ratio_run_mean": float(np.mean(per_run_ratio)),
+            "chevron_hv_ratio_run_min": float(np.min(per_run_ratio)),
             "predicted_chevron_hv": get_chevron_metrics(predicted, chevron)["chevron_hv"],
             "chevron_F1": float(chevron[0]),
             "chevron_F2": float(chevron[1]),
