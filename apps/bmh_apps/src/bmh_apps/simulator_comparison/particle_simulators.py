@@ -127,22 +127,23 @@ class LatticeSimulator(ParticleSimulator):
     its supports all lie towards +x and +z, which makes its piles lean.
 
     The resting rule only depends on which sites are filled, so compressing the lattice vertically keeps every pile and scales the tangent
-    of all slopes by the same factor. Piles of the uncompressed lattice reach NATIVE_ANGLE_OF_REPOSE; the compression maps that to
-    angle_of_repose. The spheres become spheroids of height vertical_scale times their diameter and keep the particle volume.
+    of all slopes by the same factor. Piles of the uncompressed lattice are hexagonal pyramids with the volume of a cone of
+    NATIVE_ANGLE_OF_REPOSE (derived in the Entropy note Lattice Simulation); the compression maps that to angle_of_repose. The spheres
+    become spheroids of height vertical_scale times their diameter and keep the particle volume.
     """
 
     shape = "sphere"
 
-    # Effective angle of repose of cones on the uncompressed lattice, fitted to a cone of 0.25 m particles in the simulator comparison;
-    # coarser particles give flatter cones (57.5° with 1 m particles)
-    NATIVE_ANGLE_OF_REPOSE = 59.9
+    # Slope of the cone with the height and volume of a pile on the uncompressed lattice, 60.89° (faces 62.06°, edges 58.52°)
+    NATIVE_TAN_ANGLE_OF_REPOSE = 4.0 / 3.0 * math.sqrt(math.pi / math.sqrt(3.0))
+    NATIVE_ANGLE_OF_REPOSE = math.degrees(math.atan(NATIVE_TAN_ANGLE_OF_REPOSE))
 
     def __init__(self, bed_size_x: float, bed_size_z: float, *, ppm3: float, angle_of_repose: float | None = 45.0, **kwargs):
         super().__init__(bed_size_x, bed_size_z, ppm3=ppm3, **kwargs)
         if angle_of_repose is None:
             self.vertical_scale = 1.0
         else:
-            self.vertical_scale = math.tan(math.radians(angle_of_repose)) / math.tan(math.radians(self.NATIVE_ANGLE_OF_REPOSE))
+            self.vertical_scale = math.tan(math.radians(angle_of_repose)) / self.NATIVE_TAN_ANGLE_OF_REPOSE
         # A close-packed sphere of diameter a occupies a / sqrt(2) cubed, compressed by the vertical scale; that is the particle volume
         self.a = (math.sqrt(2.0) * self.particle_volume / self.vertical_scale) ** (1.0 / 3.0)
         self.row_distance = self.a * math.sqrt(3.0) / 2.0

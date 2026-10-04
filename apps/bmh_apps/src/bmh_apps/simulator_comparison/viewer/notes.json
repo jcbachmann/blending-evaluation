@@ -4,15 +4,15 @@
     "items": [
       {
         "lead": "The angle of repose depends on the method.",
-        "text": "At 0.25 m the fast cone has about 44° (27° with 2 m particles). The HCP lattice natively builds 60° cones; compressed vertically it reaches 44° at 0.25 m and 42° at 1 m. The detailed cubes settle at about 30°, close to the arctangent of their friction coefficient 0.5."
+        "text": "Measured as the cone of the same height and volume, the fast cone has 43.5° at 0.25 m (30.5° with 2 m particles) and the detailed cone about 44° at 1 m. The HCP lattice natively builds hexagonal pyramids (faces 62.1°, edges 58.5°, the volume of a 60.9° cone); compressed to 45° its cones reach 44.3° to 45.0° from 1 m to 0.25 m (36.5° with 2 m)."
       },
       {
         "lead": "Stops at every turning point keep the ridge level.",
-        "text": "With the derived stops the ridge varies by only 0.03 to 0.07 m along the core at 0.25 m and F2 is 3.2 to 5.2 m³ for 5 to 500 layers, as low as for one layer with its start cone. Play the stacking and watch the long section stay flat after every layer."
+        "text": "With the derived stops the ridge varies by only 0.03 to 0.07 m along the core at 0.25 m and F2 is 3.0 to 5.2 m³ for 5 to 500 layers, as low as for one layer with its start cone. Play the stacking and watch the long section stay flat after every layer."
       },
       {
         "lead": "Shrinking turning points blend better.",
-        "text": "With turning points that move inwards as the pile grows, F1 is 0.031 to 0.045 instead of 0.066 to 0.072 with fixed ones, because the end cones are built while travelling over the longer early cores instead of while standing."
+        "text": "With turning points that move inwards as the pile grows, F1 is 0.030 to 0.045 instead of 0.066 to 0.074 with fixed ones, because the end cones are built while travelling over the longer early cores instead of while standing."
       },
       {
         "lead": "The ends dominate F1.",
@@ -24,7 +24,7 @@
       },
       {
         "lead": "Particle methods converge with resolution.",
-        "text": "At 0.25 m Fast and HCP agree on F1 within 0.005 for every pattern, while F2 of the lattice is lower (3.2 to 3.5 m³ against 3.6 to 5.2 m³). Both are C++ and stack and reclaim 323,000 particles in about 0.2 s; with the snapshots for the time slider a run takes 0.6 to 5 s. The Python port of the lattice needed 56 s."
+        "text": "At 0.25 m Fast and HCP agree on F1 within 0.007 for every pattern, while F2 of the lattice is lower (3.0 to 4.0 m³ against 3.6 to 5.2 m³). Both are C++ and stack and reclaim 323,000 particles in about 0.2 s; with the snapshots for the time slider a run takes 0.6 to 5 s. The Python port of the lattice needed 56 s."
       }
     ]
   },

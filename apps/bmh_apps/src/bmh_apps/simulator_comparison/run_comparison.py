@@ -33,6 +33,7 @@ from bmh.helpers.stockpile_math import get_ideal_stockpile_volumes
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 from bmh.simulation.mathematical_blending_simulator import MathematicalBlendingSimulator
 from bmh.simulation.smooth_blending_simulator import SmoothBlendingSimulator
+from scipy.spatial import ConvexHull
 
 from .scenarios import (
     BASE_PATTERNS,
@@ -106,17 +107,32 @@ def resample_height_map(heights: list[list[float]], cell: float = HEIGHT_MAP_CEL
     return native[np.ix_(zi, xi)]
 
 
-def cone_angle(heights: np.ndarray) -> float | None:
-    """Effective angle of repose in degrees: slope of the height over the distance from the bed center between 20 % and 80 % of the peak."""
-    nz, nx = heights.shape
-    x = (np.arange(nx) + 0.5) * HEIGHT_MAP_CELL - 0.5 * BED_SIZE_X
-    z = (np.arange(nz) + 0.5) * HEIGHT_MAP_CELL - 0.5 * BED_SIZE_Z
-    distance = np.hypot(*np.meshgrid(x, z))
-    peak = heights.max()
-    mask = (heights > 0.2 * peak) & (heights < 0.8 * peak)
-    if peak <= 0 or mask.sum() < 3:
+def cone_angle(heights: np.ndarray, cell: float = HEIGHT_MAP_CELL) -> float | None:
+    """
+    Angle of repose in degrees of the cone with the same height and volume profile as the pile: the radius of the circle with the area of
+    the pile above a height falls with the slope of that cone, fitted between 20 % and 80 % of the peak. Unlike a fit of the height over
+    the distance from the center it does not depend on the shape of the footprint, such as the hexagons of the lattice. The area above a
+    height is that of the convex hull of the cells above it, so that empty cells inside, as in the height map of the detailed simulation,
+    do not count, and the peak is the 99th percentile of the occupied cells, so that a few particles above the pile do not set it.
+    """
+    occupied = heights[heights > 0]
+    if len(occupied) < 10:
         return None
-    slope = np.polyfit(distance[mask], heights[mask], 1)[0]
+    peak = float(np.quantile(occupied, 0.99))
+    nz, nx = heights.shape
+    x, z = np.meshgrid((np.arange(nx) + 0.5) * cell, (np.arange(nz) + 0.5) * cell)
+    points = np.column_stack([x.ravel(), z.ravel()])
+    levels = peak * np.arange(1, 50) / 50
+    radii = []
+    for level in levels:
+        above = points[heights.ravel() > level]
+        # In 2D the volume of the hull is its area
+        radii.append(math.sqrt(ConvexHull(above).volume / math.pi) if len(above) >= 3 else 0.0)
+    radii = np.asarray(radii)
+    mask = (levels > 0.2 * peak) & (levels < 0.8 * peak) & (radii > 0)
+    if mask.sum() < 3:
+        return None
+    slope = np.polyfit(radii[mask], levels[mask], 1)[0]
     return math.degrees(math.atan(-slope))
 
 
