@@ -39,6 +39,8 @@ class BslBlendingSimulator(BlendingSimulator):
         if reclaimincrement is None:
             reclaimincrement = 1.0 / math.sqrt(ppm3)
 
+        # The seed only when one is given: the released simulator (v2026.1) has no seed argument yet
+        seed_argument = () if seed is None else (seed,)
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
             bed_size_z,
@@ -50,7 +52,7 @@ class BslBlendingSimulator(BlendingSimulator):
             dropheight,
             detailed,
             reclaimincrement,
-            seed,
+            *seed_argument,
         )
 
     def stack(self, timestamp: float, x: float, z: float, volume: float, parameter: list[float]) -> None:
