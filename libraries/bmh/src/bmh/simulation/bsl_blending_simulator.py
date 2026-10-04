@@ -8,7 +8,7 @@ from .blending_simulator import BlendingSimulator, Material, MaterialDeposition
 
 def optional_arguments(seed: int | None, lattice: bool, record_particles: bool) -> tuple[tuple, dict]:
     """
-    Arguments of newer simulator versions, only when used: the released simulator (v2026.1) has no seed, lattice and particle recording
+    Arguments of newer simulator versions, only when used: bindings built against simulator v2026.1 have no seed, lattice and particle recording
     """
     seed_argument = () if seed is None else (seed,)
     options: dict = {}

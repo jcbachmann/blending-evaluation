@@ -16,7 +16,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_Declare(
     blending-simulation
     GIT_REPOSITORY https://github.com/jcbachmann/blending-simulation
-    GIT_TAG v2026.1
+    GIT_TAG v2026.2
 )
 FetchContent_MakeAvailable(blending-simulation)
 
