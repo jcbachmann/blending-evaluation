@@ -256,6 +256,15 @@ the noise falls tenfold, and the cost grows about linearly with the particles ab
 order across levels is phase 0 (b). `detailed=True` costs about 64 s per run and changes F1 by 37 %, but in the current configuration it
 is a concept, not a realistic simulation, and is not used.
 
+**Dimensionality of the profiles** (2026-10-04, 50,000 training profiles of S2-v1, single simulations at `ppm3` = 1). The profile models
+predict 120 values (volume and quality of 60 slices, 56 of them ever non-empty) from 70 inputs. The values are strongly coupled:
+components for 90 / 99 / 99.9 % of the variance: volume 4 / 17 / 41, quality relative to the material 13 / 34 / 50. F1 and F2
+recomputed from profiles reduced to k components deviate from the full ones by (rmse; one simulation's noise is 0.007 for F1, 0.14 for
+F2): k = 10: 0.034 / 0.27, k = 15: 0.020 / 0.14, k = 20: 0.014 / 0.09, k = 30: 0.006 / 0.03. F2 survives about 15 components, F1 needs
+about 30: F1 depends on fine detail of the quality profile, the reason why F1 from a predicted profile is hard. Coarser slices would
+change the definitions of F1 and F2 (both are defined on the 1 m slices). Part of the fine detail is particle noise; to be measured
+again at L4 (phase 0), where predicting about 30 components instead of 120 values becomes a variant for phase 2.
+
 **Ideal stockpile of F2** (2026-10-01): F2 uses `bmh.helpers.stockpile_math.get_ideal_stockpile_volumes` (the vault note "Ideal
 Stockpile", the cut area at one point per slice). The newer derivation in the vault (`Concepts/Stockpile Math/Ideal Stockpile
 Derivation`, integrated over each slice) ramps about one slice later and sums exactly to the total volume (the point rule gives 2503.5 for
@@ -322,7 +331,8 @@ more threads per job. LightGBM is fastest with 8 to 12 threads.
 ### 7.3 Running jobs
 
 Long jobs go through the job queue (`~/offload/queue/` on both hosts, documented in `~/.claude/CLAUDE.md`; a copy of its scripts is in
-`workdir/offload-queue/`, the job logs of 2026-10-03 in `workdir/logs/queue-2026-10-03/`): write a job script into
+`workdir/offload-queue/`, the job scripts of the evaluation plan in `workdir/offload-queue/jobs/`, the job logs of 2026-10-03 in
+`workdir/logs/queue-2026-10-03/`): write a job script into
 micha-pc's `~/offload/queue/pending/`, the runners start it when cores are free, the laptop takes jobs that do not write datasets. A job
 for this project starts with `source ~/offload/queue/env.sh` (checkout, store, MLflow port, `R="$HOME/offload/env/bin/python -m"`) and
 declares `# cores: N`. The laptop copies new datasets, bundles and run artifacts from micha-pc before a job and back after it (datasets
