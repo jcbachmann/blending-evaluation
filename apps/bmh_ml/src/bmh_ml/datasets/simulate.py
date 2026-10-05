@@ -27,6 +27,15 @@ def simulate_chunk(material: np.ndarray, deposition: np.ndarray, repeats: int, w
     return result, profiles
 
 
+MIN_CHUNK_SIMULATIONS = 100  # fewer are not worth starting processes for
+
+
+def get_chunk_rows(rows: int, repeats: int, n_jobs: int, chunk_size: int) -> int:
+    """Inputs per chunk: at most `chunk_size`, few enough that every process gets a chunk (a few hundred solutions of one material, each
+    simulated repeatedly at a slow level, are hours of work for one process), and enough simulations per chunk to be worth a process."""
+    return max(1, min(chunk_size, rows, max(-(-rows // n_jobs), -(-MIN_CHUNK_SIMULATIONS // repeats))))
+
+
 def simulate(
     material: np.ndarray, deposition: np.ndarray, repeats: int = 1, n_jobs: int | None = None, chunk_size: int = 500
 ) -> tuple[np.ndarray, np.ndarray | None]:
@@ -46,8 +55,9 @@ def simulate_with_profiles(
         raise ValueError("repeats must be at least 1")
     material = np.broadcast_to(material, (len(deposition), material.shape[1]))
     n_jobs = n_jobs or get_cpu_count()
-    starts = range(0, len(deposition), chunk_size)
-    chunks = [(material[s : s + chunk_size], deposition[s : s + chunk_size]) for s in starts]
+    rows = get_chunk_rows(len(deposition), repeats, n_jobs, chunk_size)
+    starts = range(0, len(deposition), rows)
+    chunks = [(material[s : s + rows], deposition[s : s + rows]) for s in starts]
 
     if n_jobs == 1 or len(chunks) == 1:
         results = [simulate_chunk(m, d, repeats, with_profiles) for m, d in chunks]

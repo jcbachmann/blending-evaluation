@@ -13,7 +13,7 @@ from bmh_ml.datasets.generators import (
     stress_depositions,
 )
 from bmh_ml.datasets.manifest import Dataset, concatenate_datasets, make_features
-from bmh_ml.datasets.simulate import build_dataset, simulate
+from bmh_ml.datasets.simulate import build_dataset, get_chunk_rows, simulate
 from bmh_ml.datasets.store import (
     Bundle,
     get_bundle_file,
@@ -287,6 +287,13 @@ def test_the_simulation_labels_repeated_inputs_with_mean_and_noise():
     assert noise_sd.shape == (3, 2)
     assert np.all(y > 0)
     assert np.all(noise_sd >= 0)
+
+
+def test_the_simulations_are_split_so_that_every_process_gets_work():
+    assert get_chunk_rows(500, 8, 16, 500) == 32  # the solutions of one material at a slow level, on all processes, not one
+    assert get_chunk_rows(100_000, 1, 16, 500) == 500  # large datasets in chunks of at most chunk_size
+    assert get_chunk_rows(20, 1, 16, 500) == 20  # too few simulations to start processes for: one chunk
+    assert get_chunk_rows(64, 1, 1, 500) == 64
 
 
 def test_a_single_repeat_has_no_noise_estimate():
