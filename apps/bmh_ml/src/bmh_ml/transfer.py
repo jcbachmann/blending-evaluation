@@ -5,7 +5,8 @@ from pathlib import Path
 import numpy as np
 
 from bmh_ml.datasets.generators import find_result_files
-from bmh_ml.datasets.store import load_bundle, load_dataset, use_bundle_simulator
+from bmh_ml.datasets.manifest import Dataset, concatenate_datasets
+from bmh_ml.datasets.store import get_bundle_simulator, load_bundle, load_dataset, use_bundle_simulator
 from bmh_ml.evaluate_run import load_run_model
 from bmh_ml.evaluation.chevron import get_chevron_objectives
 from bmh_ml.evaluation.transfer import (
@@ -20,8 +21,38 @@ from bmh_ml.evaluation.transfer import (
     run_transfer_test,
     split_by_material,
 )
+from bmh_ml.settings import use_simulator_settings
 from bmh_ml.tracking.annotate import annotate_run
 from bmh_ml.tracking.runs import configure_mlflow
+
+
+def load_references(specs: list[str]) -> tuple[Dataset, str]:
+    """The reference sets `BUNDLE:SET` of other bundles as one dataset (the materials of all of them), with their simulator settings
+    activated: the found solutions and Chevron are simulated at the level of the references. Returns the dataset and the scope."""
+    parts, levels, scopes = [], set(), set()
+    for spec in specs:
+        bundle_name, separator, set_name = spec.partition(":")
+        if not separator:
+            raise ValueError(f"'{spec}' is not of the form BUNDLE:SET")
+        bundle = load_bundle(bundle_name)
+        parts.append(load_dataset(bundle.tests[set_name]))
+        levels.add(get_bundle_simulator(bundle))
+        scopes.add(bundle.scope)
+    if len(levels) > 1 or len(scopes) > 1:
+        raise ValueError(f"The references {specs} mix simulator settings or scopes: {levels}, {scopes}")
+    use_simulator_settings(levels.pop())
+    return concatenate_datasets("+".join(specs), parts), scopes.pop()
+
+
+def transfer_run_against(run_id: str, references: list[str], label: str, config: TransferConfig, with_plots: bool = True) -> TransferResult:
+    """The transfer test of a run's model against the reference fronts of other bundles, at their level (a model trained at one level, its
+    solutions simulated at another; or more materials than the run's own bundle has). Logged as `transfer_<label>/...`."""
+    reference, scope = load_references(references)
+    result = run_transfer_test(load_run_model(run_id), scope, reference, config)
+    prefix = f"transfer_{label}"
+    configure_mlflow().MlflowClient().log_param(run_id, f"{prefix}.references", " ".join(references))
+    log_transfer(run_id, result, config, with_plots, prefix)
+    return result
 
 
 def transfer_run(run_id: str, config: TransferConfig, with_plots: bool = True) -> TransferResult:
@@ -89,19 +120,26 @@ def parse_transfer_params(params: dict[str, str]) -> dict:
     return parsed
 
 
-def simulator_baseline(bundle_name: str, config: TransferConfig, with_plots: bool = True) -> str:
-    """NSGA-III directly on the simulator with the budget `config.evaluations` per run, logged as a run with the transfer test's metrics."""
+def simulator_baseline(bundle_name: str | None, config: TransferConfig, with_plots: bool = True, references: list[str] | None = None, label: str = "") -> str:
+    """NSGA-III directly on the simulator with the budget `config.evaluations` per run, logged as a run with the transfer test's metrics:
+    for the reference set of a bundle, or for the reference sets `references` of several bundles (at their level, run name with `label`)."""
     from bmh_ml.tracking.annotate import NOTE
     from bmh_ml.tracking.environment import get_code_version
     from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
 
-    bundle = load_bundle(bundle_name)
-    use_bundle_simulator(bundle)
-    result = run_simulator_baseline(load_dataset(bundle.tests[config.reference_set]), config)
+    if references:
+        reference, scope = load_references(references)
+        params = {"references": " ".join(references), "scope": scope}
+    else:
+        bundle = load_bundle(bundle_name)
+        use_bundle_simulator(bundle)
+        reference, scope = load_dataset(bundle.tests[config.reference_set]), bundle.scope
+        params = {"bundle": bundle.name, "scope": scope}
+    result = run_simulator_baseline(reference, config)
     mlflow = configure_mlflow()
-    name = f"simulator-nsga3-{config.evaluations}"
-    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(bundle.scope)), run_name=name) as run:
-        mlflow.log_params({"optimizer": "NSGA-III on the simulator", "bundle": bundle.name, "scope": bundle.scope})
+    name = f"simulator-nsga3-{config.evaluations}" + (f"-{label}" if label else "")
+    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(scope)), run_name=name) as run:
+        mlflow.log_params({"optimizer": "NSGA-III on the simulator", **params})
         mlflow.log_metrics({"budget/simulations": float(config.evaluations), "budget/simulations_all_runs": float(config.evaluations * len(config.seeds))})
         m = result.metrics
         mlflow.set_tags(
@@ -142,7 +180,13 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--simulator-baseline", nargs="+", type=int, metavar="SIMULATIONS", help="Instead: NSGA-III on the simulator with these budgets per run, needs --bundle"
     )
     parser.add_argument("--recompute", action="store_true", help="Compute the metrics of the earlier tests of --run-id again from their stored solutions")
+    parser.add_argument(
+        "--references", nargs="+", metavar="BUNDLE:SET", help="Reference sets of other bundles instead of the run's own (their level, all their materials)"
+    )
+    parser.add_argument("--label", help="With --references: name of the test, the metrics are logged as transfer_<label>/...")
     args = parser.parse_args(argv)
+    if args.references and not args.label:
+        parser.error("--references needs --label")
     if not args.run_id and not args.simulator_runs and not args.simulator_baseline:
         parser.error("give --run-id or --simulator-runs")
     if args.simulator_runs and not args.bundle:
@@ -163,11 +207,11 @@ def main(argv: list[str] | None = None):
         for name, values in metrics.items():
             print(f"  {name:<22} mean {values.mean():.4f}, min {values.min():.4f}, max {values.max():.4f}")
     if args.simulator_baseline:
-        if not args.bundle:
-            raise SystemExit("--simulator-baseline needs --bundle")
+        if not args.bundle and not args.references:
+            raise SystemExit("--simulator-baseline needs --bundle or --references")
         for budget in args.simulator_baseline:
             config = TransferConfig(tuple(args.seeds), args.population_size, budget, args.repeats, args.reference_set, args.n_jobs)
-            run_id = simulator_baseline(args.bundle, config, not args.no_plots)
+            run_id = simulator_baseline(args.bundle, config, not args.no_plots, args.references, args.label or "")
             print(f"simulator NSGA-III, {budget} simulations per run: run {run_id}")
         return
     if args.recompute:
@@ -178,6 +222,11 @@ def main(argv: list[str] | None = None):
 
     config = TransferConfig(tuple(args.seeds), args.population_size, args.evaluations, args.repeats, args.reference_set, args.n_jobs)
     for run_id in args.run_id:
+        if args.references:
+            metrics = transfer_run_against(run_id, args.references, args.label, config, not args.no_plots).metrics
+            share, per_run = metrics["chevron_hv_ratio"], metrics["chevron_hv_ratio_run_mean"]
+            print(f"{run_id}: {args.label}: share of the improvement over Chevron {share:.4f} (per run {per_run:.4f})")
+            continue
         metrics = transfer_run(run_id, config, not args.no_plots).metrics
         print(
             f"{run_id}: hypervolume ratio {metrics['hv_ratio']:.4f} (per run {metrics['hv_ratio_run_mean']:.4f}), IGD+ {metrics['igd_plus']:.4f}, "

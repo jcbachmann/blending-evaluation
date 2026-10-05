@@ -35,8 +35,8 @@ class TransferConfig:
     reference_set: str = "T2"
     n_jobs: int | None = None  # processes of the simulation and of the optimizations, default all cores
 
-    def params(self) -> dict[str, str]:
-        return {f"transfer.{key}": str(value) for key, value in self.__dict__.items() if key != "n_jobs"}
+    def params(self, prefix: str = "transfer") -> dict[str, str]:
+        return {f"{prefix}.{key}": str(value) for key, value in self.__dict__.items() if key != "n_jobs"}
 
 
 @dataclass
@@ -375,7 +375,7 @@ def plot_transfer(result: TransferResult):
     return figure
 
 
-def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, with_plots: bool = True) -> None:
+def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, with_plots: bool = True, prefix: str = "transfer") -> None:
     """Logs the metrics (`transfer/...`), the settings and the solutions of a transfer test to a run, also to a finished one: logging by
     run id does not reopen the run, which would change its end time."""
     import tempfile
@@ -384,9 +384,9 @@ def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, wi
     from bmh_ml.tracking.runs import configure_mlflow, log_metrics_to_run
 
     client = configure_mlflow().MlflowClient()
-    for key, value in config.params().items():
+    for key, value in config.params(prefix).items():
         client.log_param(run_id, key, value)
-    log_metrics_to_run(run_id, {f"transfer/{name}": value for name, value in result.metrics.items()})
+    log_metrics_to_run(run_id, {f"{prefix}/{name}": value for name, value in result.metrics.items()})
     with tempfile.TemporaryDirectory() as directory:
         file = Path(directory) / "solutions.npz"
         arrays = {"deposition": result.deposition, "seed": result.seed, "predicted": result.predicted, "simulated": result.simulated}
@@ -397,8 +397,8 @@ def log_transfer(run_id: str, result: TransferResult, config: TransferConfig, wi
         if result.material_index is not None:
             arrays["material_index"], arrays["reference_index"] = result.material_index, result.reference_index
         np.savez_compressed(file, reference=result.reference, **arrays)
-        client.log_artifact(run_id, str(file), "transfer")
+        client.log_artifact(run_id, str(file), prefix)
     if with_plots:
         figure = plot_transfer(result)
-        client.log_figure(run_id, figure, "transfer/front.png")
+        client.log_figure(run_id, figure, f"{prefix}/front.png")
         close_figure(figure)

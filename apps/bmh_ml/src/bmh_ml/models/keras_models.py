@@ -188,6 +188,9 @@ class ProfileMLPModel(Model):
     `material_scaling` (any material only) standardizes each material curve by its own mean and standard deviation and predicts F1 and the
     quality profile in these units. The reclaimed quality mixes the material linearly (measured: F1(a m + b) = |a| F1(m) within the
     noise), so F1 relative to the material's spread is the same quantity for materials that differ only in scale or offset.
+
+    `init_run` fine-tunes: training starts from the model of that MLflow run (same architecture) instead of random weights and keeps its
+    scaling of inputs and outputs, e.g. a model trained on many cheap simulations, trained further on a few detailed ones.
     """
 
     name = "profile_mlp"
@@ -207,7 +210,9 @@ class ProfileMLPModel(Model):
         "f2_source": "profile",
         "objective_weight": 30.0,
         "material_scaling": False,
+        "init_run": None,
     }
+    ARCHITECTURE = ("width", "depth", "activation", "dropout", "material_scaling")
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -244,14 +249,17 @@ class ProfileMLPModel(Model):
         targets, targets_val = (np.hstack([profile, np.asarray(y, dtype=np.float32)]) for profile, y in zip(flat, (y_train, y_val), strict=True))
         target_std = targets.std(axis=0)
         n_profile = flat[0].shape[1]
-        self.scaling = {
-            "x_mean": x_train.mean(axis=0),
-            "x_std": np.where(x_train.std(axis=0) > 0, x_train.std(axis=0), 1.0),
-            "t_mean": targets.mean(axis=0),
-            "t_std": np.where(target_std > 1e-6, target_std, 1.0),  # the slices at the ends are always empty
-            "profile_shape": np.array(profiles_train.shape[1:]),
-            "noise": np.zeros(2),
-        }
+        if params["init_run"]:
+            self.network, self.scaling = self.load_start(params["init_run"], profiles_train.shape[1:])
+        else:
+            self.scaling = {
+                "x_mean": x_train.mean(axis=0),
+                "x_std": np.where(x_train.std(axis=0) > 0, x_train.std(axis=0), 1.0),
+                "t_mean": targets.mean(axis=0),
+                "t_std": np.where(target_std > 1e-6, target_std, 1.0),  # the slices at the ends are always empty
+                "profile_shape": np.array(profiles_train.shape[1:]),
+                "noise": np.zeros(2),
+            }
         weights = np.ones(targets.shape[1], dtype=np.float32)
         weights[n_profile:] = params["objective_weight"]
         weights = keras.ops.convert_to_tensor(weights / weights.mean())
@@ -259,7 +267,8 @@ class ProfileMLPModel(Model):
         def weighted_mse(y_true, y_pred):
             return keras.ops.mean(weights * keras.ops.square(y_true - y_pred), axis=-1)
 
-        self.network = self.build(x_train.shape[1], targets.shape[1])
+        if self.network is None or not params["init_run"]:
+            self.network = self.build(x_train.shape[1], targets.shape[1])
         self.network.compile(optimizer=keras.optimizers.Adam(learning_rate=params["learning_rate"]), loss=weighted_mse)
         callbacks = get_training_callbacks(params["patience"])
         history = self.network.fit(
@@ -281,6 +290,18 @@ class ProfileMLPModel(Model):
             "F1/noise_correction": float(self.scaling["noise"][0]),
             "F2/noise_correction": float(self.scaling["noise"][1]),
         }
+
+    def load_start(self, run_id: str, profile_shape: tuple) -> tuple[Any, dict[str, np.ndarray]]:
+        """The network and the scaling of the model of a run, the starting point of a fine-tuning; the noise correction is measured again."""
+        from bmh_ml.evaluate_run import load_run_model
+
+        start = load_run_model(run_id)
+        if not isinstance(start, ProfileMLPModel):
+            raise ValueError(f"init_run {run_id} holds a {start.name} model, fine-tuning needs a {self.name} model")
+        different = [key for key in self.ARCHITECTURE if start.params[key] != self.params[key]]
+        if different or tuple(start.scaling["profile_shape"]) != tuple(profile_shape):
+            raise ValueError(f"init_run {run_id} has another architecture or profile shape: {different or 'profile_shape'}")
+        return start.network, {**start.scaling, "noise": np.zeros(2)}
 
     def scale_inputs(self, x: np.ndarray) -> np.ndarray:
         return (x - self.scaling["x_mean"]) / self.scaling["x_std"]
