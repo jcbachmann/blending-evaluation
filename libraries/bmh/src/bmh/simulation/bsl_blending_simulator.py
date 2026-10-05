@@ -1,5 +1,3 @@
-import math
-
 from blending_simulator_lib import BlendingSimulatorLib
 from pandas import DataFrame
 
@@ -52,7 +50,8 @@ class BslBlendingSimulator(BlendingSimulator):
         if detailed is None:
             detailed = False
         if reclaimincrement is None:
-            reclaimincrement = 1.0 / math.sqrt(ppm3)
+            # One particle size, the edge of a cube of the particle volume, like the C++ command line program
+            reclaimincrement = ppm3 ** (-1.0 / 3.0)
 
         seed_argument, options = optional_arguments(seed, lattice, record_particles)
         self.bsl = BlendingSimulatorLib(
