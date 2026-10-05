@@ -122,6 +122,12 @@ S2_LEADERBOARD_COLUMNS = [
     *map(metric_column, ["budget/simulations", "train/seconds"]),
     *map(param_column, ["model", "bundle", "seed", "material_scaling", "quality_weight"]),
 ]
+L4X32_COLUMNS = [
+    "attributes.`Description`",
+    *map(metric_column, ["transfer_L4x32/chevron_hv_ratio_run_mean", "transfer_L4x32/chevron_hv_ratio", "transfer_L4x32/chevron_hv_ratio_material_min"]),
+    *map(metric_column, ["transfer_L4x32/chevron_beaten_rate", "transfer_L4x32/F1/bias", "transfer_L4x32/F2/bias", "budget/simulations"]),
+    *map(param_column, ["model", "bundle", "seed", "init_run", "low_bundle", "references", "seed_population"]),
+]
 HAS_TRANSFER = "metrics.`transfer/hv_ratio` >= 0"
 
 
@@ -172,7 +178,7 @@ def get_views(scope: str = "S1") -> dict[str, tuple[str, dict]]:
         *map(param_column, ["model", "bundle", "learning_rate", "num_leaves", "min_child_samples", "subsample", "colsample_bytree"]),
         *map(param_column, ["width", "depth", "batch_size", "activation", "dropout", "alpha"]),
     ]
-    return {
+    views = {
         "bmhml1leaderboard": (
             "1 Leaderboard: transfer test and accuracy",
             base_state(HAS_TRANSFER, ranking, False, leaderboard),
@@ -188,6 +194,12 @@ def get_views(scope: str = "S1") -> dict[str, tuple[str, dict]]:
         "bmhml4sweeps": ("4 Sweep trials: parameters and validation", base_state("tags.trial LIKE '%'", metric_column("valop/F2/nrmse"), True, sweep_columns)),
         "bmhml5all": ("5 All runs, newest first", base_state(columns=leaderboard)),
     }
+    if general:  # the evaluation plan of 2026-10-04: everything compared at the detailed level L4 on 32 unseen materials
+        views["bmhml6detailed"] = (
+            "6 Detailed level L4, 32 materials (phase 1)",
+            base_state("metrics.`transfer_L4x32/chevron_beaten_rate` >= 0", metric_column("transfer_L4x32/chevron_hv_ratio_run_mean"), False, L4X32_COLUMNS),
+        )
+    return views
 
 
 def encode_state(state: dict) -> str:

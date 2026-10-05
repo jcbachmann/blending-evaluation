@@ -104,7 +104,7 @@ def test_the_simulator_baseline_can_start_from_the_fronts_of_another_level():
     run = mlflow.get_run(run_id)
     assert run.info.run_name == "simulator-nsga3-16-L4-seeded"
     assert run.data.params["seed_population"] == "low:T6"
-    assert "transfer/chevron_beaten_rate" in run.data.metrics
+    assert "transfer_L4/chevron_beaten_rate" in run.data.metrics  # under the label of the models it is compared with
     with pytest.raises(ValueError, match="no starting population"):
         simulator_baseline(None, config, False, ["high:T6"], "L4", ["high:T1"])
 

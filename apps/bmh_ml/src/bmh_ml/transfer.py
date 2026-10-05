@@ -177,7 +177,7 @@ def simulator_baseline(
                 "bias are the single noisy simulations the optimizer saw against the repeated ones.",
             }
         )
-    log_transfer(run.info.run_id, result, config, with_plots)
+    log_transfer(run.info.run_id, result, config, with_plots, f"transfer_{label}" if label else "transfer")  # labeled like the models it is compared with
     return run.info.run_id
 
 
