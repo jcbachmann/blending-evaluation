@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 
 MATERIAL_LENGTH: int = 50  # Length of material variables array
@@ -49,6 +50,20 @@ def get_simulator_settings() -> SimulatorSettings:
 def use_simulator_settings(settings: SimulatorSettings) -> None:
     """Activates the settings for this process and the processes it starts afterwards (they inherit the environment)."""
     os.environ[SIMULATOR_ENVIRONMENT_VARIABLE] = json.dumps(settings.as_dict())
+
+
+@contextmanager
+def simulator_settings(settings: SimulatorSettings):
+    """Simulates at other settings for the duration of the block (e.g. the cheap level inside a model evaluated at a detailed level)."""
+    previous = os.environ.get(SIMULATOR_ENVIRONMENT_VARIABLE)
+    use_simulator_settings(settings)
+    try:
+        yield
+    finally:
+        if previous is None:
+            os.environ.pop(SIMULATOR_ENVIRONMENT_VARIABLE, None)
+        else:
+            os.environ[SIMULATOR_ENVIRONMENT_VARIABLE] = previous
 
 
 # All scripts read and write relative to the working directory

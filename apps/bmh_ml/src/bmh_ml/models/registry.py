@@ -13,6 +13,7 @@ MODELS = {
     "legacy_lstm": "bmh_ml.models.keras_models:LegacyLSTMModel",
     "profile_mlp": "bmh_ml.models.keras_models:ProfileMLPModel",
     "mixing_mlp": "bmh_ml.models.keras_models:MixingMLPModel",
+    "multifidelity_mlp": "bmh_ml.models.keras_models:MultiFidelityMLPModel",
 }
 
 

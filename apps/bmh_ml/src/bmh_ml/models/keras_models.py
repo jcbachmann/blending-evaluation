@@ -351,6 +351,77 @@ class ProfileMLPModel(Model):
             self.scaling = {name: stored[name] for name in stored.files}
 
 
+class MultiFidelityMLPModel(ProfileMLPModel):
+    """The hybrid profile model with the result of one cheap simulation of the same input as additional input: it learns to correct a
+    simulation at a low detail level (`low_ppm3`) to the level of its training labels. An evaluation costs one cheap simulation and the
+    network; the cheap profile carries most of the answer, the network adds what the detailed level does differently.
+
+    The inputs are the 70 features, the cheap reclaimed profile (120 values) and the cheap F1 and F2. With `material_scaling` the cheap
+    quality and F1 are made relative to the material like the targets. Cheap results of known inputs are reused: preloaded from the
+    datasets of `low_bundle` (a bundle at the low level with the same inputs, built with the same seed) and kept for inputs simulated
+    once; every other input is simulated at `low_ppm3` when it is evaluated, e.g. the candidates of an optimizer.
+    """
+
+    name = "multifidelity_mlp"
+    defaults: ClassVar[dict[str, Any]] = {**ProfileMLPModel.defaults, "low_ppm3": 1.0, "low_bundle": None}
+
+    def __init__(self, **params):
+        super().__init__(**params)
+        self.low_results: dict[bytes, np.ndarray] = {}
+
+    def preload_low_results(self) -> None:
+        """The cheap results of every dataset of `low_bundle`, by input."""
+        from bmh_ml.datasets.manifest import SCOPE_GENERAL_MATERIAL
+        from bmh_ml.datasets.store import get_evaluation_sets, load_bundle, load_dataset
+
+        bundle = load_bundle(self.params["low_bundle"])
+        for dataset_id in dict.fromkeys([bundle.train, *bundle.train_extra, *get_evaluation_sets(bundle).values()]):
+            dataset = load_dataset(dataset_id)
+            if dataset.profiles is None:
+                continue
+            x = dataset.features(SCOPE_GENERAL_MATERIAL)
+            self.store_low_results(x, dataset.profiles, dataset.y)
+
+    def store_low_results(self, x: np.ndarray, profiles: np.ndarray, y: np.ndarray) -> None:
+        values = np.hstack([np.asarray(profiles, dtype=np.float32).reshape(len(x), -1), np.asarray(y, dtype=np.float32)])
+        for row, value in zip(np.ascontiguousarray(x[:, : MATERIAL_LENGTH + DEPOSITION_LENGTH], dtype=np.float64), values, strict=True):
+            self.low_results[row.tobytes()] = value
+
+    def get_low_results(self, x: np.ndarray) -> np.ndarray:
+        """The cheap profile and objectives of every input, shape (n, 122), simulated at `low_ppm3` where they are not known yet."""
+        from bmh_ml.datasets.simulate import simulate_with_profiles
+        from bmh_ml.settings import SimulatorSettings, simulator_settings
+
+        rows = np.ascontiguousarray(x[:, : MATERIAL_LENGTH + DEPOSITION_LENGTH], dtype=np.float64)
+        keys = [row.tobytes() for row in rows]
+        missing = [i for i, key in enumerate(keys) if key not in self.low_results]
+        if missing:
+            with simulator_settings(SimulatorSettings(ppm3=self.params["low_ppm3"])):
+                y, _, profiles = simulate_with_profiles(rows[missing, :MATERIAL_LENGTH], rows[missing, MATERIAL_LENGTH:], 1)
+            self.store_low_results(rows[missing], profiles, y)
+        return np.stack([self.low_results[key] for key in keys])
+
+    def augment(self, x: np.ndarray) -> np.ndarray:
+        """The features followed by the cheap results; quality and F1 relative to the material with `material_scaling`."""
+        low = self.get_low_results(x).astype(float)
+        n_slices = (low.shape[1] - 2) // 2
+        if self.params["material_scaling"]:
+            mean, spread = get_material_spread(x)
+            low[:, n_slices : 2 * n_slices] = np.where(low[:, :n_slices] > 0, (low[:, n_slices : 2 * n_slices] - mean[:, None]) / spread[:, None], 0.0)
+            low[:, -2] /= spread
+        return np.hstack([x[:, : MATERIAL_LENGTH + DEPOSITION_LENGTH], low])
+
+    def fit(self, x_train, y_train, x_val, y_val, seed, profiles_train=None, profiles_val=None, val_repeats: int = 1):
+        if self.params["low_bundle"]:
+            self.preload_low_results()
+        return super().fit(self.augment(x_train), y_train, self.augment(x_val), y_val, seed, profiles_train, profiles_val, val_repeats)
+
+    def predict_outputs(self, x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        if x.shape[1] == MATERIAL_LENGTH + DEPOSITION_LENGTH:
+            x = self.augment(x)
+        return super().predict_outputs(x)
+
+
 class MixingMLPModel(ProfileMLPModel):
     """F1 as a quadratic form in the material whose matrix depends on the deposition alone, F2 from a predicted volume profile.
 
@@ -519,8 +590,9 @@ class MixingMLPModel(ProfileMLPModel):
 
 
 def get_material_spread(x: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """The mean and the standard deviation of each material curve in features of the any-material scope."""
-    if x.shape[1] != MATERIAL_LENGTH + DEPOSITION_LENGTH:
+    """The mean and the standard deviation of each material curve in features of the any-material scope (material first, further
+    columns after the deposition are allowed)."""
+    if x.shape[1] < MATERIAL_LENGTH + DEPOSITION_LENGTH:
         raise ValueError(f"Scaling by the material needs the material in the features (scope S2), got {x.shape[1]} columns")
     material = x[:, :MATERIAL_LENGTH]
     return material.mean(axis=1), np.maximum(material.std(axis=1), 1e-6)

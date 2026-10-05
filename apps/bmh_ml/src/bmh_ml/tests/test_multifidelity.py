@@ -107,3 +107,34 @@ def test_the_simulator_baseline_can_start_from_the_fronts_of_another_level():
     assert "transfer/chevron_beaten_rate" in run.data.metrics
     with pytest.raises(ValueError, match="no starting population"):
         simulator_baseline(None, config, False, ["high:T6"], "L4", ["high:T1"])
+
+
+def test_the_multifidelity_model_learns_from_the_cheap_result_of_each_input(tmp_path):
+    pytest.importorskip("keras")
+    from bmh_ml.datasets.store import load_bundle, load_dataset
+    from bmh_ml.models.registry import load_model
+    from bmh_ml.settings import use_simulator_settings
+
+    args = ["--train-size", "40", "--profiles", *SMALL, *TESTS]
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "cheap", *args]))
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "detailed", "--ppm3", "4", *args]))
+    detailed = load_bundle("detailed")
+    train, val = load_dataset(detailed.train), load_dataset(detailed.val)
+    use_simulator_settings(SimulatorSettings(ppm3=4.0))  # the level of the bundle, as training activates it
+    model = create_model("multifidelity_mlp", width=16, depth=1, epochs=3, material_scaling=True, low_bundle="cheap", low_ppm3=1.0)
+
+    model.fit(train.features("S2"), train.y, val.features("S2"), val.y, seed=0, profiles_train=train.profiles, profiles_val=val.profiles, val_repeats=2)
+
+    assert len(model.low_results) >= len(train.y) + len(val.y)  # the cheap results of the same inputs, preloaded, not simulated
+    rng = np.random.default_rng(9)
+    new = np.hstack([random_materials(5, rng), random_depositions(5, rng)])
+    known = len(model.low_results)
+    prediction = model.predict(new)
+    assert prediction.shape == (5, 2)
+    assert np.all(np.isfinite(prediction))
+    assert len(model.low_results) == known + 5  # new inputs are simulated at the cheap level once
+    assert get_simulator_settings() == SimulatorSettings(ppm3=4.0)  # and the active level is restored
+    model.save(tmp_path / "model")
+    loaded = load_model(tmp_path / "model")
+    loaded.low_results = dict(model.low_results)  # the same cheap results, so the prediction must be the same
+    assert np.allclose(loaded.predict(new), prediction, atol=1e-4)
