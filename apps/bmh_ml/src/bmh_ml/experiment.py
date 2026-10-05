@@ -55,14 +55,27 @@ def get_design(runs: int, evaluations: list[int], population_sizes: list[int]) -
     return design
 
 
-def optimize(problem: Problem, population_size: int, evaluations: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
+def get_initial_population(initial: np.ndarray, population_size: int, problem: Problem, seed: int) -> np.ndarray:
+    """Up to `population_size` of the given solutions, the rest uniformly random within the bounds of the problem."""
+    rng = np.random.default_rng(seed)
+    given = np.unique(np.asarray(initial, dtype=float), axis=0)
+    if len(given) > population_size:
+        given = given[rng.choice(len(given), population_size, replace=False)]
+    random = rng.uniform(problem.xl, problem.xu, (population_size - len(given), problem.n_var))
+    return np.vstack([given, random])
+
+
+def optimize(problem: Problem, population_size: int, evaluations: int, seed: int, initial: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """NSGA-III with `evaluations` evaluations in all (the first generation included). `initial`: solutions to start from, e.g. the front
+    found at another detail level, instead of a random population."""
     generations = evaluations // population_size
     if generations < 1:
         raise ValueError(f"{evaluations} evaluations are not enough for one generation of {population_size} solutions")
+    sampling = FloatRandomSampling() if initial is None else get_initial_population(initial, population_size, problem, seed)
     algorithm = NSGA3(
         pop_size=population_size,
         ref_dirs=UniformReferenceDirectionFactory(2, n_points=population_size).do(),
-        sampling=FloatRandomSampling(),
+        sampling=sampling,
         crossover=SBX(prob=0.9, eta=15),
         mutation=PM(eta=20),
         eliminate_duplicates=True,

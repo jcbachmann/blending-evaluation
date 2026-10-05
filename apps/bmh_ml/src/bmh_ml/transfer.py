@@ -120,9 +120,27 @@ def parse_transfer_params(params: dict[str, str]) -> dict:
     return parsed
 
 
-def simulator_baseline(bundle_name: str | None, config: TransferConfig, with_plots: bool = True, references: list[str] | None = None, label: str = "") -> str:
+def load_initial_populations(specs: list[str]) -> dict[bytes, np.ndarray]:
+    """The depositions of the sets `BUNDLE:SET` by material (its bytes): the starting populations of seeded optimizations."""
+    initial: dict[bytes, list[np.ndarray]] = {}
+    for spec in specs:
+        bundle_name, _, set_name = spec.partition(":")
+        for material, part in split_by_material(load_dataset(load_bundle(bundle_name).tests[set_name])):
+            initial.setdefault(material[0].tobytes(), []).append(part.deposition)
+    return {key: np.vstack(value) for key, value in initial.items()}
+
+
+def simulator_baseline(
+    bundle_name: str | None,
+    config: TransferConfig,
+    with_plots: bool = True,
+    references: list[str] | None = None,
+    label: str = "",
+    seed_population: list[str] | None = None,
+) -> str:
     """NSGA-III directly on the simulator with the budget `config.evaluations` per run, logged as a run with the transfer test's metrics:
-    for the reference set of a bundle, or for the reference sets `references` of several bundles (at their level, run name with `label`)."""
+    for the reference set of a bundle, or for the reference sets `references` of several bundles (at their level, run name with `label`).
+    `seed_population`: sets `BUNDLE:SET` whose solutions of each material start its runs (e.g. the fronts found at another level)."""
     from bmh_ml.tracking.annotate import NOTE
     from bmh_ml.tracking.environment import get_code_version
     from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
@@ -135,9 +153,15 @@ def simulator_baseline(bundle_name: str | None, config: TransferConfig, with_plo
         use_bundle_simulator(bundle)
         reference, scope = load_dataset(bundle.tests[config.reference_set]), bundle.scope
         params = {"bundle": bundle.name, "scope": scope}
-    result = run_simulator_baseline(reference, config)
+    initial = load_initial_populations(seed_population) if seed_population else None
+    if initial:
+        missing = [material for material, _ in split_by_material(reference) if material[0].tobytes() not in initial]
+        if missing:
+            raise ValueError(f"{len(missing)} materials of the references have no starting population in {seed_population}")
+        params["seed_population"] = " ".join(seed_population)
+    result = run_simulator_baseline(reference, config, initial)
     mlflow = configure_mlflow()
-    name = f"simulator-nsga3-{config.evaluations}" + (f"-{label}" if label else "")
+    name = f"simulator-nsga3-{config.evaluations}" + (f"-{label}" if label else "") + ("-seeded" if initial else "")
     with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(scope)), run_name=name) as run:
         mlflow.log_params({"optimizer": "NSGA-III on the simulator", **params})
         mlflow.log_metrics({"budget/simulations": float(config.evaluations), "budget/simulations_all_runs": float(config.evaluations * len(config.seeds))})
@@ -184,6 +208,9 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--references", nargs="+", metavar="BUNDLE:SET", help="Reference sets of other bundles instead of the run's own (their level, all their materials)"
     )
     parser.add_argument("--label", help="With --references: name of the test, the metrics are logged as transfer_<label>/...")
+    parser.add_argument(
+        "--seed-population", nargs="+", metavar="BUNDLE:SET", help="With --simulator-baseline: start each material's runs from its solutions in these sets"
+    )
     args = parser.parse_args(argv)
     if args.references and not args.label:
         parser.error("--references needs --label")
@@ -211,7 +238,7 @@ def main(argv: list[str] | None = None):
             raise SystemExit("--simulator-baseline needs --bundle or --references")
         for budget in args.simulator_baseline:
             config = TransferConfig(tuple(args.seeds), args.population_size, budget, args.repeats, args.reference_set, args.n_jobs)
-            run_id = simulator_baseline(args.bundle, config, not args.no_plots, args.references, args.label or "")
+            run_id = simulator_baseline(args.bundle, config, not args.no_plots, args.references, args.label or "", args.seed_population)
             print(f"simulator NSGA-III, {budget} simulations per run: run {run_id}")
         return
     if args.recompute:

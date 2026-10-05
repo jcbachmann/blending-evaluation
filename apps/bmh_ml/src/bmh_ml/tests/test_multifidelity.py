@@ -70,3 +70,40 @@ def test_a_model_is_tested_against_the_references_of_another_level():
     assert "transfer/chevron_beaten_rate" not in logged.metrics  # the run's own test is a different one
     with pytest.raises(ValueError, match="mix simulator settings"):
         load_references(["high:T6", "low:T6"])
+
+
+def test_the_initial_population_takes_the_given_solutions_and_fills_up_at_random():
+    pytest.importorskip("pymoo")
+    from bmh_ml.evaluation.transfer import get_simulator_problem_class
+    from bmh_ml.experiment import get_initial_population
+    from bmh_ml.settings import X_MAX, X_MIN
+
+    problem = get_simulator_problem_class()(random_materials(1, np.random.default_rng(0)))
+    given = random_depositions(3, np.random.default_rng(1))
+
+    population = get_initial_population(np.vstack([given, given[:1]]), 8, problem, seed=0)
+
+    assert population.shape == (8, 20)
+    assert all(any(np.array_equal(row, solution) for row in population) for solution in given)  # duplicates count once
+    assert population.min() >= X_MIN
+    assert population.max() <= X_MAX
+    assert len(get_initial_population(random_depositions(20, np.random.default_rng(2)), 8, problem, seed=0)) == 8
+
+
+def test_the_simulator_baseline_can_start_from_the_fronts_of_another_level():
+    mlflow = pytest.importorskip("mlflow")
+    from bmh_ml.evaluation.transfer import TransferConfig
+    from bmh_ml.transfer import simulator_baseline
+
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "low", "--train-size", "4", *SMALL, *TESTS, *FRONTS]))
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "high", "--ppm3", "4", "--train-size", "4", *SMALL, *TESTS, *FRONTS]))
+    config = TransferConfig(**{**TRANSFER, "evaluations": 16, "population_size": 8})
+
+    run_id = simulator_baseline(None, config, False, ["high:T6"], "L4", ["low:T6"])
+
+    run = mlflow.get_run(run_id)
+    assert run.info.run_name == "simulator-nsga3-16-L4-seeded"
+    assert run.data.params["seed_population"] == "low:T6"
+    assert "transfer/chevron_beaten_rate" in run.data.metrics
+    with pytest.raises(ValueError, match="no starting population"):
+        simulator_baseline(None, config, False, ["high:T6"], "L4", ["high:T1"])
