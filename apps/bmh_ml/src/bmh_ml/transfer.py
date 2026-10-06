@@ -120,14 +120,56 @@ def parse_transfer_params(params: dict[str, str]) -> dict:
     return parsed
 
 
+def load_run_fronts(run_id: str, label: str = "") -> dict[bytes, np.ndarray]:
+    """The solutions a run's model found in its transfer test `transfer_<label>` (`transfer` without a label), by material (its bytes): those
+    the model predicts as non-dominated among all its optimization runs of that material. Only the model's predictions select them."""
+    import tempfile
+
+    from bmh_ml.evaluation.transfer import get_nondominated
+    from bmh_ml.settings import get_simulator_settings
+
+    mlflow = configure_mlflow()
+    params = mlflow.get_run(run_id).data.params
+    prefix = f"transfer_{label}" if label else "transfer"
+    if f"{prefix}.references" in params:
+        level = get_simulator_settings()
+        reference, _ = load_references(params[f"{prefix}.references"].split())
+        use_simulator_settings(level)  # only the materials are needed here, the level stays
+    else:
+        reference = load_dataset(load_bundle(params["bundle"]).tests[params.get(f"{prefix}.reference_set", "T2")])
+    with tempfile.TemporaryDirectory() as directory:
+        path = mlflow.artifacts.download_artifacts(run_id=run_id, artifact_path=f"{prefix}/solutions.npz", dst_path=directory)
+        with np.load(path) as stored:
+            deposition, predicted = stored["deposition"], stored["predicted"]
+            index = stored["material_index"] if "material_index" in stored.files else np.zeros(len(deposition), dtype=int)
+    fronts = {}
+    for i, (material, _) in enumerate(split_by_material(reference)):
+        rows = np.flatnonzero(index == i)
+        fronts[material[0].tobytes()] = deposition[rows][get_nondominated(predicted[rows])]
+    return fronts
+
+
 def load_initial_populations(specs: list[str]) -> dict[bytes, np.ndarray]:
-    """The depositions of the sets `BUNDLE:SET` by material (its bytes): the starting populations of seeded optimizations."""
+    """The starting populations of seeded optimizations by material (its bytes): the depositions of the sets `BUNDLE:SET`, or with
+    `run:<run id>[:<label>]` the solutions a model found in its transfer test (`load_run_fronts`)."""
     initial: dict[bytes, list[np.ndarray]] = {}
     for spec in specs:
+        if spec.startswith("run:"):
+            _, run_id, label = [*spec.split(":"), ""][:3]
+            for key, deposition in load_run_fronts(run_id, label).items():
+                initial.setdefault(key, []).append(deposition)
+            continue
         bundle_name, _, set_name = spec.partition(":")
         for material, part in split_by_material(load_dataset(load_bundle(bundle_name).tests[set_name])):
             initial.setdefault(material[0].tobytes(), []).append(part.deposition)
     return {key: np.vstack(value) for key, value in initial.items()}
+
+
+def get_seeded_suffix(seed_population: list[str]) -> str:
+    """The run name suffix of a seeded baseline: `-seeded`, and the names of the runs whose model fronts seed it."""
+    mlflow = configure_mlflow()
+    sources = [mlflow.get_run(spec.split(":")[1]).info.run_name for spec in seed_population if spec.startswith("run:")]
+    return "-seeded" + (f"-from-{'+'.join(sources)}" if sources else "")
 
 
 def simulator_baseline(
@@ -140,7 +182,8 @@ def simulator_baseline(
 ) -> str:
     """NSGA-III directly on the simulator with the budget `config.evaluations` per run, logged as a run with the transfer test's metrics:
     for the reference set of a bundle, or for the reference sets `references` of several bundles (at their level, run name with `label`).
-    `seed_population`: sets `BUNDLE:SET` whose solutions of each material start its runs (e.g. the fronts found at another level)."""
+    `seed_population`: sets `BUNDLE:SET` whose solutions of each material start its runs (e.g. the fronts found at another level), or
+    `run:<run id>[:<label>]`, the fronts a model found (`load_run_fronts`)."""
     from bmh_ml.tracking.annotate import NOTE
     from bmh_ml.tracking.environment import get_code_version
     from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
@@ -161,7 +204,7 @@ def simulator_baseline(
         params["seed_population"] = " ".join(seed_population)
     result = run_simulator_baseline(reference, config, initial)
     mlflow = configure_mlflow()
-    name = f"simulator-nsga3-{config.evaluations}" + (f"-{label}" if label else "") + ("-seeded" if initial else "")
+    name = f"simulator-nsga3-{config.evaluations}" + (f"-{label}" if label else "") + (get_seeded_suffix(seed_population) if initial else "")
     with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(scope)), run_name=name) as run:
         mlflow.log_params({"optimizer": "NSGA-III on the simulator", **params})
         mlflow.log_metrics({"budget/simulations": float(config.evaluations), "budget/simulations_all_runs": float(config.evaluations * len(config.seeds))})
@@ -209,7 +252,11 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--label", help="With --references: name of the test, the metrics are logged as transfer_<label>/...")
     parser.add_argument(
-        "--seed-population", nargs="+", metavar="BUNDLE:SET", help="With --simulator-baseline: start each material's runs from its solutions in these sets"
+        "--seed-population",
+        nargs="+",
+        metavar="BUNDLE:SET",
+        help="With --simulator-baseline: start each material's runs from its solutions in these sets, or with run:<run id>[:<label>] from the "
+        "solutions a model predicts as non-dominated in that run's transfer test",
     )
     args = parser.parse_args(argv)
     if args.references and not args.label:

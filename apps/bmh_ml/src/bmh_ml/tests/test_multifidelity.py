@@ -109,6 +109,43 @@ def test_the_simulator_baseline_can_start_from_the_fronts_of_another_level():
         simulator_baseline(None, config, False, ["high:T6"], "L4", ["high:T1"])
 
 
+def test_the_simulator_baseline_can_start_from_the_fronts_a_model_found():
+    mlflow = pytest.importorskip("mlflow")
+    pytest.importorskip("sklearn")
+    from bmh_ml.evaluation.transfer import TransferConfig, get_nondominated, split_by_material
+    from bmh_ml.train import run_training
+    from bmh_ml.transfer import load_initial_populations, simulator_baseline
+
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "low", "--train-size", "30", *SMALL, *TESTS, *FRONTS]))
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "high", "--ppm3", "4", "--train-size", "4", *SMALL, *TESTS, *FRONTS]))
+    model_run = run_training("low", "ridge", {}, with_plots=False)
+    result = transfer_run_against_high(model_run.run_id)
+
+    initial = load_initial_populations([f"run:{model_run.run_id}:L4"])
+
+    assert get_simulator_settings() == SimulatorSettings(ppm3=4.0)  # loading the fronts keeps the active level
+    for i, (material, _) in enumerate(split_by_material(load_dataset_of("high"))):
+        rows = result.material_index == i
+        expected = result.deposition[rows][get_nondominated(result.predicted[rows])]  # what the model itself calls its front
+        assert np.array_equal(initial[material[0].tobytes()], expected)
+    config = TransferConfig(**{**TRANSFER, "evaluations": 16, "population_size": 8})
+    run_id = simulator_baseline(None, config, False, ["high:T6"], "L4", [f"run:{model_run.run_id}:L4"])
+    assert mlflow.get_run(run_id).info.run_name == f"simulator-nsga3-16-L4-seeded-from-{mlflow.get_run(model_run.run_id).info.run_name}"
+
+
+def transfer_run_against_high(run_id: str):
+    from bmh_ml.evaluation.transfer import TransferConfig
+    from bmh_ml.transfer import transfer_run_against
+
+    return transfer_run_against(run_id, ["high:T6"], "L4", TransferConfig(**TRANSFER), with_plots=False)
+
+
+def load_dataset_of(bundle_name: str):
+    from bmh_ml.datasets.store import load_bundle, load_dataset
+
+    return load_dataset(load_bundle(bundle_name).tests["T6"])
+
+
 def test_the_multifidelity_model_learns_from_the_cheap_result_of_each_input(tmp_path):
     pytest.importorskip("keras")
     from bmh_ml.datasets.store import load_bundle, load_dataset
