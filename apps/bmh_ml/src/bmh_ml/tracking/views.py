@@ -194,9 +194,9 @@ def get_views(scope: str = "S1") -> dict[str, tuple[str, dict]]:
         "bmhml4sweeps": ("4 Sweep trials: parameters and validation", base_state("tags.trial LIKE '%'", metric_column("valop/F2/nrmse"), True, sweep_columns)),
         "bmhml5all": ("5 All runs, newest first", base_state(columns=leaderboard)),
     }
-    if general:  # the evaluation plan of 2026-10-04: everything compared at the detailed level L4 on 32 unseen materials
+    if general:  # the evaluation plan of 2026-10-04: everything compared at level L4 (ppm3 64) on 32 unseen materials
         views["bmhml6detailed"] = (
-            "6 Detailed level L4, 32 materials (phase 1)",
+            "6 Level L4 (ppm3 64), 32 materials (phase 1)",
             base_state("metrics.`transfer_L4x32/chevron_beaten_rate` >= 0", metric_column("transfer_L4x32/chevron_hv_ratio_run_mean"), False, L4X32_COLUMNS),
         )
     return views
