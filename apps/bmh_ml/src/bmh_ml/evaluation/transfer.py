@@ -159,7 +159,7 @@ def run_simulator_baseline(
     start = time.perf_counter()
     fronts = run_simulator_fronts_many([material for material, _ in parts], config, initial, prescreen)
     optimize_seconds = (time.perf_counter() - start) / len(parts)
-    results = [score_found_solutions(material, part, front, config, optimize_seconds) for (material, part), front in zip(parts, fronts, strict=True)]
+    results = score_all_found_solutions(parts, fronts, config, optimize_seconds)
     return combine_results(results)
 
 
@@ -243,22 +243,50 @@ def run_transfer_test(model: Model, scope: str, reference_dataset: Dataset, conf
     start = time.perf_counter()
     fronts = optimize_model_many(model, scope, [material for material, _ in parts], config.seeds, config.population_size, config.evaluations, config.n_jobs)
     optimize_seconds = (time.perf_counter() - start) / len(parts)
-    results = [score_found_solutions(material, part, front, config, optimize_seconds) for (material, part), front in zip(parts, fronts, strict=True)]
+    results = score_all_found_solutions(parts, fronts, config, optimize_seconds)
     return combine_results(results)
 
 
 def score_found_solutions(
-    material: np.ndarray, reference_dataset: Dataset, front: tuple[np.ndarray, np.ndarray, np.ndarray], config: TransferConfig, optimize_seconds: float
+    material: np.ndarray,
+    reference_dataset: Dataset,
+    front: tuple[np.ndarray, np.ndarray, np.ndarray],
+    config: TransferConfig,
+    optimize_seconds: float,
+    simulation: tuple[np.ndarray, np.ndarray | None, float] | None = None,
 ) -> TransferResult:
-    """Simulates the solutions an optimizer found for one material and scores them against its reference front and its Chevron."""
+    """Simulates the solutions an optimizer found for one material and scores them against its reference front and its Chevron.
+    `simulation`: their simulated objectives, standard deviations and the seconds it took, if already simulated."""
     deposition, predicted, seeds = front
     reference = get_reference_front(reference_dataset)
     start = time.perf_counter()
-    simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
+    if simulation is None:
+        simulated, simulated_sd = simulate(material, deposition, config.repeats, config.n_jobs)
+        seconds = 0.0
+    else:
+        simulated, simulated_sd, seconds = simulation
     chevron = get_chevron_objectives(material, n_jobs=config.n_jobs)
     metrics = get_transfer_metrics(seeds, predicted, simulated, reference, chevron)
-    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": time.perf_counter() - start})
+    metrics.update({"optimize_seconds": optimize_seconds, "simulate_seconds": seconds + time.perf_counter() - start})
     return TransferResult(metrics, deposition, seeds, predicted, simulated, simulated_sd, reference, chevron)
+
+
+def score_all_found_solutions(
+    parts: list[tuple[np.ndarray, Dataset]], fronts: list[tuple[np.ndarray, np.ndarray, np.ndarray]], config: TransferConfig, optimize_seconds: float
+) -> list[TransferResult]:
+    """`score_found_solutions` for every material, the solutions of all materials simulated in one batch (one set of processes instead
+    of one per material, whose start took longer than the few hundred simulations of a material)."""
+    start = time.perf_counter()
+    materials = np.vstack([np.repeat(np.atleast_2d(material), len(front[0]), axis=0) for (material, _), front in zip(parts, fronts, strict=True)])
+    simulated, simulated_sd = simulate(materials, np.vstack([front[0] for front in fronts]), config.repeats, config.n_jobs)
+    seconds = (time.perf_counter() - start) / len(parts)
+    bounds = np.cumsum([0] + [len(front[0]) for front in fronts])
+    results = []
+    for i, ((material, part), front) in enumerate(zip(parts, fronts, strict=True)):
+        rows = slice(bounds[i], bounds[i + 1])
+        simulation = (simulated[rows], None if simulated_sd is None else simulated_sd[rows], seconds)
+        results.append(score_found_solutions(material, part, front, config, optimize_seconds, simulation))
+    return results
 
 
 def combine_results(results: list[TransferResult]) -> TransferResult:
