@@ -65,9 +65,11 @@ def get_initial_population(initial: np.ndarray, population_size: int, problem: P
     return np.vstack([given, random])
 
 
-def optimize(problem: Problem, population_size: int, evaluations: int, seed: int, initial: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+def optimize(
+    problem: Problem, population_size: int, evaluations: int, seed: int, initial: np.ndarray | None = None, callback=None
+) -> tuple[np.ndarray, np.ndarray]:
     """NSGA-III with `evaluations` evaluations in all (the first generation included). `initial`: solutions to start from, e.g. the front
-    found at another detail level, instead of a random population."""
+    found at another detail level, instead of a random population. `callback`: a pymoo callback, called after every generation."""
     generations = evaluations // population_size
     if generations < 1:
         raise ValueError(f"{evaluations} evaluations are not enough for one generation of {population_size} solutions")
@@ -80,7 +82,8 @@ def optimize(problem: Problem, population_size: int, evaluations: int, seed: int
         mutation=PM(eta=20),
         eliminate_duplicates=True,
     )
-    result = minimize(problem, algorithm, ("n_gen", generations), seed=seed, verbose=False)
+    options = {} if callback is None else {"callback": callback}  # None would replace pymoo's default callback
+    result = minimize(problem, algorithm, ("n_gen", generations), seed=seed, verbose=False, **options)
     return result.F, result.X
 
 
