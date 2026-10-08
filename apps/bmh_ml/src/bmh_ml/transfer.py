@@ -1,5 +1,6 @@
 import argparse
 import logging
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -165,6 +166,20 @@ def load_initial_populations(specs: list[str]) -> dict[bytes, np.ndarray]:
     return {key: np.vstack(value) for key, value in initial.items()}
 
 
+def save_prescreen_models(run_ids: list[str], scope: str, candidates: int, simulated: int, directory: Path):
+    """The models of the runs saved into `directory` (worker processes load them from there) as a `prescreen.Prescreen`."""
+    from bmh_ml.prescreen import Prescreen
+
+    if not 1 <= len(run_ids) <= 2:
+        raise ValueError("--prescreen takes one run (both objectives) or two (F1, then F2)")
+    paths = []
+    for i, run_id in enumerate(dict.fromkeys(run_ids)):
+        path = directory / f"model-{i}"
+        load_run_model(run_id).save(path)
+        paths.append(str(path))
+    return Prescreen(paths[0], paths[-1], scope, candidates, simulated)
+
+
 def get_seeded_suffix(seed_population: list[str]) -> str:
     """The run name suffix of a seeded baseline: `-seeded`, and the names of the runs whose model fronts seed it."""
     mlflow = configure_mlflow()
@@ -179,11 +194,16 @@ def simulator_baseline(
     references: list[str] | None = None,
     label: str = "",
     seed_population: list[str] | None = None,
+    prescreen: list[str] | None = None,
+    candidates: int = 300,
+    simulated: int = 100,
 ) -> str:
     """NSGA-III directly on the simulator with the budget `config.evaluations` per run, logged as a run with the transfer test's metrics:
     for the reference set of a bundle, or for the reference sets `references` of several bundles (at their level, run name with `label`).
     `seed_population`: sets `BUNDLE:SET` whose solutions of each material start its runs (e.g. the fronts found at another level), or
-    `run:<run id>[:<label>]`, the fronts a model found (`load_run_fronts`)."""
+    `run:<run id>[:<label>]`, the fronts a model found (`load_run_fronts`). `prescreen`: the training runs whose models rate the offspring
+    (one for both objectives, or one for F1 and one for F2); every generation makes `candidates` offspring and simulates the `simulated`
+    best (`prescreen.optimize_prescreened`)."""
     from bmh_ml.tracking.annotate import NOTE
     from bmh_ml.tracking.environment import get_code_version
     from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
@@ -202,9 +222,16 @@ def simulator_baseline(
         if missing:
             raise ValueError(f"{len(missing)} materials of the references have no starting population in {seed_population}")
         params["seed_population"] = " ".join(seed_population)
-    result = run_simulator_baseline(reference, config, initial)
+    with tempfile.TemporaryDirectory() as directory:
+        screen = None
+        if prescreen:
+            screen = save_prescreen_models(prescreen, scope, candidates, simulated, Path(directory))
+            params |= {"prescreen": " ".join(prescreen), "prescreen_candidates": candidates, "prescreen_simulated": simulated}
+        result = run_simulator_baseline(reference, config, initial, screen)
     mlflow = configure_mlflow()
     name = f"simulator-nsga3-{config.evaluations}" + (f"-{label}" if label else "") + (get_seeded_suffix(seed_population) if initial else "")
+    if prescreen:
+        name += f"-prescreened-{candidates}to{simulated}"
     with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(scope)), run_name=name) as run:
         mlflow.log_params({"optimizer": "NSGA-III on the simulator", **params})
         mlflow.log_metrics({"budget/simulations": float(config.evaluations), "budget/simulations_all_runs": float(config.evaluations * len(config.seeds))})
@@ -258,6 +285,14 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="With --simulator-baseline: start each material's runs from its solutions in these sets, or with run:<run id>[:<label>] from the "
         "solutions a model predicts as non-dominated in that run's transfer test",
     )
+    parser.add_argument(
+        "--prescreen",
+        nargs="+",
+        metavar="RUN_ID",
+        help="With --simulator-baseline: models of these runs (one, or F1 then F2) choose which offspring are simulated",
+    )
+    parser.add_argument("--candidates", type=int, default=300, help="With --prescreen: offspring made per generation")
+    parser.add_argument("--simulated", type=int, default=100, help="With --prescreen: offspring simulated per generation, the models' best")
     args = parser.parse_args(argv)
     if args.references and not args.label:
         parser.error("--references needs --label")
@@ -285,7 +320,9 @@ def main(argv: list[str] | None = None):
             raise SystemExit("--simulator-baseline needs --bundle or --references")
         for budget in args.simulator_baseline:
             config = TransferConfig(tuple(args.seeds), args.population_size, budget, args.repeats, args.reference_set, args.n_jobs)
-            run_id = simulator_baseline(args.bundle, config, not args.no_plots, args.references, args.label or "", args.seed_population)
+            run_id = simulator_baseline(
+                args.bundle, config, not args.no_plots, args.references, args.label or "", args.seed_population, args.prescreen, args.candidates, args.simulated
+            )
             print(f"simulator NSGA-III, {budget} simulations per run: run {run_id}")
         return
     if args.recompute:

@@ -132,23 +132,32 @@ def get_simulator_problem_class():
 
 
 def optimize_simulator_once(
-    material: np.ndarray, seed: int, population_size: int, evaluations: int, initial: np.ndarray | None = None
+    material: np.ndarray, seed: int, population_size: int, evaluations: int, initial: np.ndarray | None = None, prescreen=None
 ) -> tuple[np.ndarray, np.ndarray]:
     """The final front of one NSGA-III run on the simulator: depositions and the objectives the optimizer saw (one simulation each).
-    `initial`: depositions to start from instead of a random population."""
+    `initial`: depositions to start from instead of a random population. `prescreen`: a `prescreen.Prescreen`, models choose which
+    offspring are simulated."""
     from bmh_ml.experiment import optimize
+    from bmh_ml.prescreen import optimize_prescreened
 
-    objectives, variables = optimize(get_simulator_problem_class()(np.atleast_2d(material)), population_size, evaluations, seed, initial)
+    problem = get_simulator_problem_class()(np.atleast_2d(material))
+    if prescreen is None:
+        objectives, variables = optimize(problem, population_size, evaluations, seed, initial)
+    else:
+        objectives, variables = optimize_prescreened(problem, prescreen, population_size, evaluations, seed, initial)
     return np.atleast_2d(variables), np.atleast_2d(objectives)
 
 
-def run_simulator_baseline(reference_dataset: Dataset, config: TransferConfig, initial: dict[bytes, np.ndarray] | None = None) -> TransferResult:
+def run_simulator_baseline(
+    reference_dataset: Dataset, config: TransferConfig, initial: dict[bytes, np.ndarray] | None = None, prescreen=None
+) -> TransferResult:
     """The transfer test's yardstick: NSGA-III directly on the simulator with `config.evaluations` simulations per run, for each material of
     the reference dataset, the final fronts simulated `config.repeats` times and scored with the same metrics. `predicted` holds the single
-    noisy simulations the optimizer saw. `initial` maps a material (its bytes) to the depositions its runs start from."""
+    noisy simulations the optimizer saw. `initial` maps a material (its bytes) to the depositions its runs start from. `prescreen`: models
+    choose which offspring are simulated (`prescreen.Prescreen`)."""
     parts = split_by_material(reference_dataset)
     start = time.perf_counter()
-    fronts = run_simulator_fronts_many([material for material, _ in parts], config, initial)
+    fronts = run_simulator_fronts_many([material for material, _ in parts], config, initial, prescreen)
     optimize_seconds = (time.perf_counter() - start) / len(parts)
     results = [score_found_solutions(material, part, front, config, optimize_seconds) for (material, part), front in zip(parts, fronts, strict=True)]
     return combine_results(results)
@@ -160,14 +169,14 @@ def run_simulator_fronts(material: np.ndarray, config: TransferConfig) -> tuple[
 
 
 def run_simulator_fronts_many(
-    materials: list[np.ndarray], config: TransferConfig, initial: dict[bytes, np.ndarray] | None = None
+    materials: list[np.ndarray], config: TransferConfig, initial: dict[bytes, np.ndarray] | None = None, prescreen=None
 ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
     """`run_simulator_fronts` for several materials, all runs in one set of parallel processes. One result per material. `initial`: the
     depositions the runs of a material start from, by the material's bytes (a material without an entry starts at random)."""
     from bmh_ml.parallel import get_cpu_count, run_parallel
 
     start = lambda material: (initial or {}).get(np.atleast_2d(material)[0].tobytes())  # noqa: E731
-    tasks = [(material, seed, config.population_size, config.evaluations, start(material)) for material in materials for seed in config.seeds]
+    tasks = [(material, seed, config.population_size, config.evaluations, start(material), prescreen) for material in materials for seed in config.seeds]
     fronts = run_parallel(optimize_simulator_once, tasks, min(config.n_jobs or get_cpu_count(), len(tasks)), threads=1)
     results = []
     for i in range(len(materials)):

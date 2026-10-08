@@ -133,6 +133,27 @@ def test_the_simulator_baseline_can_start_from_the_fronts_a_model_found():
     assert mlflow.get_run(run_id).info.run_name == f"simulator-nsga3-16-L4-seeded-from-{mlflow.get_run(model_run.run_id).info.run_name}"
 
 
+def test_the_simulator_baseline_can_let_a_model_choose_which_offspring_are_simulated():
+    mlflow = pytest.importorskip("mlflow")
+    pytest.importorskip("sklearn")
+    from bmh_ml.evaluation.transfer import TransferConfig
+    from bmh_ml.train import run_training
+    from bmh_ml.transfer import simulator_baseline
+
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "low", "--train-size", "30", *SMALL, *TESTS, *FRONTS]))
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "high", "--ppm3", "4", "--train-size", "4", *SMALL, *TESTS, *FRONTS]))
+    model_run = run_training("low", "ridge", {}, with_plots=False)
+    config = TransferConfig(**{**TRANSFER, "evaluations": 16, "population_size": 8})
+
+    run_id = simulator_baseline(None, config, False, ["high:T6"], "L4", None, [model_run.run_id], candidates=12, simulated=4)
+
+    run = mlflow.get_run(run_id)
+    assert run.info.run_name == "simulator-nsga3-16-L4-prescreened-12to4"
+    assert run.data.params["prescreen"] == model_run.run_id
+    assert run.data.params["prescreen_simulated"] == "4"
+    assert "transfer_L4/chevron_beaten_rate" in run.data.metrics
+
+
 def transfer_run_against_high(run_id: str):
     from bmh_ml.evaluation.transfer import TransferConfig
     from bmh_ml.transfer import transfer_run_against

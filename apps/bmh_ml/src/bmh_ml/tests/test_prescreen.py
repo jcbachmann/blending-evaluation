@@ -29,10 +29,10 @@ def test_the_preselection_takes_the_offspring_with_the_best_predicted_rank():
     from bmh_ml.prescreen import preselect
 
     rng = np.random.default_rng(0)
-    assert sorted(preselect(PARENTS, OFFSPRING, 0.5, rng).tolist()) == [0, 2]  # a perfect model picks exactly the joining ones
+    assert sorted(preselect(PARENTS, OFFSPRING, 2, rng).tolist()) == [0, 2]  # a perfect model picks exactly the joining ones
     wrong = OFFSPRING[::-1]  # predictions that swap good and bad
-    assert sorted(preselect(PARENTS, wrong, 0.5, rng).tolist()) == [1, 3]
-    assert len(preselect(PARENTS, OFFSPRING, 0.01, rng)) == 1  # at least one is always simulated
+    assert sorted(preselect(PARENTS, wrong, 2, rng).tolist()) == [1, 3]
+    assert len(preselect(PARENTS, OFFSPRING, 0, rng)) == 1  # at least one is always simulated
 
 
 def test_a_perfect_model_recalls_every_joining_offspring_and_noise_does_not():
@@ -69,3 +69,30 @@ def test_the_refinement_records_parents_and_offspring_of_every_generation(tmp_pa
     with np.load(tmp_path / "g.npz") as stored:
         assert set(stored["role"].tolist()) == {0, 1}
         assert stored["x"].shape[1] == 20
+
+
+def test_the_prescreened_optimizer_simulates_only_the_models_picks_within_the_budget(tmp_path, monkeypatch):
+    pytest.importorskip("pymoo")
+    pytest.importorskip("sklearn")
+    from bmh_ml.datasets.manifest import make_features
+    from bmh_ml.evaluation import transfer
+    from bmh_ml.models.registry import create_model
+    from bmh_ml.prescreen import Prescreen, optimize_prescreened
+
+    rng = np.random.default_rng(3)
+    material, depositions = random_materials(1, rng), random_depositions(40, rng)
+    model = create_model("ridge")
+    y = transfer.simulate(material, depositions, 1, n_jobs=1)[0]
+    x = make_features("S2", np.repeat(material, 40, axis=0), depositions)
+    model.fit(x, y, x, y, seed=0)
+    model.save(tmp_path / "model")
+    simulated = []
+    original = transfer.simulate
+    monkeypatch.setattr(transfer, "simulate", lambda m, d, *a, **k: (simulated.append(len(d)), original(m, d, *a, **k))[1])
+    problem = transfer.get_simulator_problem_class()(material)
+
+    objectives, variables = optimize_prescreened(problem, Prescreen(str(tmp_path / "model"), str(tmp_path / "model"), "S2", 16, 4), 8, 30, 1)
+
+    assert simulated == [8, 4, 4, 4, 4, 4, 2]  # the first population, then the 4 best of 16 candidates, the last generation fills the budget
+    assert variables.shape[1] == 20
+    assert objectives.shape == (len(variables), 2)

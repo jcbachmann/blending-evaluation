@@ -65,15 +65,14 @@ def joins_front(parents_f: np.ndarray, offspring_f: np.ndarray) -> np.ndarray:
     return mask
 
 
-def preselect(parents_f: np.ndarray, predicted_f: np.ndarray, share: float, rng: np.random.Generator) -> np.ndarray:
-    """The offspring a model would have simulated: the share with the best non-domination rank of their predictions among the parents
+def preselect(parents_f: np.ndarray, predicted_f: np.ndarray, count: int, rng: np.random.Generator) -> np.ndarray:
+    """The `count` offspring a model would have simulated: those with the best non-domination rank of their predictions among the parents
     (simulated) and all offspring (predicted), ties broken at random."""
     from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
     _, rank = NonDominatedSorting().do(np.vstack([parents_f, predicted_f]), return_rank=True)
     offspring_rank = rank[len(parents_f) :]
-    count = max(1, round(share * len(predicted_f)))
-    return np.lexsort((rng.random(len(predicted_f)), offspring_rank))[:count]
+    return np.lexsort((rng.random(len(predicted_f)), offspring_rank))[: max(1, count)]
 
 
 def get_check_metrics(generations: list[Generation], predicted: list[np.ndarray], seed: int = 0) -> dict[str, float]:
@@ -89,7 +88,7 @@ def get_check_metrics(generations: list[Generation], predicted: list[np.ndarray]
         joining += int(truth.sum())
         offspring += len(truth)
         for share in SHARES:
-            hits[share] += int(truth[preselect(generation.parents_f, prediction, share, rng)].sum())
+            hits[share] += int(truth[preselect(generation.parents_f, prediction, round(share * len(prediction)), rng)].sum())
         for objective in (0, 1):
             correlations[objective].append(spearmanr(prediction[:, objective], generation.offspring_f[:, objective]).statistic)
     metrics = {"joining_share": joining / offspring, "generations": float(len(generations))}
@@ -100,6 +99,81 @@ def get_check_metrics(generations: list[Generation], predicted: list[np.ndarray]
     for objective, name in ((0, "F1"), (1, "F2")):
         metrics[f"{name}/offspring_spearman"] = float(np.nanmean(correlations[objective]))
     return metrics
+
+
+_MODELS: dict[str, object] = {}  # models loaded by this process, by directory
+
+
+@dataclass
+class Prescreen:
+    """Pre-screening for NSGA-III on the simulator: every generation makes `candidates` offspring, the models rate them and only the
+    `simulated` best are simulated. F1 comes from the model in `f1_model`, F2 from the one in `f2_model` (directories of saved models,
+    possibly the same)."""
+
+    f1_model: str
+    f2_model: str
+    scope: str
+    candidates: int
+    simulated: int
+
+    def predictor(self, material: np.ndarray):
+        """A function from depositions to the predicted objectives for this material."""
+        from bmh_ml.datasets.manifest import make_features
+        from bmh_ml.models.registry import load_model
+
+        for directory in {self.f1_model, self.f2_model}:
+            if directory not in _MODELS:
+                _MODELS[directory] = load_model(Path(directory))
+        f1_model, f2_model = _MODELS[self.f1_model], _MODELS[self.f2_model]
+
+        def predict(depositions: np.ndarray) -> np.ndarray:
+            x = make_features(self.scope, np.repeat(np.atleast_2d(material), len(depositions), axis=0), depositions)
+            if f1_model is f2_model:
+                return f1_model.predict(x)
+            return np.column_stack([f1_model.predict(x)[:, 0], f2_model.predict(x)[:, 1]])
+
+        return predict
+
+
+def optimize_prescreened(problem, prescreen: Prescreen, population_size: int, evaluations: int, seed: int, initial: np.ndarray | None = None):
+    """NSGA-III like `experiment.optimize` with `evaluations` simulations in all: the first population is simulated completely, after that
+    each generation simulates only the offspring the models rate best (`Prescreen`). Returns the objectives and depositions of the final
+    non-dominated solutions."""
+    from pymoo.algorithms.moo.nsga3 import NSGA3
+    from pymoo.core.termination import NoTermination
+    from pymoo.operators.crossover.sbx import SBX
+    from pymoo.operators.mutation.pm import PM
+    from pymoo.operators.sampling.rnd import FloatRandomSampling
+    from pymoo.util.reference_direction import UniformReferenceDirectionFactory
+
+    from bmh_ml.experiment import get_initial_population
+
+    if evaluations < population_size:
+        raise ValueError(f"{evaluations} evaluations are not enough for the first population of {population_size}")
+    sampling = FloatRandomSampling() if initial is None else get_initial_population(initial, population_size, problem, seed)
+    algorithm = NSGA3(
+        pop_size=population_size,
+        n_offsprings=prescreen.candidates,
+        ref_dirs=UniformReferenceDirectionFactory(2, n_points=population_size).do(),
+        sampling=sampling,
+        crossover=SBX(prob=0.9, eta=15),
+        mutation=PM(eta=20),
+        eliminate_duplicates=True,
+    )
+    algorithm.setup(problem, termination=NoTermination(), seed=seed, verbose=False)
+    predict = prescreen.predictor(problem.material)
+    rng = np.random.default_rng(seed)
+    used = 0
+    while used < evaluations:
+        infills = algorithm.ask()
+        if algorithm.is_initialized:
+            count = min(prescreen.simulated, evaluations - used)
+            infills = infills[preselect(algorithm.pop.get("F"), predict(infills.get("X")), count, rng)]
+        algorithm.evaluator.eval(problem, infills)
+        algorithm.tell(infills=infills)
+        used += len(infills)
+    result = algorithm.result()
+    return np.atleast_2d(result.F), np.atleast_2d(result.X)
 
 
 def predict_generations(model, scope: str, material: np.ndarray, generations: list[Generation]) -> list[np.ndarray]:
