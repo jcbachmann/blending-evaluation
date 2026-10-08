@@ -1,0 +1,672 @@
+<meta charset="utf-8">
+<title>Front Interpolation Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: an instrument page. Controls in one row, the objective-space canvas as the hero, a narrow readout column beside it that
+   shows the deposition schedules behind whatever is under the cursor; verification and parameters below as reference tables. */
+:root {
+  --bg: #f5f7f8;
+  --surface: #ffffff;
+  --ink: #12171c;
+  --ink-2: #4b5560;
+  --muted: #7d8791;
+  --rule: #dde2e6;
+  --grid: #edf0f2;
+  --line: #2a78d6;
+  --front: #eb6834;
+  --gain: #128a60;
+  --ramp-near: #0d366b;
+  --ramp-far: #9ec5f4;
+  --worse: #f3eee8;
+  --ref: #5b5246;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111416; --surface: #181c1f; --ink: #eef1f3; --ink-2: #bcc4cb; --muted: #87919a; --rule: #2a3035; --grid: #1f2427;
+    --line: #5598e7; --front: #f07a47; --gain: #2fc48f; --ramp-near: #cde2fb; --ramp-far: #1c5cab; --worse: #1f1c19; --ref: #d6cbbd; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111416; --surface: #181c1f; --ink: #eef1f3; --ink-2: #bcc4cb; --muted: #87919a; --rule: #2a3035; --grid: #1f2427;
+  --line: #5598e7; --front: #f07a47; --gain: #2fc48f; --ramp-near: #cde2fb; --ramp-far: #1c5cab; --worse: #1f1c19; --ref: #d6cbbd; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.page { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 22px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: clamp(1.7rem, 3.2vw, 2.3rem); line-height: 1.1; }
+h2 { font-size: 1.25rem; }
+p { margin: 0; max-width: 72ch; }
+.eyebrow { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { color: var(--ink-2); }
+header { display: grid; gap: 8px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; padding-block: 10px; border-block: 1px solid var(--rule); }
+.control { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--ink-2); }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { font: inherit; font-size: 0.8125rem; border: 0; background: var(--surface); color: var(--ink-2); padding: 5px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+select, input[type="range"] { font: inherit; font-size: 0.8125rem; accent-color: var(--line); }
+select { background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--line); outline-offset: 2px; }
+
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .workspace { grid-template-columns: minmax(0, 1fr); } }
+.chart { position: relative; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; aspect-ratio: 4 / 3; max-width: 100%; min-height: 300px; }
+.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chart canvas#top { cursor: crosshair; touch-action: none; }
+.chart canvas#top.panning { cursor: grabbing; }
+.zoombar { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 6px; }
+.zoombar button { font: inherit; font-size: 0.75rem; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+.zoombar button:hover { color: var(--ink); border-color: var(--muted); }
+.zoombar .num { font-size: 0.75rem; color: var(--muted); align-self: center; padding-inline: 4px; }
+.howto { font-size: 0.8125rem; color: var(--muted); margin-top: 6px; }
+.howto kbd { font-family: var(--font-data); font-size: 0.75rem; border: 1px solid var(--rule); border-radius: 3px; padding: 0 3px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-data); font-size: 0.75rem;
+  line-height: 1.4; padding: 6px 8px; border-radius: 5px; white-space: nowrap; transform: translate(12px, -50%); z-index: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.8125rem; color: var(--ink-2); margin-top: 8px; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.swatch.line { width: 18px; height: 2px; border-radius: 1px; }
+.swatch.hollow { background: transparent; border: 1.5px solid var(--muted); }
+.ramp { width: 72px; height: 6px; border-radius: 3px; display: inline-block; background: linear-gradient(90deg, var(--ramp-near), var(--ramp-far)); }
+
+.panel { display: grid; gap: 14px; min-width: 0; }
+.panel section { display: grid; gap: 6px; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; margin: 0; }
+.readout { font-family: var(--font-data); font-size: 0.8125rem; color: var(--ink-2); display: grid; gap: 2px; min-height: 3.6em; }
+.readout b { color: var(--ink); font-weight: 500; }
+.panel svg { width: 100%; height: auto; display: block; overflow: visible; }
+.hint { color: var(--muted); font-size: 0.8125rem; }
+
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; }
+.finding { display: grid; gap: 4px; align-content: start; }
+.finding .big { font-family: var(--font-data); font-size: 1.35rem; font-weight: 500; }
+.finding p { color: var(--ink-2); font-size: 0.9rem; }
+
+.tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 28px; }
+.tables > section { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.8438rem; }
+th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+td.num { white-space: nowrap; }
+.note { font-size: 0.8125rem; color: var(--muted); }
+code { font-family: var(--font-data); font-size: 0.8em; overflow-wrap: anywhere; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">bmh_ml · bundle S2-v1 · test set T6 · <span id="material-label">material</span> · fast simulator L1</div>
+    <h1>Front Interpolation Web</h1>
+    <p class="lede">Each faint line joins two solutions of a simulator-optimized Pareto front. It runs through depositions on the straight line between the two
+      deposition schedules, each point the mean of 32 simulations: 39 evenly spaced ones, and more wherever the line changes faster than simulator
+      noise explains, down to 1/2560 of the line. Each solution is drawn at the mean of 128 single simulations, and the faint cloud around it shows
+      them, so you can see how far simulator noise alone moves it. Hover over a solution to highlight its lines, click to pin it, then move along a line to see the
+      schedule at that point.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Chart controls">
+    <div class="control">Lines between
+      <span class="seg" id="set">
+        <button type="button" data-v="front" aria-pressed="true">front solutions</button>
+        <button type="button" data-v="all" aria-pressed="false">all final solutions</button>
+      </span>
+    </div>
+    <div class="control">Axes
+      <span class="seg" id="units">
+        <button type="button" data-v="relative" aria-pressed="true">relative to Chevron</button>
+        <button type="button" data-v="absolute" aria-pressed="false">absolute</button>
+      </span>
+    </div>
+    <div class="control">Color
+      <span class="seg" id="color">
+        <button type="button" data-v="uniform" aria-pressed="true">uniform</button>
+        <button type="button" data-v="distance" aria-pressed="false">by schedule distance</button>
+      </span>
+    </div>
+    <label class="control" for="opacity">Line opacity <input id="opacity" type="range" min="1" max="40" value="10"> <span class="num" id="opacity-v">10 %</span></label>
+    <label class="control" for="clouds"><input id="clouds" type="checkbox" checked> Single simulations</label>
+    <label class="control" for="gains"><input id="gains" type="checkbox" checked> Interpolated points that beat the front</label>
+    <label class="control" for="pick">Pin <select id="pick"></select></label>
+  </div>
+
+  <div class="workspace">
+    <div>
+      <div class="zoombar" role="group" aria-label="Zoom">
+          <span class="num" id="zoom-v">1.0×</span>
+          <button type="button" id="z-in" aria-label="Zoom in">+</button>
+          <button type="button" id="z-out" aria-label="Zoom out">−</button>
+          <button type="button" id="z-front">Front</button>
+          <button type="button" id="z-all">All</button>
+          <button type="button" id="z-chevron">With Chevron</button>
+      </div>
+      <div class="chart" id="chart">
+        <canvas id="base" aria-hidden="true"></canvas>
+        <canvas id="top" tabindex="0" aria-label="F1 against F2 of the front solutions and the simulated interpolation lines between them"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <p class="howto">Scroll to zoom (<kbd>Shift</kbd> F1 only, <kbd>Alt</kbd> F2 only), drag to pan, <kbd>Shift</kbd>-drag to zoom into a box,
+        double-click to reset. Pinch and drag on touch screens.</p>
+      <div class="legend" id="legend">
+        <span class="key"><span class="swatch" style="background: var(--front)"></span>Pareto front solution</span>
+        <span class="key"><span class="swatch hollow"></span>other final solution of the 3 runs</span>
+        <span class="key" id="key-line"><span class="swatch line" style="background: var(--line)"></span>simulated interpolation</span>
+        <span class="key" id="key-ramp" hidden><span class="ramp"></span>near … far in schedule space</span>
+        <span class="key" id="key-cloud"><span class="swatch" style="background: var(--front); opacity: 0.45; width: 5px; height: 5px"></span>128 single simulations of a solution, its noise cloud (the solution is drawn at their mean)</span>
+        <span class="key"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 6 L6 11 L1 6 Z" fill="var(--ref)"/></svg>Chevron at maximum speed, 19 layers (dashed: its F1 and F2; shaded: worse than it in F1 or F2)</span>
+        <span class="key" id="key-gain"><span class="swatch" style="background: var(--gain); width: 7px; height: 7px"></span>interpolated point beating the front, confirmed with 32 fresh simulations</span>
+      </div>
+    </div>
+
+    <aside class="panel" aria-live="polite">
+      <section>
+        <h3>Selection</h3>
+        <div class="readout" id="readout"><span class="hint">Hover a solution on the chart.</span></div>
+      </section>
+      <section>
+        <h3>Deposition schedule</h3>
+        <svg id="dep" viewBox="0 0 300 200" role="img" aria-label="Stacker position over the 20 deposition steps"></svg>
+      </section>
+      <section>
+        <h3>Along the hovered line</h3>
+        <svg id="along" viewBox="0 0 300 150" role="img" aria-label="F1 and F2 along the hovered interpolation line"></svg>
+      </section>
+      <section>
+        <h3>Material</h3>
+        <svg id="mat" viewBox="0 0 300 80" role="img" aria-label="Quality of the 50 material units in stacking order"></svg>
+      </section>
+    </aside>
+  </div>
+
+  <section class="findings" id="findings" aria-label="What the lines show"></section>
+
+  <div class="tables">
+    <section>
+      <h2>Verification</h2>
+      <p class="note">The simulator release that produced T6 (v2026.1) had no seed, so the front is reproduced statistically, not bit for bit.</p>
+      <div class="scroll"><table id="verify"></table></div>
+    </section>
+    <section>
+      <h2>Parameters</h2>
+      <div class="scroll"><table id="params"></table></div>
+      <p class="note">Code and documentation: <code>Code/BlendingEvaluation/apps/bmh_ml/src/bmh_ml/front_study/</code> (<code>README.md</code>,
+        <code>run_all.sh</code>); results: <code>workdir/front-interpolation/out/</code>.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+
+const N = DATA.labels.length, P = DATA.pairs.length;
+const isFront = new Uint8Array(N); DATA.front.forEach(i => isFront[i] = 1);
+let lines = [], tpos = [];  // per pair: F1, F2 interleaved per point, and t of each point (0 at the first solution of the pair, 1 at the second)
+async function decodeLines(enc) {  // see encode_lines in build_interpolation_page.py
+  const bytes = Uint8Array.from(atob(enc.data), c => c.charCodeAt(0));
+  const buffer = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+  const v = new Int16Array(buffer), n = enc.points, dq = v.subarray(P, P + n), d1 = v.subarray(P + n, P + 2 * n), d2 = v.subarray(P + 2 * n, P + 3 * n);
+  let i = 0;
+  for (let p = 0; p < P; p++) {
+    const c = v[p], f = new Float32Array(2 * c), t = new Float32Array(c);
+    for (let k = 0, q = 0, a = 0, b = 0; k < c; k++, i++) { q += dq[i]; a += d1[i]; b += d2[i]; t[k] = q / enc.grid; f[2*k] = a / 1e4; f[2*k+1] = b / 1e3; }
+    lines.push(f); tpos.push(t);
+  }
+}
+const frontPair = DATA.pairs.map(([a, b]) => isFront[a] && isFront[b]);
+const dist = DATA.pairs.map(([a, b]) => Math.hypot(...DATA.deposition[a].map((v, i) => v - DATA.deposition[b][i])));
+const maxDist = Math.max(...dist);
+const pairsOf = Array.from({ length: N }, () => []);
+DATA.pairs.forEach(([a, b], p) => { pairsOf[a].push(p); pairsOf[b].push(p); });
+const gains = DATA.beyond.pair.map((pair, i) => ({ pair, y: DATA.beyond.y[i] }));
+const ord = DATA.id;  // display id per solution, numbered by F1
+const R = DATA.clouds[0].length / 2;
+const clouds = DATA.clouds.map(a => Float32Array.from(a, (v, j) => j % 2 ? v / 1e3 : v / 1e4));
+const cloudSd = clouds.map(c => [0, 1].map(o => { let m = 0, q = 0; for (let r = 0; r < R; r++) m += c[2*r+o]; m /= R;
+  for (let r = 0; r < R; r++) q += (c[2*r+o] - m) ** 2; return Math.sqrt(q / (R - 1)); }));
+const CH = DATA.chevron;  // reference: Chevron at maximum speed, 19 layers (mean of 128 simulations)
+const chCloud = Float32Array.from(DATA.chevron_cloud, (v, j) => j % 2 ? v / 1e3 : v / 1e4);
+const rel = () => state.units === "relative";
+// objective values in the units of the axes: absolute, or relative to Chevron (1 = Chevron)
+const fv = (c, v) => rel() ? (v / CH[c]).toFixed(3) : (c ? v.toFixed(2) : v.toFixed(4));
+const fmt1 = v => fv(0, v), fmt2 = v => fv(1, v);
+
+const state = { units: "relative", set: "front", color: "uniform", opacity: 0.10, gains: true, clouds: true, hover: null, pinned: null, line: null };
+const visible = p => state.set === "all" || frontPair[p];
+
+// scales
+let HOME = { x0: 0, x1: 1, y0: 0, y1: 1 }, view = { ...HOME };
+function setHome() {
+  let lo1 = Infinity, hi1 = -Infinity, lo2 = Infinity, hi2 = -Infinity;
+  for (const f of lines) for (let k = 0; k < f.length; k += 2) { lo1 = Math.min(lo1, f[k]); hi1 = Math.max(hi1, f[k]); lo2 = Math.min(lo2, f[k+1]); hi2 = Math.max(hi2, f[k+1]); }
+  HOME = { x0: Math.floor(lo1 * 50) / 50, x1: Math.ceil(hi1 * 20) / 20, y0: Math.floor(lo2), y1: Math.ceil(hi2) }; view = { ...HOME };
+}
+const M = { l: 62, r: 16, t: 14, b: 48 };
+let W = 0, H = 0, dpr = 1, px = [], solPx = [];
+const sx = v => M.l + (v - view.x0) / (view.x1 - view.x0) * (W - M.l - M.r);
+const sy = v => H - M.b - (v - view.y0) / (view.y1 - view.y0) * (H - M.t - M.b);
+const ix = x => view.x0 + (x - M.l) / (W - M.l - M.r) * (view.x1 - view.x0);
+const iy = y => view.y0 + (H - M.b - y) / (H - M.t - M.b) * (view.y1 - view.y0);
+const inPlot = (x, y) => x >= M.l - 4 && x <= W - M.r + 4 && y >= M.t - 4 && y <= H - M.b + 4;
+
+const chartEl = document.getElementById("chart"), base = document.getElementById("base"), topC = document.getElementById("top"), tip = document.getElementById("tip");
+const bctx = base.getContext("2d"), tctx = topC.getContext("2d");
+let C = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["surface", "ink", "ink-2", "muted", "rule", "grid", "line", "front", "gain", "ramp-near", "ramp-far", "worse", "ref"]) C[k] = cs.getPropertyValue("--" + k).trim();
+}
+const hex = h => { h = h.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+function rampColor(t) { const a = hex(C["ramp-near"]), b = hex(C["ramp-far"]); return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`; }
+const lineColor = p => state.color === "uniform" ? C.line : rampColor(Math.sqrt(dist[p] / maxDist));
+
+function resize() {
+  const r = chartEl.getBoundingClientRect(); dpr = window.devicePixelRatio || 1; W = r.width; H = r.height;
+  for (const c of [base, topC]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  project(); drawBase(); drawTop();
+}
+function project() {
+  px = lines.map(f => { const q = new Float32Array(f.length); for (let k = 0; k < f.length; k += 2) { q[k] = sx(f[k]); q[k+1] = sy(f[k+1]); } return q; });
+  solPx = DATA.labels.map(([a, b]) => [sx(a), sy(b)]);
+}
+let frame = 0;
+function setView(v) {
+  const minX = 0.002, minY = 0.05;  // about a fifth of one simulation's noise
+  if (v.x1 - v.x0 < minX) { const c = (v.x0 + v.x1) / 2; v.x0 = c - minX / 2; v.x1 = c + minX / 2; }
+  if (v.y1 - v.y0 < minY) { const c = (v.y0 + v.y1) / 2; v.y0 = c - minY / 2; v.y1 = c + minY / 2; }
+  view = v;
+  const z = Math.sqrt((HOME.x1 - HOME.x0) / (v.x1 - v.x0) * (HOME.y1 - HOME.y0) / (v.y1 - v.y0));
+  document.getElementById("zoom-v").textContent = (z < 10 ? z.toFixed(1) : z.toFixed(0)) + "×";
+  if (!frame) frame = requestAnimationFrame(() => { frame = 0; project(); drawBase(); drawTop(); });
+}
+const zoomAt = (cx, cy, fx, fy) => setView({ x0: cx - (cx - view.x0) * fx, x1: cx + (view.x1 - cx) * fx, y0: cy - (cy - view.y0) * fy, y1: cy + (view.y1 - cy) * fy });
+function fit(points, pad = 0.12) {
+  let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+  for (const [x, y] of points) { a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, y); d = Math.max(d, y); }
+  const px_ = (b - a) * pad || 0.01, py_ = (d - c) * pad || 0.1;
+  setView({ x0: a - px_, x1: b + px_, y0: c - py_, y1: d + py_ });
+}
+
+function niceTicks(a, b, n) {
+  const raw = (b - a) / Math.max(2, n), mag = 10 ** Math.floor(Math.log10(raw)), r = raw / mag;
+  const step = (r < 1.5 ? 1 : r < 3.5 ? 2 : r < 7.5 ? 5 : 10) * mag, out = [];
+  for (let v = Math.ceil(a / step - 1e-9) * step; v <= b + 1e-9; v += step) out.push(v);
+  return { values: out, decimals: Math.max(0, -Math.floor(Math.log10(step) + 1e-9)) };
+}
+function drawAxes(ctx) {
+  ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--font-data") || "monospace"}`;
+  ctx.lineWidth = 1; ctx.strokeStyle = C.grid; ctx.fillStyle = C.muted;
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  const u1 = rel() ? CH[0] : 1, u2 = rel() ? CH[1] : 1;
+  const tx = niceTicks(view.x0 / u1, view.x1 / u1, Math.round((W - M.l - M.r) / 80));
+  for (const v of tx.values) { const x = sx(v * u1); ctx.beginPath(); ctx.moveTo(x, M.t); ctx.lineTo(x, H - M.b); ctx.stroke(); ctx.fillText(v.toFixed(tx.decimals), x, H - M.b + 6); }
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  const ty = niceTicks(view.y0 / u2, view.y1 / u2, Math.round((H - M.t - M.b) / 50));
+  for (const v of ty.values) { const y = sy(v * u2); ctx.beginPath(); ctx.moveTo(M.l, y); ctx.lineTo(W - M.r, y); ctx.stroke(); ctx.fillText(v.toFixed(ty.decimals), M.l - 8, y); }
+  ctx.strokeStyle = C.rule; ctx.beginPath(); ctx.moveTo(M.l, H - M.b); ctx.lineTo(W - M.r, H - M.b); ctx.stroke();
+  ctx.fillStyle = C["ink-2"]; ctx.font = `12px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  ctx.fillText(rel() ? "F1 relative to Chevron · quality standard deviation (1 = Chevron, lower is better)" : "F1 · standard deviation of the reclaimed quality (lower is better)", M.l + (W - M.l - M.r) / 2, H - 6);
+  ctx.save(); ctx.translate(14, M.t + (H - M.t - M.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle";
+  ctx.fillText(rel() ? "F2 relative to Chevron · volume deviation per slice (1 = Chevron)" : "F2 · volume deviation per slice, m³ (lower is better)", 0, 0); ctx.restore();
+}
+function polyline(ctx, q) {  // vertices closer than a pixel to the last drawn one are skipped, the end point never
+  const n = q.length / 2; let lx = q[0], ly = q[1];
+  ctx.beginPath(); ctx.moveTo(lx, ly);
+  for (let k = 1; k < n; k++) { const x = q[2*k], y = q[2*k+1]; if (k < n - 1 && Math.abs(x - lx) + Math.abs(y - ly) < 0.8) continue; ctx.lineTo(x, y); lx = x; ly = y; }
+  ctx.stroke();
+}
+function dot(ctx, x, y, r, fill, ring, stroke) {
+  ctx.beginPath(); ctx.arc(x, y, r + 2, 0, 7); ctx.fillStyle = ring; ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 7);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); } else { ctx.lineWidth = 1.5; ctx.strokeStyle = stroke; ctx.stroke(); }
+}
+
+function drawBase() {
+  if (!px.length) return;
+  const ctx = bctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  drawAxes(ctx);
+  ctx.save(); ctx.beginPath(); ctx.rect(M.l, M.t, W - M.l - M.r, H - M.t - M.b); ctx.clip();
+  drawChevron(ctx);
+  const dim = state.pinned !== null || state.hover !== null;
+  ctx.globalAlpha = state.opacity * (dim ? 0.6 : 1); ctx.lineWidth = 1; ctx.lineJoin = "round";
+  const order = [...Array(P).keys()].filter(visible);
+  if (state.color === "distance") order.sort((a, b) => dist[b] - dist[a]);  // near pairs on top
+  if (state.color === "uniform") ctx.strokeStyle = C.line;
+  for (const p of order) { if (state.color !== "uniform") ctx.strokeStyle = lineColor(p); polyline(ctx, px[p]); }
+  ctx.globalAlpha = 1;
+  if (state.clouds) drawClouds(ctx, i => state.set === "all" || isFront[i], 1.3, dim ? 0.12 : 0.22);
+  if (state.gains) {
+    ctx.fillStyle = C.gain;
+    for (const g of gains) if (visible(g.pair)) { ctx.beginPath(); ctx.arc(sx(g.y[0]), sy(g.y[1]), 1.6, 0, 7); ctx.fill(); }
+  }
+  for (let i = 0; i < N; i++) if (!isFront[i]) dot(ctx, solPx[i][0], solPx[i][1], 3, null, C.surface, state.set === "all" ? C["ink-2"] : C.muted);
+  for (let i = 0; i < N; i++) if (isFront[i]) dot(ctx, solPx[i][0], solPx[i][1], 4.5, C.front, C.surface);
+  diamond(ctx, sx(CH[0]), sy(CH[1]), 6, C.ref, C.surface);
+  ctx.restore();
+  chevronPointer(ctx);
+}
+function diamond(ctx, x, y, r, fill, ring) {
+  for (const [rr, c] of [[r + 2, ring], [r, fill]]) { ctx.beginPath(); ctx.moveTo(x, y - rr); ctx.lineTo(x + rr, y); ctx.lineTo(x, y + rr); ctx.lineTo(x - rr, y); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); }
+}
+function drawChevron(ctx) {
+  const x = sx(CH[0]), y = sy(CH[1]), l = M.l, r = W - M.r, t = M.t, b = H - M.b;
+  ctx.fillStyle = C.worse;  // worse than Chevron in F1 or in F2
+  if (x < r) ctx.fillRect(Math.max(x, l), t, r - Math.max(x, l), b - t);
+  if (y > t) ctx.fillRect(l, t, r - l, Math.min(y, b) - t);
+  ctx.strokeStyle = C.ref; ctx.lineWidth = 1; ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(x, t); ctx.lineTo(x, b); ctx.moveTo(l, y); ctx.lineTo(r, y); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = C.ref; ctx.font = `11px ${getComputedStyle(document.body).fontFamily}`;
+  const f2 = rel() ? "F2 = Chevron" : `Chevron F2 ${CH[1].toFixed(2)} m³`, f1 = rel() ? "F1 = Chevron" : `Chevron F1 ${CH[0].toFixed(3)}`;
+  if (y > t + 12 && y < b) { ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(f2 + ", worse above", l + 6, y - 3); }
+  if (x > l && x < r - 12) { ctx.save(); ctx.translate(x + 3, t + 6); ctx.rotate(Math.PI / 2); ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText(f1 + ", worse to the right", 0, 0); ctx.restore(); }
+  if (state.clouds) { ctx.globalAlpha = 0.3; ctx.fillStyle = C.ref;
+    for (let s = 0; s < chCloud.length / 2; s++) { ctx.beginPath(); ctx.arc(sx(chCloud[2*s]), sy(chCloud[2*s+1]), 1.3, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1; }
+}
+function chevronPointer(ctx) {  // where Chevron lies when it is outside the view
+  const x = sx(CH[0]), y = sy(CH[1]), l = M.l, r = W - M.r, t = M.t, b = H - M.b;
+  if (x >= l && x <= r && y >= t && y <= b) return;
+  const cx = Math.min(Math.max(x, l + 8), r - 8), cy = Math.min(Math.max(y, t + 8), b - 8), ang = Math.atan2(y - cy, x - cx);
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.fillStyle = C.ref;
+  ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(-4, -5); ctx.lineTo(-4, 5); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.font = `11px ${getComputedStyle(document.body).fontFamily}`; ctx.fillStyle = C.ref;
+  ctx.textAlign = cx > (l + r) / 2 ? "right" : "left"; ctx.textBaseline = cy > (t + b) / 2 ? "bottom" : "top";
+  ctx.fillText(`Chevron (F1 ${CH[0].toFixed(3)}, F2 ${CH[1].toFixed(2)})`, cx + (cx > (l + r) / 2 ? -12 : 12), cy + (cy > (t + b) / 2 ? -8 : 8));
+}
+
+function drawClouds(ctx, which, r, alpha) {
+  ctx.globalAlpha = alpha;
+  for (let i = 0; i < N; i++) { if (!which(i)) continue; ctx.fillStyle = isFront[i] ? C.front : C.muted; const c = clouds[i];
+    for (let s = 0; s < R; s++) { ctx.beginPath(); ctx.arc(sx(c[2*s]), sy(c[2*s+1]), r, 0, 7); ctx.fill(); } }
+  ctx.globalAlpha = 1;
+}
+const active = () => state.pinned ?? state.hover;
+function drawTop() {
+  if (!px.length) return;
+  const ctx = tctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const a = active(); if (a === null) return;
+  ctx.save(); ctx.beginPath(); ctx.rect(M.l, M.t, W - M.l - M.r, H - M.t - M.b); ctx.clip();
+  ctx.lineWidth = 1.5; ctx.lineJoin = "round"; ctx.globalAlpha = 0.55;
+  for (const p of pairsOf[a]) if (visible(p)) { ctx.strokeStyle = lineColor(p); polyline(ctx, px[p]); }
+  ctx.globalAlpha = 1;
+  const L = state.line;
+  if (state.clouds) {
+    if (L) drawClouds(ctx, i => i === other(L.pair, a), 1.8, 0.7);
+    drawClouds(ctx, i => i === a, 2, 0.85);
+  }
+  if (L) {
+    ctx.strokeStyle = C.ink; ctx.lineWidth = 2.5; polyline(ctx, px[L.pair]);
+    ctx.fillStyle = C.ink; const q = px[L.pair];
+    for (let k = 1; k < q.length / 2 - 1; k++) { ctx.beginPath(); ctx.arc(q[2*k], q[2*k+1], 1.3, 0, 7); ctx.fill(); }
+    dot(ctx, q[2*L.k], q[2*L.k+1], 4.5, C.ink, C.surface);
+  }
+  for (const p of pairsOf[a]) if (visible(p)) { const o = other(p, a); dot(ctx, solPx[o][0], solPx[o][1], isFront[o] ? 4.5 : 3, isFront[o] ? C.front : null, C.surface, C["ink-2"]); }
+  if (L) { const o = other(L.pair, a); ctx.lineWidth = 2; ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.arc(solPx[o][0], solPx[o][1], 8, 0, 7); ctx.stroke(); }
+  ctx.lineWidth = 2; ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.arc(solPx[a][0], solPx[a][1], 9, 0, 7); ctx.stroke();
+  if (state.pinned !== null) { ctx.beginPath(); ctx.arc(solPx[a][0], solPx[a][1], 12.5, 0, 7); ctx.stroke(); }
+  ctx.restore();
+}
+function drawBox(d) {
+  const ctx = tctx, x = Math.min(d.start.x, d.end.x), y = Math.min(d.start.y, d.end.y), w = Math.abs(d.end.x - d.start.x), h = Math.abs(d.end.y - d.start.y);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = C.line; ctx.globalAlpha = 0.08; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.strokeRect(x, y, w, h); ctx.setLineDash([]);
+}
+const other = (p, a) => DATA.pairs[p][0] === a ? DATA.pairs[p][1] : DATA.pairs[p][0];
+
+// what the cursor is on
+function nearestSolution(x, y, radius) {
+  let best = null, bd = radius * radius;
+  for (let i = 0; i < N; i++) { if (!isFront[i] && state.set === "front") continue; if (!inPlot(solPx[i][0], solPx[i][1])) continue; const d = (solPx[i][0] - x) ** 2 + (solPx[i][1] - y) ** 2; if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+function nearestLinePoint(a, x, y, radius) {
+  let best = null, bd = radius * radius;
+  for (const p of pairsOf[a]) { if (!visible(p)) continue; const q = px[p];
+    for (let k = 1; k < q.length / 2 - 1; k++) { if (!inPlot(q[2*k], q[2*k+1])) continue; const d = (q[2*k] - x) ** 2 + (q[2*k+1] - y) ** 2; if (d < bd) { bd = d; best = { pair: p, k }; } } }
+  return best;
+}
+// a point at step k of pair p, oriented from solution a
+const tFrom = (p, k, a) => DATA.pairs[p][0] === a ? tpos[p][k] : 1 - tpos[p][k];
+
+function onMove(ev) {
+  const r = topC.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+  const sol = nearestSolution(x, y, 12);
+  let changed = false;
+  if (state.pinned === null && sol !== state.hover) { state.hover = sol; changed = true; }
+  const a = active();
+  let line = null;
+  if (a !== null && (sol === null || sol === a)) line = nearestLinePoint(a, x, y, 14);
+  if (sol !== null && sol !== a && state.pinned !== null) { const p = pairsOf[a].find(p => other(p, a) === sol); if (p !== undefined && visible(p)) line = { pair: p, k: DATA.pairs[p][0] === a ? lines[p].length / 2 - 2 : 1, end: true }; }
+  if (JSON.stringify(line) !== JSON.stringify(state.line)) { state.line = line; changed = true; }
+  if (changed) { if (state.pinned === null) drawBase(); drawTop(); updatePanel(); }
+  showTip(x, y, sol);
+}
+function showTip(x, y, sol) {
+  const a = active(), L = state.line;
+  let html = null;
+  if (L && !L.end) { const o = other(L.pair, a), t = tFrom(L.pair, L.k, a), f = lines[L.pair];
+    html = `#${ord[a]} → #${ord[o]} · t ${t.toFixed(3)}<br>F1 ${fmt1(f[2*L.k])} · F2 ${fmt2(f[2*L.k+1])}`; }
+  else if (sol !== null) { const [f1, f2] = DATA.labels[sol]; html = `#${ord[sol]} · ${isFront[sol] ? "front" : "dominated"}<br>F1 ${fmt1(f1)} · F2 ${fmt2(f2)}`; }
+  else if ((sx(CH[0]) - x) ** 2 + (sy(CH[1]) - y) ** 2 < 144) html = `Chevron, maximum speed, 19 layers<br>F1 ${CH[0].toFixed(4)} · F2 ${CH[1].toFixed(2)} m³`;
+  if (!html) { tip.hidden = true; return; }
+  if (rel() && !html.startsWith("Chevron")) html += " (× Chevron)";
+  tip.innerHTML = html; tip.hidden = false;
+  const flip = x > W - 200; tip.style.left = x + "px"; tip.style.top = y + "px";
+  tip.style.transform = flip ? "translate(calc(-100% - 12px), -50%)" : "translate(12px, -50%)";
+}
+function onLeave() { tip.hidden = true; if (state.pinned === null && (state.hover !== null || state.line)) { state.hover = null; state.line = null; drawBase(); drawTop(); updatePanel(); } }
+function pin(i) { state.pinned = i; state.hover = null; state.line = null; document.getElementById("pick").value = i === null ? "" : String(i); drawBase(); drawTop(); updatePanel(); }
+const pointers = new Map();
+let drag = null, suppressClick = false;
+const pos = ev => { const r = topC.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
+topC.addEventListener("pointerdown", ev => {
+  if (ev.button !== 0) return;
+  try { topC.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic or already released pointer */ }
+  pointers.set(ev.pointerId, pos(ev));
+  if (pointers.size === 1) drag = { start: pos(ev), view: { ...view }, box: ev.shiftKey, moved: false };
+  else if (pointers.size === 2) { const [p, q] = [...pointers.values()];
+    drag = { pinch: Math.hypot(p.x - q.x, p.y - q.y), mid: { x: ix((p.x + q.x) / 2), y: iy((p.y + q.y) / 2) }, view: { ...view }, moved: true }; }
+});
+topC.addEventListener("pointermove", ev => {
+  if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, pos(ev));
+  if (!drag) return onMove(ev);
+  if (drag.pinch) { const [p, q] = [...pointers.values()]; if (!q) return; const f = drag.pinch / Math.max(10, Math.hypot(p.x - q.x, p.y - q.y)), v = drag.view, c = drag.mid;
+    setView({ x0: c.x - (c.x - v.x0) * f, x1: c.x + (v.x1 - c.x) * f, y0: c.y - (c.y - v.y0) * f, y1: c.y + (v.y1 - c.y) * f }); return; }
+  const p = pos(ev), dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+  drag.moved = true; tip.hidden = true;
+  if (drag.box) { drag.end = p; drawTop(); drawBox(drag); return; }
+  topC.classList.add("panning");
+  const v = drag.view, kx = (v.x1 - v.x0) / (W - M.l - M.r), ky = (v.y1 - v.y0) / (H - M.t - M.b);
+  setView({ x0: v.x0 - dx * kx, x1: v.x1 - dx * kx, y0: v.y0 + dy * ky, y1: v.y1 + dy * ky });
+});
+function endPointer(ev) {
+  pointers.delete(ev.pointerId); topC.classList.remove("panning");
+  if (!drag) return;
+  suppressClick = drag.moved;
+  if (drag.box && drag.end && Math.abs(drag.end.x - drag.start.x) > 8 && Math.abs(drag.end.y - drag.start.y) > 8) {
+    const a = drag.start, b = drag.end;
+    setView({ x0: ix(Math.min(a.x, b.x)), x1: ix(Math.max(a.x, b.x)), y0: iy(Math.max(a.y, b.y)), y1: iy(Math.min(a.y, b.y)) });
+  } else if (drag.box) drawTop();
+  drag = null;  // a pinch that loses a finger ends as well, so the view does not jump
+}
+topC.addEventListener("pointerup", endPointer);
+topC.addEventListener("pointercancel", endPointer);
+topC.addEventListener("pointerleave", ev => { if (!drag) onLeave(); });
+topC.addEventListener("wheel", ev => {
+  ev.preventDefault();
+  const p = pos(ev), d = ev.deltaY || ev.deltaX, f = Math.exp(Math.max(-1, Math.min(1, d * (ev.deltaMode ? 0.05 : 0.0015))));
+  zoomAt(ix(p.x), iy(p.y), ev.altKey ? 1 : f, ev.shiftKey ? 1 : f);  // Shift: F1 only, Alt: F2 only
+}, { passive: false });
+topC.addEventListener("dblclick", () => setView({ ...HOME }));
+topC.addEventListener("keydown", ev => {
+  const c = [(view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2];
+  if (ev.key === "+" || ev.key === "=") zoomAt(...c, 0.7, 0.7); else if (ev.key === "-") zoomAt(...c, 1 / 0.7, 1 / 0.7); else if (ev.key === "0") setView({ ...HOME });
+});
+document.getElementById("z-in").addEventListener("click", () => zoomAt((view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2, 0.6, 0.6));
+document.getElementById("z-out").addEventListener("click", () => zoomAt((view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2, 1 / 0.6, 1 / 0.6));
+document.getElementById("z-all").addEventListener("click", () => setView({ ...HOME }));
+document.getElementById("z-front").addEventListener("click", () => fit(DATA.front.flatMap(i => [DATA.labels[i], ...Array.from({ length: R }, (_, s) => [clouds[i][2*s], clouds[i][2*s+1]])])));
+document.getElementById("z-chevron").addEventListener("click", () => setView({ x0: HOME.x0, x1: Math.max(HOME.x1, CH[0] * 1.06), y0: HOME.y0, y1: Math.max(HOME.y1, CH[1] * 1.06) }));
+topC.addEventListener("click", ev => {
+  if (suppressClick) { suppressClick = false; return; }
+  const r = topC.getBoundingClientRect(), sol = nearestSolution(ev.clientX - r.left, ev.clientY - r.top, 12);
+  if (sol !== null) pin(sol === state.pinned ? null : sol); else if (!state.line) pin(null);
+});
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && state.pinned !== null) pin(null); });
+
+// side panel
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+function miniFrame(svg, w, h, m, xs, ys, xticks, yticks, xlab, ylab, fmtY) {
+  svg.innerHTML = "";
+  for (const v of yticks) { const y = ys(v); svgEl("line", { x1: m.l, x2: w - m.r, y1: y, y2: y, stroke: "var(--grid)" }, svg);
+    svgEl("text", { x: m.l - 5, y: y + 3.5, "text-anchor": "end", "font-size": 10, fill: "var(--muted)", "font-family": "var(--font-data)" }, svg).textContent = fmtY ? fmtY(v) : v; }
+  for (const v of xticks) svgEl("text", { x: xs(v), y: h - m.b + 13, "text-anchor": "middle", "font-size": 10, fill: "var(--muted)", "font-family": "var(--font-data)" }, svg).textContent = v;
+  if (xlab) svgEl("text", { x: m.l + (w - m.l - m.r) / 2, y: h - 2, "text-anchor": "middle", "font-size": 10.5, fill: "var(--ink-2)" }, svg).textContent = xlab;
+  if (ylab) svgEl("text", { x: m.l, y: m.t - 5, "font-size": 10.5, fill: "var(--ink-2)" }, svg).textContent = ylab;
+}
+function pathD(xs, ys, vals) { return vals.map((v, i) => `${i ? "L" : "M"}${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join(""); }
+
+function updatePanel() {
+  const a = active(), L = state.line && !state.line.end ? state.line : null, rd = document.getElementById("readout");
+  if (a === null) rd.innerHTML = `<span class="hint">Hover a solution on the chart, or pin one with the menu above.</span>`;
+  else {
+    const [f1, f2] = DATA.labels[a];
+    let s = `<span><b>#${ord[a]}</b> ${isFront[a] ? "front" : "dominated"} · F1 <b>${fmt1(f1)}</b> · F2 <b>${fmt2(f2)}</b></span>`;
+    const n = pairsOf[a].filter(visible).length;
+    s += `<span>single simulations: sd F1 ${fmt1(cloudSd[a][0])} · F2 ${fmt2(cloudSd[a][1])}</span>`;
+    s += `<span>${n} line${n === 1 ? "" : "s"} shown${state.pinned === null ? " · click to pin" : " · pinned, Esc to release"}</span>`;
+    if (L) { const o = other(L.pair, a), f = lines[L.pair], t = tFrom(L.pair, L.k, a);
+      s += `<span>to <b>#${ord[o]}</b> · F1 ${fmt1(DATA.labels[o][0])} · F2 ${fmt2(DATA.labels[o][1])}</span>`;
+      s += `<span>t <b>${t.toFixed(3)}</b> · F1 <b>${fmt1(f[2*L.k])}</b> · F2 <b>${fmt2(f[2*L.k+1])}</b></span>`;
+      s += `<span>schedule distance ${dist[L.pair].toFixed(1)} m</span>`; }
+    rd.innerHTML = s;
+  }
+  // deposition schedules
+  const svg = document.getElementById("dep"), w = 300, h = 200, m = { l: 30, r: 8, t: 30, b: 30 };
+  const xs = i => m.l + i / 19 * (w - m.l - m.r), ys = v => h - m.b - (v - 10) / 39 * (h - m.t - m.b);
+  miniFrame(svg, w, h, m, xs, ys, [], [10, 20, 30, 40, 49], "deposition step 1 … 20 (time →)", "stacker position along the bed, m");
+  for (const i of [0, 4, 9, 14, 19]) svgEl("text", { x: xs(i), y: h - m.b + 13, "text-anchor": "middle", "font-size": 10, fill: "var(--muted)", "font-family": "var(--font-data)" }, svg).textContent = i + 1;
+  if (a === null) return drawAlong(null);
+  const dA = DATA.deposition[a];
+  if (L) { const o = other(L.pair, a), dB = DATA.deposition[o], t = tFrom(L.pair, L.k, a);
+    svgEl("path", { d: pathD(xs, ys, dB), fill: "none", stroke: "var(--line)", "stroke-width": 1.5 }, svg);
+    svgEl("path", { d: pathD(xs, ys, dA.map((v, i) => v + t * (dB[i] - v))), fill: "none", stroke: "var(--ink)", "stroke-width": 2, "stroke-dasharray": "4 3" }, svg); }
+  svgEl("path", { d: pathD(xs, ys, dA), fill: "none", stroke: "var(--front)", "stroke-width": 2 }, svg);
+  dA.forEach((v, i) => svgEl("circle", { cx: xs(i), cy: ys(v), r: 2.2, fill: "var(--front)" }, svg));
+  const lg = svgEl("g", { "font-size": 10, fill: "var(--ink-2)" }, svg);
+  const items = L ? [["var(--front)", `#${ord[a]}`, ""], ["var(--ink)", "at t", "4 3"], ["var(--line)", `#${ord[other(L.pair, a)]}`, ""]] : [["var(--front)", `#${ord[a]}`, ""]];
+  items.forEach(([c, label, dash], j) => { const x0 = j * 64; svgEl("line", { x1: x0, x2: x0 + 14, y1: 6, y2: 6, stroke: c, "stroke-width": 2, "stroke-dasharray": dash }, lg);
+    svgEl("text", { x: x0 + 18, y: 9.5 }, lg).textContent = label; });
+  drawAlong(L ? { pair: L.pair, k: L.k, a } : null);
+}
+function drawAlong(sel) {
+  const svg = document.getElementById("along"), w = 300, h = 150;
+  svg.innerHTML = "";
+  if (!sel) { svgEl("text", { x: 0, y: 20, "font-size": 12, fill: "var(--muted)" }, svg).textContent = "Pin a solution and move along one of its lines."; return; }
+  const f = lines[sel.pair], tt = tpos[sel.pair], n = tt.length, forward = DATA.pairs[sel.pair][0] === sel.a;
+  const T = k => forward ? tt[k] : 1 - tt[k];  // t seen from the pinned solution
+  const m = { l: 44, r: 8 }, xs = t => m.l + t * (w - m.l - m.r);
+  for (const [c, name, fm, oy] of [[0, "F1", fmt1, 0], [1, "F2", fmt2, 66]]) {
+    let lo = Infinity, hi = -Infinity; for (let k = 0; k < n; k++) { lo = Math.min(lo, f[2*k+c]); hi = Math.max(hi, f[2*k+c]); }
+    const pad = (hi - lo) * 0.1 || 0.01, ys = v => oy + 58 - (v - (lo - pad)) / (hi - lo + 2 * pad) * 44;
+    svgEl("text", { x: m.l, y: oy + 10, "font-size": 10.5, fill: "var(--ink-2)" }, svg).textContent = name;
+    for (const v of [lo, hi]) { svgEl("line", { x1: m.l, x2: w - m.r, y1: ys(v), y2: ys(v), stroke: "var(--grid)" }, svg);
+      svgEl("text", { x: m.l - 5, y: ys(v) + 3.5, "text-anchor": "end", "font-size": 10, fill: "var(--muted)", "font-family": "var(--font-data)" }, svg).textContent = fm(v); }
+    svgEl("path", { d: `M${xs(0)},${ys(forward ? f[c] : f[2*(n-1)+c])}L${xs(1)},${ys(forward ? f[2*(n-1)+c] : f[c])}`, fill: "none", stroke: "var(--muted)", "stroke-dasharray": "2 3" }, svg);
+    let d = ""; for (let k = 0; k < n; k++) d += `${k ? "L" : "M"}${xs(T(k)).toFixed(1)},${ys(f[2*k+c]).toFixed(1)}`;
+    svgEl("path", { d, fill: "none", stroke: "var(--line)", "stroke-width": 1.25, "stroke-linejoin": "round" }, svg);
+    svgEl("circle", { cx: xs(T(sel.k)), cy: ys(f[2*sel.k+c]), r: 3.5, fill: "var(--ink)", stroke: "var(--surface)", "stroke-width": 2 }, svg);
+  }
+  let rug = ""; for (let k = 0; k < n; k++) rug += `M${xs(T(k)).toFixed(1)},130v4`;  // where the line was simulated
+  svgEl("path", { d: rug, stroke: "var(--muted)", "stroke-width": 0.6 }, svg);
+  svgEl("text", { x: 44, y: h - 2, "font-size": 10, fill: "var(--muted)" }, svg).textContent = `t = 0 at #${ord[sel.a]} … 1 · ${n} points · dotted: chord`;
+}
+function drawMaterial() {
+  const svg = document.getElementById("mat"), w = 300, h = 80, m = { l: 30, r: 8, t: 8, b: 16 }, q = DATA.material;
+  const xs = i => m.l + i / (q.length - 1) * (w - m.l - m.r), ys = v => h - m.b - (v - 5) / 5 * (h - m.t - m.b);
+  miniFrame(svg, w, h, m, xs, ys, [], [5, 7.5, 10], null, null);
+  svgEl("path", { d: pathD(xs, ys, q), fill: "none", stroke: "var(--ink-2)", "stroke-width": 1.5 }, svg);
+  svgEl("text", { x: m.l, y: h - 2, "font-size": 10, fill: "var(--muted)" }, svg).textContent = "quality of the 50 units in stacking order (range 5 … 10)";
+}
+
+// controls
+function seg(id, key, after) {
+  const el = document.getElementById(id);
+  el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state[key] = b.dataset.v;
+    el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); after && after(); drawBase(); drawTop(); updatePanel(); });
+}
+const opacityEl = document.getElementById("opacity");
+function setOpacity(v) { state.opacity = v / 100; opacityEl.value = v; document.getElementById("opacity-v").textContent = v + " %"; }
+seg("set", "set", () => { setOpacity(state.set === "all" ? 2 : 10); if (state.pinned !== null && state.set === "front" && !isFront[state.pinned]) pin(null); fillPick(); });
+seg("units", "units", () => { fillPick(); });
+seg("color", "color", () => { document.getElementById("key-line").hidden = state.color !== "uniform"; document.getElementById("key-ramp").hidden = state.color === "uniform"; });
+opacityEl.addEventListener("input", () => { setOpacity(+opacityEl.value); drawBase(); });
+document.getElementById("clouds").addEventListener("change", ev => { state.clouds = ev.target.checked; document.getElementById("key-cloud").hidden = !state.clouds; drawBase(); drawTop(); });
+document.getElementById("gains").addEventListener("change", ev => { state.gains = ev.target.checked; document.getElementById("key-gain").hidden = !state.gains; drawBase(); });
+function fillPick() {
+  const el = document.getElementById("pick"), ids = [...Array(N).keys()].filter(i => state.set === "all" || isFront[i]).sort((a, b) => ord[a] - ord[b]);
+  el.innerHTML = `<option value="">none</option>` + ids.map(i => `<option value="${i}">#${ord[i]} · F1 ${fmt1(DATA.labels[i][0])} · F2 ${fmt2(DATA.labels[i][1])}</option>`).join("");
+  el.value = state.pinned === null ? "" : String(state.pinned);
+}
+document.getElementById("pick").addEventListener("change", ev => pin(ev.target.value === "" ? null : +ev.target.value));
+
+// text
+function fillText() {
+  const c = DATA.check, st = DATA.stats, nGain = gains.length;
+  document.getElementById("material-label").textContent = `material ${DATA.material_index + 1} of 8`;
+  const pct = (a, b) => (100 * a / b).toFixed(1) + " %";
+  const nFrontPairs = frontPair.filter(Boolean).length;
+  document.getElementById("findings").innerHTML = [
+    [`${st.mid_f2.toFixed(2)} m³`, `Median F2 halfway along a line between two front solutions (${(st.mid_f2 / CH[1]).toFixed(2)} × Chevron), against ${st.chord_f2.toFixed(2)} m³ (${(st.chord_f2 / CH[1]).toFixed(2)} × Chevron) on the straight chord between their objectives
+      (F1 ${st.mid_f1.toFixed(3)} against ${st.chord_f1.toFixed(3)}). Blending two good schedules mostly makes a worse one: the lines bow far up and to the right.`],
+    [`${nGain.toLocaleString("en")} points`, `of ${st.points.toLocaleString("en")} interpolated depositions stay non-dominated by every final solution after 32 fresh simulations
+      (${st.beyond.toLocaleString("en")} looked so on their ${st.simulations_per_point} simulations). Together they dominate ${st.front_beaten} of the ${DATA.front.length} front solutions.`],
+    [`${(st.distance_median).toFixed(0)} m vs ${st.confirmed_distance_median.toFixed(1)} m`, `Median distance between two schedules over all pairs, and over the pairs whose lines produced those gains. The gains come
+      from near-identical neighbours, a short local search around a front that had not converged, not from mixing distant schedules.`],
+  ].map(([big, text]) => `<div class="finding"><div class="big">${big}</div><p>${text}</p></div>`).join("");
+
+  const z = c.z_sd, rows = [
+    ["Material", "regenerated exactly from the bundle seed (all 8 T6 materials match)"],
+    ["Stored solutions re-simulated", `${c.solutions} × 16 fresh simulations`],
+    ["Mean difference, fresh − stored", `F1 ${c.mean_difference[0].toFixed(4)} · F2 ${c.mean_difference[1].toFixed(3)}`],
+    ["Mean absolute difference", `F1 ${c.mean_abs_difference[0].toFixed(4)} · F2 ${c.mean_abs_difference[1].toFixed(3)}`],
+    ["Correlation, fresh with stored", `F1 ${c.correlation[0].toFixed(4)} · F2 ${c.correlation[1].toFixed(4)}`],
+    ["Difference in standard errors", `sd F1 ${z[0].toFixed(2)} · F2 ${z[1].toFixed(2)} (1 expected); |z| < 2 for ${pct(c.share_abs_z_below_2[0] * c.solutions, c.solutions)}`],
+    ["Front, stored labels / fresh labels", `${c.front_stored.length} / ${c.front_fresh.length} solutions, ${c.front_overlap} in both`],
+    ["Hypervolume (stored front = 1, ref. point 1.1)", `stored ${c.hv_stored_front.toFixed(3)} · same solutions, fresh labels ${c.hv_fresh_labels_of_stored_front.toFixed(3)} · fresh front ${c.hv_fresh_front.toFixed(3)}`],
+    ["The 3 NSGA-III runs repeated", `${c.rerun_solutions} final solutions, front of ${c.rerun_front_size}; hypervolume ${c.hv_rerun_front.toFixed(3)} (runs ${Object.values(c.hv_rerun_per_seed).map(v => v.toFixed(2)).join(" / ")}); ${Math.round(c.rerun_seconds)} s`],
+    ["Front used here", `${DATA.front.length} of ${N} solutions, non-dominated on the means of ${st.cloud} new simulations each`],
+    ["Chevron, 19 passes (outside the chart)", `F1 ${DATA.chevron[0].toFixed(3)} · F2 ${DATA.chevron[1].toFixed(2)} m³ (mean of ${st.cloud} simulations)`],
+  ];
+  document.getElementById("verify").innerHTML = rows.map(([k, v]) => `<tr><th scope="row">${k}</th><td class="num">${v}</td></tr>`).join("");
+  const params = [
+    ["Result", "bundle S2-v1, test set T6 (S2-v1-T6-c6b60ab04f), built 2026-10-02 with code e9b1bc0"],
+    ["Material", `50 quality values, random walk in 5 … 10 (steps ±1, Gaussian σ 0.75); SeedSequence(1).spawn(7)[6], material ${DATA.material_index + 1} of 8; total volume 2,500 m³`],
+    ["Stockpile", "bed 59 × 20 m; 20 stacker positions x ∈ [10, 49] m at z = 10 m, evenly spaced over 86,400 s; reclaim 59 m per 86,400 s"],
+    ["Simulator", "fast BslBlendingSimulator, level L1: ppm3 1, reclaim step 1 m, reclaim angle 45°, eight-likelihood 0.87; 60 slices; v2026.1 (re-run with v2026.2, unseeded)"],
+    ["Objectives", "F1: volume-weighted sd of the reclaimed quality; F2: sd of the slice volumes from the ideal stockpile; x from 10 to 49 m"],
+    ["Optimizer", "pymoo NSGA-III, population 100, 250 generations (25,000 simulations), 100 uniform reference directions, SBX p 0.9 η 15, PM η 20, seeds 1 2 3"],
+    ["Solutions", `T6 stores the mean of 16 simulations per solution; drawn here at the mean of ${st.cloud} new single simulations at L1, which form the cloud`],
+    ["Interpolation", `a + t (b − a), first t = 1/40 … 39/40 (${st.base_points.toLocaleString("en")} points); ${P.toLocaleString("en")} pairs of ${N} solutions (${nFrontPairs} between front solutions); ${st.simulations_per_point} simulations per point`],
+    ["Adaptive refinement", `${st.rounds} rounds of bisection: every segment whose ends differ by more than 4 noise units (Euclidean in units of the noise of a difference, F1 and F2) gets its midpoint, down to 1/${DATA.lines.grid} of the line (decided on 8-simulation means, then every point brought to ${st.simulations_per_point}); ${st.points.toLocaleString("en")} interior points in all, ${(st.points * 8 / 1e6).toFixed(1)} M simulations`],
+  ];
+  document.getElementById("params").innerHTML = params.map(([k, v]) => `<tr><th scope="row">${k}</th><td>${v}</td></tr>`).join("");
+}
+
+readTokens(); fillText(); fillPick(); drawMaterial(); updatePanel();
+decodeLines(DATA.lines).then(() => { setHome(); new ResizeObserver(resize).observe(chartEl); });
+const retheme = () => { readTokens(); drawBase(); drawTop(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+document.fonts && document.fonts.ready.then(() => drawBase());
+</script>

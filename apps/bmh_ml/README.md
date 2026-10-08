@@ -153,3 +153,18 @@ uv run --package bmh_ml python -m bmh_ml.sweep --name lgbm-1 --bundle S1-v1-rmlp
 * Optuna (TPE) chooses the parameters of each trial from the search space of the model (`SEARCH_SPACES` in `sweep.py`); `--param` fixes parameters. Each trial is a training run nested in the parent run `sweep-<name>`, which is tagged with the best run.
 * The objective is the mean `nrmse` of F1 and F2 on every validation set of the bundle (`val`, and `valop` if present), or the metrics given with `--objective`. Test sets are refused.
 * The study is stored in the store (`optuna.db`): the same `--name` continues a sweep.
+
+## Front study: interpolation web and resolution ladder
+
+`bmh_ml.front_study` examines one simulator-optimized front (bundle S2-v1, test set T6, material index 2) with two interactive charts:
+straight lines in deposition space between all final solutions, re-simulated (the interpolation web), and the solutions re-simulated at
+six particle resolutions (the resolution ladder, with a static figure for print). From the repository root, with an environment outside
+the repository:
+
+```shell
+ENV=/path/to/env apps/bmh_ml/src/bmh_ml/front_study/run_resolution.sh 2   # the resolution ladder alone, about 15 minutes
+ENV=/path/to/env apps/bmh_ml/src/bmh_ml/front_study/run_all.sh 2          # everything, about 1.5 hours on 14 cores
+```
+
+The results go to the git-ignored `workdir/front-interpolation/out`. Steps, data, file formats and findings:
+[src/bmh_ml/front_study/README.md](src/bmh_ml/front_study/README.md).

@@ -1,0 +1,497 @@
+<meta charset="utf-8">
+<title>Front Resolution Ladder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: the companion of the interpolation chart. One objective-space canvas with a cloud per solution and resolution level, a readout
+   column for the hovered solution across all levels, and the per-level summary below. Levels diverge around L1, the optimizer's
+   resolution: grey; coarser orange; finer a blue ramp, darker (light theme) or lighter (dark theme) the finer. */
+:root {
+  --bg: #f5f7f8; --surface: #ffffff; --ink: #12171c; --ink-2: #4b5560; --muted: #7d8791; --rule: #dde2e6; --grid: #edf0f2;
+  --worse: #f3eee8; --ref: #5b5246;
+  --lv0: #eb6834; --lv1: #6f6d68; --lv2: #6da7ec; --lv3: #2a78d6; --lv4: #1c5cab; --lv5: #0d366b;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111416; --surface: #181c1f; --ink: #eef1f3; --ink-2: #bcc4cb; --muted: #87919a; --rule: #2a3035; --grid: #1f2427;
+    --worse: #1f1c19; --ref: #d6cbbd;
+    --lv0: #d95926; --lv1: #a8a7a0; --lv2: #184f95; --lv3: #3987e5; --lv4: #86b6ef; --lv5: #cde2fb; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111416; --surface: #181c1f; --ink: #eef1f3; --ink-2: #bcc4cb; --muted: #87919a; --rule: #2a3035; --grid: #1f2427;
+  --worse: #1f1c19; --ref: #d6cbbd;
+  --lv0: #d95926; --lv1: #a8a7a0; --lv2: #184f95; --lv3: #3987e5; --lv4: #86b6ef; --lv5: #cde2fb; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.page { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 56px; display: grid; gap: 22px; }
+h1, h2 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: clamp(1.7rem, 3.2vw, 2.3rem); line-height: 1.1; }
+h2 { font-size: 1.25rem; }
+p { margin: 0; max-width: 72ch; }
+.eyebrow { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { color: var(--ink-2); }
+header { display: grid; gap: 8px; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; padding-block: 10px; border-block: 1px solid var(--rule); }
+.control { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color: var(--ink-2); flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { font: inherit; font-size: 0.8125rem; border: 0; background: var(--surface); color: var(--ink-2); padding: 5px 10px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.chips { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 0.8125rem; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule); background: var(--surface);
+  color: var(--ink-2); border-radius: 999px; padding: 3px 10px 3px 6px; cursor: pointer; }
+.chip[aria-pressed="false"] { opacity: 0.45; }
+.chip .dot { width: 10px; height: 10px; border-radius: 50%; }
+select { font: inherit; font-size: 0.8125rem; background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: 4px 6px; max-width: 100%; }
+button:focus-visible, select:focus-visible, input:focus-visible, canvas:focus-visible { outline: 2px solid var(--lv3); outline-offset: 2px; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .workspace { grid-template-columns: minmax(0, 1fr); } }
+.zoombar { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; margin-bottom: 6px; }
+.zoombar button { font: inherit; font-size: 0.75rem; border: 1px solid var(--rule); background: var(--surface); color: var(--ink-2); border-radius: 5px; padding: 3px 8px; cursor: pointer; }
+.zoombar button:hover { color: var(--ink); border-color: var(--muted); }
+.zoombar .num { font-size: 0.75rem; color: var(--muted); align-self: center; padding-inline: 4px; }
+.chart { position: relative; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; aspect-ratio: 4 / 3; max-width: 100%; min-height: 300px; }
+.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.chart canvas#top { cursor: crosshair; touch-action: none; }
+.chart canvas#top.panning { cursor: grabbing; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--font-data); font-size: 0.75rem;
+  line-height: 1.4; padding: 6px 8px; border-radius: 5px; white-space: nowrap; transform: translate(12px, -50%); z-index: 2; }
+.howto { font-size: 0.8125rem; color: var(--muted); margin-top: 6px; }
+.howto kbd { font-family: var(--font-data); font-size: 0.75rem; border: 1px solid var(--rule); border-radius: 3px; padding: 0 3px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.8125rem; color: var(--ink-2); margin-top: 8px; }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.panel { display: grid; gap: 14px; min-width: 0; }
+.panel section { display: grid; gap: 6px; }
+.panel h3 { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; margin: 0; }
+.readout { font-family: var(--font-data); font-size: 0.8125rem; color: var(--ink-2); display: grid; gap: 2px; }
+.readout b { color: var(--ink); font-weight: 500; }
+.hint { color: var(--muted); font-size: 0.8125rem; }
+.panel svg { width: 100%; height: auto; display: block; overflow: visible; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.8125rem; }
+th, td { text-align: right; padding: 5px 0 5px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+th { font-weight: 500; color: var(--ink-2); }
+td { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.lvname { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-body); }
+.findings { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; }
+.finding { display: grid; gap: 4px; align-content: start; }
+.finding .big { font-family: var(--font-data); font-size: 1.35rem; font-weight: 500; }
+.finding p { color: var(--ink-2); font-size: 0.9rem; }
+section.summary { display: grid; gap: 10px; }
+.note { font-size: 0.8125rem; color: var(--muted); }
+table.facts td { font-family: var(--font-body); white-space: normal; text-align: left; }
+table.facts th { text-align: left; white-space: nowrap; vertical-align: top; }
+pre { background: var(--grid); border-radius: 6px; padding: 8px 10px; overflow-x: auto; margin: 0; }
+code { font-family: var(--font-data); font-size: 0.8em; overflow-wrap: anywhere; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="eyebrow">bmh_ml · bundle S2-v1 · test set T6 · <span id="material-label">material</span> · fast simulator, six particle resolutions</div>
+    <h1>Front Resolution Ladder</h1>
+    <p class="lede">The 83 final solutions of the three NSGA-III runs, optimized at one particle per cubic meter (L1), simulated again 128 times at
+      each of six particle resolutions, from 2 m particles (L0) to 0.16 m particles (L5). Each cloud is one solution at one level; the dot is
+      its mean. Hover over a solution to highlight it at every level, and follow its path as the resolution grows.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Chart controls">
+    <div class="control">Levels <span class="chips" id="chips"></span></div>
+    <div class="control">Axes
+      <span class="seg" id="units">
+        <button type="button" data-v="relative" aria-pressed="true">relative to Chevron at the same level</button>
+        <button type="button" data-v="absolute" aria-pressed="false">absolute</button>
+      </span>
+    </div>
+    <label class="control" for="clouds"><input id="clouds" type="checkbox" checked> Single simulations</label>
+    <label class="control" for="paths"><input id="paths" type="checkbox" checked> Paths across levels</label>
+    <label class="control" for="fronts"><input id="fronts" type="checkbox" checked> Front of each level</label>
+    <label class="control" for="pick">Pin <select id="pick"></select></label>
+  </div>
+
+  <div class="workspace">
+    <div>
+      <div class="zoombar" role="group" aria-label="Zoom">
+        <span class="num" id="zoom-v">1.0×</span>
+        <button type="button" id="z-in" aria-label="Zoom in">+</button>
+        <button type="button" id="z-out" aria-label="Zoom out">−</button>
+        <button type="button" id="z-front" title="Fits the solutions of the L1 front at L1 and the finer levels">L1 front</button>
+        <button type="button" id="z-all">All</button>
+      </div>
+      <div class="chart" id="chart">
+        <canvas id="base" aria-hidden="true"></canvas>
+        <canvas id="top" tabindex="0" aria-label="F1 against F2 of the final solutions at six particle resolutions"></canvas>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+      <p class="howto">Scroll to zoom (<kbd>Shift</kbd> F1 only, <kbd>Alt</kbd> F2 only), drag to pan, <kbd>Shift</kbd>-drag to zoom into a box,
+        double-click to reset. Pinch and drag on touch screens.</p>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <aside class="panel" aria-live="polite">
+      <section>
+        <h3>Selection</h3>
+        <div class="readout" id="readout"><span class="hint">Hover a solution on the chart, or pin one with the menu above.</span></div>
+      </section>
+      <section>
+        <h3>Across the levels</h3>
+        <div class="scroll"><table id="sel-table"></table></div>
+      </section>
+      <section>
+        <h3>Deposition schedule</h3>
+        <svg id="dep" viewBox="0 0 320 190" role="img" aria-label="Stacker position over the 20 deposition steps"></svg>
+      </section>
+    </aside>
+  </div>
+
+  <section class="findings" id="findings" aria-label="What the levels show"></section>
+
+  <section class="summary">
+    <h2>Levels</h2>
+    <div class="scroll"><table id="levels"></table></div>
+    <p class="note">ms per run: <span id="timing-note"></span>. Particle edge = ppm3<sup>−1/3</sup>. The reclaim step is 1 m at every level, so all levels reclaim the same 60 slices. Noise: the
+      standard deviation of one simulation, averaged over the solutions. Shift and rank correlation compare each level's means with the finest
+      level. Kept: solutions of the L1 front that are still non-dominated at that level. Code: <code>apps/bmh_ml/src/bmh_ml/front_study/</code>
+      (<code>resolution.py</code>, <code>build_resolution_page.py</code>).</p>
+  </section>
+
+  <section class="summary" id="method">
+    <h2>Method</h2>
+    <div class="scroll"><table class="facts" id="facts"></table></div>
+    <h2>Reproducing</h2>
+    <p>In <code>Code/BlendingEvaluation</code>, with an environment outside the repository
+      (<code>UV_PROJECT_ENVIRONMENT=/some/env uv sync --locked --all-packages</code>; never the repository's <code>.venv</code>):</p>
+    <pre><code>ENV=/some/env apps/bmh_ml/src/bmh_ml/front_study/run_resolution.sh 2</code></pre>
+    <p>It runs <code>verify.py</code> (reads the stored front, about 2 minutes), <code>resolution.py</code> (the clouds, about 12 minutes on 14 cores),
+      <code>time_levels.py</code> (the cost, on an idle machine, about 1 minute), then builds this page and the static figure
+      <code>out/resolution-figure-material-2.pdf</code> (also <code>.svg</code>, <code>.png</code>). The simulator is not seeded, so every run gives
+      new clouds; means agree within their standard error (the noise divided by √128), the noise levels within a few percent. Data:
+      <code>out/clouds-material-2.npz</code> (every single simulation), <code>out/resolution-material-2.csv</code> (one row per solution and level),
+      <code>out/resolution-data-material-2.json</code> (what this page embeds). All files are in <code>workdir/front-interpolation/out/</code>
+      (git-ignored). Documentation: <code>apps/bmh_ml/src/bmh_ml/front_study/README.md</code>.</p>
+    <h2>Figure caption</h2>
+    <p id="caption"></p>
+  </section>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+const LV = DATA.levels, NL = LV.length, N = DATA.id.length, R = DATA.repeats, ord = DATA.id;
+const means = DATA.means, sds = DATA.sds;
+const samples = DATA.samples.map(level => level.map(a => Float32Array.from(a, (v, j) => j % 2 ? v / 1e3 : v / 1e4)));
+const chSamples = DATA.chevron_samples.map(a => Float32Array.from(a, (v, j) => j % 2 ? v / 1e3 : v / 1e4));
+const l1Front = new Set(LV[DATA.l1].front);
+const byResolution = [...Array(NL).keys()].sort((a, b) => LV[a].ppm3 - LV[b].ppm3);
+const state = { units: "relative", show: Array(NL).fill(true), clouds: true, paths: true, fronts: true, hover: null, pinned: null, level: null };
+
+// objective values: absolute, or relative to Chevron at the same level
+const rel = () => state.units === "relative";
+const val = (k, c, v) => rel() ? v / LV[k].chevron[c] : v;
+const fv = (c, v) => rel() ? v.toFixed(3) : (c ? v.toFixed(2) : v.toFixed(4));
+
+// view and scales (in the units of the axes)
+let HOME = null, view = null;
+const M = { l: 62, r: 16, t: 14, b: 48 };
+let W = 0, H = 0, dpr = 1;
+const sx = v => M.l + (v - view.x0) / (view.x1 - view.x0) * (W - M.l - M.r);
+const sy = v => H - M.b - (v - view.y0) / (view.y1 - view.y0) * (H - M.t - M.b);
+const ix = x => view.x0 + (x - M.l) / (W - M.l - M.r) * (view.x1 - view.x0);
+const iy = y => view.y0 + (H - M.b - y) / (H - M.t - M.b) * (view.y1 - view.y0);
+const inPlot = (x, y) => x >= M.l - 4 && x <= W - M.r + 4 && y >= M.t - 4 && y <= H - M.b + 4;
+function extent(points, pad = 0.06) {
+  let a = Infinity, b = -Infinity, c = Infinity, d = -Infinity;
+  for (const [x, y] of points) { a = Math.min(a, x); b = Math.max(b, x); c = Math.min(c, y); d = Math.max(d, y); }
+  const px = (b - a) * pad || 0.01, py = (d - c) * pad || 0.01;
+  return { x0: a - px, x1: b + px, y0: c - py, y1: d + py };
+}
+function* cloudPoints(levels) { for (const k of levels) for (let i = 0; i < N; i++) { const s = samples[k][i]; for (let r = 0; r < R; r++) yield [val(k, 0, s[2*r]), val(k, 1, s[2*r+1])]; } }
+const visibleLevels = () => byResolution.filter(k => state.show[k]);
+function setHome() { HOME = extent(cloudPoints(visibleLevels().length ? visibleLevels() : byResolution), 0.03); view = { ...HOME }; updateZoom(); }
+
+const chartEl = document.getElementById("chart"), base = document.getElementById("base"), topC = document.getElementById("top"), tip = document.getElementById("tip");
+const bctx = base.getContext("2d"), tctx = topC.getContext("2d");
+let C = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["surface", "ink", "ink-2", "muted", "rule", "grid", "worse", "ref"]) C[k] = cs.getPropertyValue("--" + k).trim();
+  C.lv = [...Array(NL).keys()].map(k => cs.getPropertyValue("--lv" + k).trim());
+}
+function resize() {
+  const r = chartEl.getBoundingClientRect(); dpr = window.devicePixelRatio || 1; W = r.width; H = r.height;
+  for (const c of [base, topC]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  draw();
+}
+let frame = 0;
+const draw = () => { if (!frame) frame = requestAnimationFrame(() => { frame = 0; drawBase(); drawTop(); }); };
+function updateZoom() {
+  const z = Math.sqrt((HOME.x1 - HOME.x0) / (view.x1 - view.x0) * (HOME.y1 - HOME.y0) / (view.y1 - view.y0));
+  document.getElementById("zoom-v").textContent = (z < 10 ? z.toFixed(1) : z.toFixed(0)) + "×";
+}
+function setView(v) {
+  const minX = (HOME.x1 - HOME.x0) / 2000, minY = (HOME.y1 - HOME.y0) / 2000;
+  if (v.x1 - v.x0 < minX) { const c = (v.x0 + v.x1) / 2; v.x0 = c - minX / 2; v.x1 = c + minX / 2; }
+  if (v.y1 - v.y0 < minY) { const c = (v.y0 + v.y1) / 2; v.y0 = c - minY / 2; v.y1 = c + minY / 2; }
+  view = v; updateZoom(); draw();
+}
+const zoomAt = (cx, cy, fx, fy) => setView({ x0: cx - (cx - view.x0) * fx, x1: cx + (view.x1 - cx) * fx, y0: cy - (cy - view.y0) * fy, y1: cy + (view.y1 - cy) * fy });
+
+function niceTicks(a, b, n) {
+  const raw = (b - a) / Math.max(2, n), mag = 10 ** Math.floor(Math.log10(raw)), r = raw / mag;
+  const step = (r < 1.5 ? 1 : r < 3.5 ? 2 : r < 7.5 ? 5 : 10) * mag, out = [];
+  for (let v = Math.ceil(a / step - 1e-9) * step; v <= b + 1e-9; v += step) out.push(v);
+  return { values: out, decimals: Math.max(0, -Math.floor(Math.log10(step) + 1e-9)) };
+}
+function drawAxes(ctx) {
+  ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--font-data") || "monospace"}`;
+  ctx.lineWidth = 1; ctx.strokeStyle = C.grid; ctx.fillStyle = C.muted; ctx.textAlign = "center"; ctx.textBaseline = "top";
+  const tx = niceTicks(view.x0, view.x1, Math.round((W - M.l - M.r) / 80));
+  for (const v of tx.values) { const x = sx(v); ctx.beginPath(); ctx.moveTo(x, M.t); ctx.lineTo(x, H - M.b); ctx.stroke(); ctx.fillText(v.toFixed(tx.decimals), x, H - M.b + 6); }
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  const ty = niceTicks(view.y0, view.y1, Math.round((H - M.t - M.b) / 50));
+  for (const v of ty.values) { const y = sy(v); ctx.beginPath(); ctx.moveTo(M.l, y); ctx.lineTo(W - M.r, y); ctx.stroke(); ctx.fillText(v.toFixed(ty.decimals), M.l - 8, y); }
+  ctx.strokeStyle = C.rule; ctx.beginPath(); ctx.moveTo(M.l, H - M.b); ctx.lineTo(W - M.r, H - M.b); ctx.stroke();
+  ctx.fillStyle = C["ink-2"]; ctx.font = `12px ${getComputedStyle(document.body).fontFamily}`; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  ctx.fillText(rel() ? "F1 relative to Chevron at the same level (1 = Chevron, lower is better)" : "F1 · standard deviation of the reclaimed quality (lower is better)", M.l + (W - M.l - M.r) / 2, H - 6);
+  ctx.save(); ctx.translate(14, M.t + (H - M.t - M.b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = "middle";
+  ctx.fillText(rel() ? "F2 relative to Chevron at the same level (1 = Chevron)" : "F2 · volume deviation per slice, m³ (lower is better)", 0, 0); ctx.restore();
+}
+function ring(ctx, x, y, r, fill, stroke, width = 2) { ctx.beginPath(); ctx.arc(x, y, r + width, 0, 7); ctx.fillStyle = stroke; ctx.fill(); ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = fill; ctx.fill(); }
+function diamond(ctx, x, y, r, fill, edge) {
+  for (const [rr, c] of [[r + 2, edge], [r, fill]]) { ctx.beginPath(); ctx.moveTo(x, y - rr); ctx.lineTo(x + rr, y); ctx.lineTo(x, y + rr); ctx.lineTo(x - rr, y); ctx.closePath(); ctx.fillStyle = c; ctx.fill(); }
+}
+function clip(ctx) { ctx.save(); ctx.beginPath(); ctx.rect(M.l, M.t, W - M.l - M.r, H - M.t - M.b); ctx.clip(); }
+function drawCloud(ctx, k, i, r, alpha) {
+  ctx.globalAlpha = alpha; ctx.fillStyle = C.lv[k]; const s = samples[k][i];
+  for (let q = 0; q < R; q++) { ctx.beginPath(); ctx.arc(sx(val(k, 0, s[2*q])), sy(val(k, 1, s[2*q+1])), r, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+}
+const meanPx = (k, i) => [sx(val(k, 0, means[k][i][0])), sy(val(k, 1, means[k][i][1]))];
+function path(ctx, i) {
+  const ks = visibleLevels(); if (ks.length < 2) return;
+  ctx.beginPath(); ks.forEach((k, j) => { const [x, y] = meanPx(k, i); j ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+}
+
+function drawBase() {
+  if (!view || !W) return;
+  const ctx = bctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  drawAxes(ctx); clip(ctx);
+  const dim = state.hover !== null || state.pinned !== null, ks = visibleLevels();
+  if (rel()) {  // every level's Chevron sits at (1, 1) here
+    const x = sx(1), y = sy(1), l = M.l, r = W - M.r, t = M.t, b = H - M.b;
+    ctx.fillStyle = C.worse; if (x < r) ctx.fillRect(Math.max(x, l), t, r - Math.max(x, l), b - t); if (y > t) ctx.fillRect(l, t, r - l, Math.min(y, b) - t);
+    ctx.strokeStyle = C.ref; ctx.setLineDash([5, 4]); ctx.beginPath(); ctx.moveTo(x, t); ctx.lineTo(x, b); ctx.moveTo(l, y); ctx.lineTo(r, y); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (state.clouds) for (const k of ks) for (let i = 0; i < N; i++) drawCloud(ctx, k, i, 1.2, dim ? 0.07 : 0.14);
+  if (state.paths) { ctx.strokeStyle = C["ink-2"]; ctx.globalAlpha = dim ? 0.06 : 0.12; ctx.lineWidth = 1; for (let i = 0; i < N; i++) path(ctx, i); ctx.globalAlpha = 1; }
+  if (state.fronts) for (const k of ks) {
+    const f = LV[k].front.map(i => meanPx(k, i)).sort((a, b) => a[0] - b[0]);
+    ctx.strokeStyle = C.lv[k]; ctx.lineWidth = 1.5; ctx.globalAlpha = dim ? 0.4 : 0.9;
+    ctx.beginPath(); f.forEach(([x, y], j) => { if (j) { ctx.lineTo(x, f[j - 1][1]); ctx.lineTo(x, y); } else ctx.moveTo(x, y); }); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  for (const k of ks) for (let i = 0; i < N; i++) { const [x, y] = meanPx(k, i); ring(ctx, x, y, 2.6, C.lv[k], C.surface, 1.2); }
+  for (const k of ks) {  // Chevron of each level: in relative units all at (1, 1), in absolute units one diamond per level
+    if (rel() && k !== ks[ks.length - 1]) continue;
+    const c = LV[k].chevron; diamond(ctx, sx(val(k, 0, c[0])), sy(val(k, 1, c[1])), 5.5, rel() ? C.ref : C.lv[k], C.surface);
+  }
+  ctx.restore();
+}
+const active = () => state.pinned ?? state.hover;
+function drawTop() {
+  if (!view || !W) return;
+  const ctx = tctx; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const a = active(); if (a === null) return;
+  clip(ctx); const ks = visibleLevels();
+  if (state.clouds) for (const k of ks) drawCloud(ctx, k, a, 1.8, 0.75);
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 2; path(ctx, a);
+  ctx.font = `11px ${getComputedStyle(document.body).getPropertyValue("--font-data") || "monospace"}`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  for (const k of ks) { const [x, y] = meanPx(k, a); ring(ctx, x, y, 4.5, C.lv[k], C.ink, 1.8);
+    if (state.level === k) { ctx.lineWidth = 2; ctx.strokeStyle = C.ink; ctx.beginPath(); ctx.arc(x, y, 10, 0, 7); ctx.stroke(); }
+    ctx.fillStyle = C.ink; ctx.fillText(LV[k].name, x + 9, y - 9); }
+  ctx.restore();
+}
+
+// what the cursor is on: the nearest mean of a visible level
+function nearest(x, y, radius) {
+  let best = null, bd = radius * radius;
+  for (const k of visibleLevels()) for (let i = 0; i < N; i++) { const [px, py] = meanPx(k, i); if (!inPlot(px, py)) continue;
+    const d = (px - x) ** 2 + (py - y) ** 2; if (d < bd) { bd = d; best = { i, k }; } }
+  return best;
+}
+function onMove(ev) {
+  const r = topC.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, hit = nearest(x, y, 12);
+  const pinned = state.pinned !== null, hover = pinned ? state.hover : hit ? hit.i : null;
+  const level = hit && (!pinned || hit.i === state.pinned) ? hit.k : null;
+  if (hover !== state.hover || level !== state.level) { const redrawBase = !pinned && (hover === null) !== (state.hover === null); state.hover = hover; state.level = level;
+    if (redrawBase) drawBase(); drawTop(); updatePanel(); }
+  if (hit && (!pinned || hit.i === state.pinned)) { const m = means[hit.k][hit.i], s = sds[hit.k][hit.i];
+    tip.innerHTML = `#${ord[hit.i]} · ${LV[hit.k].name} (ppm3 ${LV[hit.k].ppm3})<br>F1 ${fv(0, val(hit.k, 0, m[0]))} ± ${fv(0, val(hit.k, 0, s[0]))} · F2 ${fv(1, val(hit.k, 1, m[1]))} ± ${fv(1, val(hit.k, 1, s[1]))}${rel() ? " (× Chevron)" : ""}`;
+    tip.hidden = false; const flip = x > W - 260; tip.style.left = x + "px"; tip.style.top = y + "px"; tip.style.transform = flip ? "translate(calc(-100% - 12px), -50%)" : "translate(12px, -50%)";
+  } else tip.hidden = true;
+}
+function pin(i) { state.pinned = i; state.hover = null; document.getElementById("pick").value = i === null ? "" : String(i); drawBase(); drawTop(); updatePanel(); }
+
+// pan, box zoom, pinch, wheel (as in the interpolation chart)
+const pointers = new Map();
+let drag = null, suppressClick = false;
+const pos = ev => { const r = topC.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
+topC.addEventListener("pointerdown", ev => {
+  if (ev.button !== 0) return;
+  try { topC.setPointerCapture(ev.pointerId); } catch (e) { /* synthetic or released pointer */ }
+  pointers.set(ev.pointerId, pos(ev));
+  if (pointers.size === 1) drag = { start: pos(ev), view: { ...view }, box: ev.shiftKey, moved: false };
+  else if (pointers.size === 2) { const [p, q] = [...pointers.values()]; drag = { pinch: Math.hypot(p.x - q.x, p.y - q.y), mid: { x: ix((p.x + q.x) / 2), y: iy((p.y + q.y) / 2) }, view: { ...view }, moved: true }; }
+});
+topC.addEventListener("pointermove", ev => {
+  if (pointers.has(ev.pointerId)) pointers.set(ev.pointerId, pos(ev));
+  if (!drag) return onMove(ev);
+  if (drag.pinch) { const [p, q] = [...pointers.values()]; if (!q) return; const f = drag.pinch / Math.max(10, Math.hypot(p.x - q.x, p.y - q.y)), v = drag.view, c = drag.mid;
+    setView({ x0: c.x - (c.x - v.x0) * f, x1: c.x + (v.x1 - c.x) * f, y0: c.y - (c.y - v.y0) * f, y1: c.y + (v.y1 - c.y) * f }); return; }
+  const p = pos(ev), dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 4) return;
+  drag.moved = true; tip.hidden = true;
+  if (drag.box) { drag.end = p; drawTop(); const ctx = tctx, x0 = Math.min(drag.start.x, p.x), y0 = Math.min(drag.start.y, p.y);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.strokeStyle = C.ink; ctx.setLineDash([4, 3]); ctx.strokeRect(x0, y0, Math.abs(dx), Math.abs(dy)); ctx.setLineDash([]); return; }
+  topC.classList.add("panning");
+  const v = drag.view, kx = (v.x1 - v.x0) / (W - M.l - M.r), ky = (v.y1 - v.y0) / (H - M.t - M.b);
+  setView({ x0: v.x0 - dx * kx, x1: v.x1 - dx * kx, y0: v.y0 + dy * ky, y1: v.y1 + dy * ky });
+});
+function endPointer(ev) {
+  pointers.delete(ev.pointerId); topC.classList.remove("panning");
+  if (!drag) return;
+  suppressClick = drag.moved;
+  if (drag.box && drag.end && Math.abs(drag.end.x - drag.start.x) > 8 && Math.abs(drag.end.y - drag.start.y) > 8) {
+    const a = drag.start, b = drag.end; setView({ x0: ix(Math.min(a.x, b.x)), x1: ix(Math.max(a.x, b.x)), y0: iy(Math.max(a.y, b.y)), y1: iy(Math.min(a.y, b.y)) });
+  } else if (drag.box) drawTop();
+  drag = null;
+}
+topC.addEventListener("pointerup", endPointer);
+topC.addEventListener("pointercancel", endPointer);
+topC.addEventListener("pointerleave", () => { if (drag) return; tip.hidden = true; if (state.pinned === null && state.hover !== null) { state.hover = null; state.level = null; drawBase(); drawTop(); updatePanel(); } });
+topC.addEventListener("wheel", ev => { ev.preventDefault(); const p = pos(ev), d = ev.deltaY || ev.deltaX, f = Math.exp(Math.max(-1, Math.min(1, d * (ev.deltaMode ? 0.05 : 0.0015))));
+  zoomAt(ix(p.x), iy(p.y), ev.altKey ? 1 : f, ev.shiftKey ? 1 : f); }, { passive: false });
+topC.addEventListener("dblclick", () => setView({ ...HOME }));
+topC.addEventListener("click", ev => {
+  if (suppressClick) { suppressClick = false; return; }
+  const r = topC.getBoundingClientRect(), hit = nearest(ev.clientX - r.left, ev.clientY - r.top, 12);
+  if (hit) pin(hit.i === state.pinned ? null : hit.i); else pin(null);
+});
+topC.addEventListener("keydown", ev => { const c = [(view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2];
+  if (ev.key === "+" || ev.key === "=") zoomAt(...c, 0.7, 0.7); else if (ev.key === "-") zoomAt(...c, 1 / 0.7, 1 / 0.7); else if (ev.key === "0") setView({ ...HOME }); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && state.pinned !== null) pin(null); });
+document.getElementById("z-in").addEventListener("click", () => zoomAt((view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2, 0.6, 0.6));
+document.getElementById("z-out").addEventListener("click", () => zoomAt((view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2, 1 / 0.6, 1 / 0.6));
+document.getElementById("z-all").addEventListener("click", () => setView({ ...HOME }));
+document.getElementById("z-front").addEventListener("click", () => setView(extent(function* () {
+  for (const k of visibleLevels()) if (LV[k].ppm3 >= 1) for (const i of l1Front) yield [val(k, 0, means[k][i][0]), val(k, 1, means[k][i][1])]; }(), 0.12)));
+
+// panel
+const NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; }
+const swatch = k => `<span class="dot" style="background: var(--lv${k}); width: 9px; height: 9px; border-radius: 50%; display: inline-block"></span>`;
+function updatePanel() {
+  const a = active(), rd = document.getElementById("readout"), tb = document.getElementById("sel-table");
+  if (a === null) { rd.innerHTML = `<span class="hint">Hover a solution on the chart, or pin one with the menu above.</span>`; tb.innerHTML = ""; drawDeposition(null); return; }
+  rd.innerHTML = `<span><b>#${ord[a]}</b> · ${l1Front.has(a) ? "on the L1 front" : "dominated at L1"}${state.pinned !== null ? " · pinned, Esc to release" : " · click to pin"}</span>`;
+  tb.innerHTML = `<caption class="note" style="caption-side: bottom; text-align: left; padding-top: 4px">mean ± one run (standard deviation of a single simulation)${rel() ? ", relative to Chevron at the level" : ""}; ✓ non-dominated at that level</caption><tr><th>Level</th><th>F1</th><th>F2</th><th>Front</th></tr>` + byResolution.map(k => {
+    const m = means[k][a], s = sds[k][a];
+    return `<tr><td><span class="lvname">${swatch(k)}${LV[k].name}</span></td><td>${fv(0, val(k, 0, m[0]))} ± ${fv(0, val(k, 0, s[0]))}</td><td>${fv(1, val(k, 1, m[1]))} ± ${fv(1, val(k, 1, s[1]))}</td><td>${LV[k].front.includes(a) ? "✓" : ""}</td></tr>`;
+  }).join("");
+  drawDeposition(a);
+}
+function drawDeposition(a) {
+  const svg = document.getElementById("dep"), w = 320, h = 190, m = { l: 30, r: 8, t: 16, b: 30 }; svg.innerHTML = "";
+  const xs = i => m.l + i / 19 * (w - m.l - m.r), ys = v => h - m.b - (v - 10) / 39 * (h - m.t - m.b);
+  for (const v of [10, 20, 30, 40, 49]) { svgEl("line", { x1: m.l, x2: w - m.r, y1: ys(v), y2: ys(v), stroke: "var(--grid)" }, svg);
+    svgEl("text", { x: m.l - 5, y: ys(v) + 3.5, "text-anchor": "end", "font-size": 10, fill: "var(--muted)", "font-family": "var(--font-data)" }, svg).textContent = v; }
+  for (const i of [0, 4, 9, 14, 19]) svgEl("text", { x: xs(i), y: h - m.b + 13, "text-anchor": "middle", "font-size": 10, fill: "var(--muted)", "font-family": "var(--font-data)" }, svg).textContent = i + 1;
+  svgEl("text", { x: m.l, y: 10, "font-size": 10.5, fill: "var(--ink-2)" }, svg).textContent = "stacker position along the bed, m";
+  svgEl("text", { x: m.l + (w - m.l - m.r) / 2, y: h - 2, "text-anchor": "middle", "font-size": 10.5, fill: "var(--ink-2)" }, svg).textContent = "deposition step 1 … 20 (time →)";
+  if (a === null) return;
+  const dep = DATA.deposition[a];
+  svgEl("path", { d: dep.map((v, i) => `${i ? "L" : "M"}${xs(i).toFixed(1)},${ys(v).toFixed(1)}`).join(""), fill: "none", stroke: "var(--ink)", "stroke-width": 1.75 }, svg);
+  dep.forEach((v, i) => svgEl("circle", { cx: xs(i), cy: ys(v), r: 2.2, fill: "var(--ink)" }, svg));
+}
+
+// controls
+function seg(id, key, after) {
+  const el = document.getElementById(id);
+  el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; state[key] = b.dataset.v;
+    el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); after && after(); drawBase(); drawTop(); updatePanel(); });
+}
+seg("units", "units", () => setHome());
+for (const id of ["clouds", "paths", "fronts"]) document.getElementById(id).addEventListener("change", ev => { state[id] = ev.target.checked; drawBase(); drawTop(); });
+function fillChips() {
+  const el = document.getElementById("chips");
+  el.innerHTML = byResolution.map(k => `<button type="button" class="chip" data-k="${k}" aria-pressed="true">${swatch(k)}${LV[k].name} · ${LV[k].edge >= 0.995 ? LV[k].edge.toFixed(0) : LV[k].edge.toFixed(2)} m</button>`).join("");
+  el.addEventListener("click", ev => { const b = ev.target.closest("button"); if (!b) return; const k = +b.dataset.k; state.show[k] = !state.show[k];
+    b.setAttribute("aria-pressed", String(state.show[k])); drawBase(); drawTop(); });
+}
+function fillPick() {
+  const el = document.getElementById("pick"), ids = [...Array(N).keys()].sort((a, b) => ord[a] - ord[b]);
+  el.innerHTML = `<option value="">none</option>` + ids.map(i => `<option value="${i}">#${ord[i]}${l1Front.has(i) ? " · L1 front" : ""}</option>`).join("");
+}
+document.getElementById("pick").addEventListener("change", ev => pin(ev.target.value === "" ? null : +ev.target.value));
+
+function fillText() {
+  document.getElementById("material-label").textContent = `material ${DATA.material_index + 1} of 8`;
+  document.getElementById("legend").innerHTML = [
+    `<span class="key"><span class="dot" style="width: 9px; height: 9px; border-radius: 50%; background: var(--ink-2); display: inline-block"></span>mean of ${R} simulations of a solution at a level; the faint cloud around it: the single simulations</span>`,
+    `<span class="key"><span style="width: 18px; height: 0; border-top: 1.5px solid var(--ink-2); display: inline-block"></span>front of a level (non-dominated means, in the level's color)</span>`,
+    `<span class="key"><span style="width: 18px; height: 0; border-top: 1px solid var(--muted); display: inline-block"></span>path of a solution through the levels, coarse to fine</span>`,
+    `<span class="key"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1 L11 6 L6 11 L1 6 Z" fill="var(--ref)"/></svg>Chevron at maximum speed, 19 layers, at each level (relative axes: all at 1; shaded: worse than it)</span>`,
+  ].join("");
+  const f = LV[DATA.finest], l1 = LV[DATA.l1], coarse = LV[byResolution[0]];
+  const l2 = LV[byResolution[2]];
+  document.getElementById("findings").innerHTML = [
+    [`${(l1.noise_sd[0] / f.noise_sd[0]).toFixed(0)}× the noise`, `One simulation at L1, the optimizer's resolution, scatters by ±${l1.noise_sd[0].toFixed(4)} in F1 and ±${l1.noise_sd[1].toFixed(2)} m³ in F2;
+      at ${f.name} by ±${f.noise_sd[0].toFixed(4)} and ±${f.noise_sd[1].toFixed(3)} m³. ${coarse.name} with 2 m particles: ±${coarse.noise_sd[0].toFixed(3)} and ±${coarse.noise_sd[1].toFixed(2)} m³.`],
+    [`${l1.l1_front_kept} → ${f.l1_front_kept} of ${l1.front.length}`, `solutions of the L1 front stay non-dominated at ${f.name}, where the front has ${f.front.length} solutions.
+      Rank correlation of L1 with ${f.name} over all ${N} solutions: F1 ${l1.spearman_vs_finest[0].toFixed(2)}, F2 ${l1.spearman_vs_finest[1].toFixed(2)} (${l2.name}: ${l2.spearman_vs_finest[0].toFixed(2)}, ${l2.spearman_vs_finest[1].toFixed(2)}).`],
+    [`${(l1.abs_shift_vs_finest[1]).toFixed(2)} m³`, `Mean distance of a solution's F2 at L1 from its F2 at ${f.name} (F1: ${l1.abs_shift_vs_finest[0].toFixed(4)}); on average L1 reads F1 ${l1.shift_vs_finest[0] >= 0 ? "higher" : "lower"}
+      by ${Math.abs(l1.shift_vs_finest[0]).toFixed(4)} and F2 ${l1.shift_vs_finest[1] >= 0 ? "higher" : "lower"} by ${Math.abs(l1.shift_vs_finest[1]).toFixed(2)} m³. Chevron itself moves too: F1 ${l1.chevron[0].toFixed(3)} at L1, ${f.chevron[0].toFixed(3)} at ${f.name}.`],
+  ].map(([big, text]) => `<div class="finding"><div class="big">${big}</div><p>${text}</p></div>`).join("");
+  document.getElementById("levels").innerHTML = `<tr><th>Level</th><th>ppm3</th><th>Particle edge, m</th><th>ms per run</th><th>Chevron F1</th><th>Chevron F2, m³</th>
+    <th>Noise F1</th><th>Noise F2, m³</th><th>Front</th><th>L1 front kept</th><th>Shift F1</th><th>Shift F2, m³</th><th>Rank corr. F1</th><th>Rank corr. F2</th></tr>` +
+    byResolution.map(k => { const v = LV[k]; return `<tr><td><span class="lvname">${swatch(k)}${v.name}${k === DATA.l1 ? " (optimizer)" : ""}</span></td><td>${v.ppm3}</td><td>${v.edge.toFixed(2)}</td>
+      <td>${v.ms_per_run.toFixed(1)}</td><td>${v.chevron[0].toFixed(4)}</td><td>${v.chevron[1].toFixed(2)}</td><td>${v.noise_sd[0].toFixed(4)}</td><td>${v.noise_sd[1].toFixed(3)}</td>
+      <td>${v.front.length}</td><td>${v.l1_front_kept} of ${l1.front.length}</td><td>${v.shift_vs_finest[0] >= 0 ? "+" : ""}${v.shift_vs_finest[0].toFixed(4)}</td>
+      <td>${v.shift_vs_finest[1] >= 0 ? "+" : ""}${v.shift_vs_finest[1].toFixed(3)}</td><td>${v.spearman_vs_finest[0].toFixed(3)}</td><td>${v.spearman_vs_finest[1].toFixed(3)}</td></tr>`; }).join("");
+}
+
+function fillMethod() {
+  const p = DATA.provenance, l1 = LV[DATA.l1], f = LV[DATA.finest];
+  document.getElementById("timing-note").textContent = DATA.timing;
+  const facts = [
+    ["Result", p.result],
+    ["Solutions", `${p.solutions}; numbered #1 … #${N} by F1 at L1, as in the interpolation chart`],
+    ["Material", `material ${DATA.material_index + 1} of the 8 unseen materials of T6: 50 quality values, a smoothed random walk in 5 … 10, regenerated exactly from the bundle seed; 2,500 m³`],
+    ["Stockpile", "bed 59 × 20 m; 20 stacker positions x ∈ [10, 49] m at z = 10 m, evenly spaced in time; reclaimed in 60 slices of 1 m"],
+    ["Resolutions", `${NL} levels of ppm3 (particles per m³): ${byResolution.map(k => `${LV[k].name} ${LV[k].ppm3}`).join(", ")}; particle edge ppm3^(−1/3) from ${LV[byResolution[0]].edge.toFixed(1)} m to ${f.edge.toFixed(2)} m. Reclaim step 1 m, reclaim angle 45°, eight-likelihood 0.87 at every level. L1 to L5 are named as in the bmh_ml plan; L0 was added here as a coarser level.`],
+    ["Simulations", `${R} single simulations of every solution and of Chevron at every level (${(NL * (N + 1) * R).toLocaleString("en")} in all)`],
+    ["Objectives", "F1: volume-weighted standard deviation of the reclaimed quality; F2: standard deviation of the reclaimed volume per slice from the ideal stockpile, m³; both minimized, evaluated between x = 10 and 49 m"],
+    ["Reference", "Chevron at maximum speed: the stacker alternates between the two ends of the bed at every one of the 20 steps, 19 layers. Relative values divide by Chevron's mean at the same level."],
+    ["Statistics", `Point: mean of the ${R} simulations; ± one run: their standard deviation; noise of a level: that standard deviation averaged over the ${N} solutions; front: the non-dominated means of a level; shift: mean of (level − ${f.name}) over the solutions; rank correlation: Spearman between the means of a level and of ${f.name} over the ${N} solutions.`],
+    ["Code", p.code], ["Simulator", p.simulator], ["Computed", p.computed],
+  ];
+  document.getElementById("facts").innerHTML = facts.map(([k, v]) => `<tr><th scope="row">${k}</th><td>${v}</td></tr>`).join("");
+  document.getElementById("caption").textContent = `(a) The ${N} final solutions of three NSGA-III runs, optimized at one particle per m³ (L1), re-simulated ${R} times at
+    each of ${NL} particle resolutions (ppm3 ${byResolution.map(k => LV[k].ppm3).join(", ")}): single simulations (faint), their means (dots) and the
+    non-dominated means of each resolution (steps), relative to Chevron stacking at maximum speed (19 layers) at the same resolution. (b) Standard
+    deviation of one simulation, mean over the solutions, relative to Chevron. (c) Time of one simulation (${DATA.timing}). Of the
+    ${l1.front.length} non-dominated solutions at L1, ${f.l1_front_kept} remain non-dominated at ${f.name} (ppm3 ${f.ppm3}).`;
+}
+
+readTokens(); fillChips(); fillPick(); fillText(); fillMethod(); setHome(); updatePanel();
+new ResizeObserver(resize).observe(chartEl);
+const retheme = () => { readTokens(); drawBase(); drawTop(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+document.fonts && document.fonts.ready.then(() => drawBase());
+</script>
