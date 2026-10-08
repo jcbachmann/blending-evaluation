@@ -11,6 +11,11 @@ Scripts that need machine specific locations read them from environment variable
 | `BMH_BENCHMARK_PATH` | `bmh_apps.benchmark.optimize_deposition`, `bmh_apps.benchmark.optimize_deposition_simple` | Directory of the simulator benchmark (materials, depositions, simulators) |
 | `BMH_EXPERIMENTS_PATH` | `bmh_apps.funvar.*` (`plot_fun`, `export_fun`, ...) | Root directory searched for experiment directories, so experiments can be given by id (e.g. `E1234abcd`) instead of a path |
 
+## Comparing simulation methods
+
+`bmh_apps.simulator_comparison` runs the stockpile simulation methods on the same deposition patterns and shows the results in a
+three.js viewer. [Its README](src/bmh_apps/simulator_comparison/README.md) describes how to generate and view the results.
+
 ## Comparing optimization runs
 
 `plot_eaf` compares groups of independent optimization runs with empirical attainment functions (EAFs). Runs are grouped by their varying parameters, so for example the experiments with random and with preconditioned start populations can be given by id or path:
