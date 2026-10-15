@@ -13,12 +13,22 @@ include(FetchContent)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# The simulator release the bindings are built from, available as blending_simulator_lib.simulator_version: bmh_ml records it with every
+# simulation result, so that results of different simulator versions are never mixed
+set(BLENDING_SIMULATOR_TAG v2026.2)
+
 FetchContent_Declare(
     blending-simulation
     GIT_REPOSITORY https://github.com/jcbachmann/blending-simulation
-    GIT_TAG v2026.2
+    GIT_TAG ${BLENDING_SIMULATOR_TAG}
 )
 FetchContent_MakeAvailable(blending-simulation)
+
+string(REGEX REPLACE "^v" "" BLENDING_SIMULATOR_VERSION ${BLENDING_SIMULATOR_TAG})
+if(FETCHCONTENT_SOURCE_DIR_BLENDING-SIMULATION)
+    # Built from a local checkout, which may hold any state of the simulator: never the release itself
+    string(APPEND BLENDING_SIMULATOR_VERSION "+local")
+endif()
 
 pybind11_add_module(
     _blending_simulator_lib
@@ -37,6 +47,8 @@ target_link_libraries(
     BlendingSimulator::LatticeLib
     pybind11::pybind11
 )
+
+target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_VERSION="${BLENDING_SIMULATOR_VERSION}")
 
 if(BUILD_DETAILED_SIMULATOR)
     # Disabled for Apple

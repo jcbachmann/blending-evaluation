@@ -10,7 +10,7 @@ import typing
 import numpy
 import numpy.typing
 
-__all__: list[str] = ["BlendingSimulatorLib", "simulate_batch"]
+__all__: list[str] = ["BlendingSimulatorLib", "simulate_batch", "simulator_version"]
 
 class BlendingSimulatorLib:
     def __init__(
@@ -56,3 +56,5 @@ def simulate_batch(
     lattice: bool = False,
     threads: typing.SupportsInt | typing.SupportsIndex = 1,
 ) -> dict: ...
+
+simulator_version: str

@@ -25,6 +25,12 @@ DEFAULT_RECLAIM_ANGLE = 45.0
 DEFAULT_EIGHT_LIKELIHOOD = 0.87
 
 
+def get_simulator_version() -> str | None:
+    """The simulator release blending_simulator_lib is built from, e.g. "2026.3" ("+local" for a local checkout of the simulator), or None
+    for bindings built before they reported it."""
+    return getattr(blending_simulator_lib, "simulator_version", None)
+
+
 def default_reclaim_increment(ppm3: float) -> float:
     """One particle size, the edge of a cube of the particle volume, like the C++ command line program"""
     return ppm3 ** (-1.0 / 3.0)
@@ -40,9 +46,11 @@ def simulate_batch(
     seed: int | None = None,
     lattice: bool = False,
     threads: int = 1,
+    reclaimangle: float = DEFAULT_RECLAIM_ANGLE,
+    eight: float = DEFAULT_EIGHT_LIKELIHOOD,
 ) -> dict[str, np.ndarray]:
     """
-    Stack and reclaim many inputs at once with the defaults of BslBlendingSimulator, in one call into the simulator: no Python per simulation,
+    Stack and reclaim many inputs at once like BslBlendingSimulator, in one call into the simulator: no Python per simulation,
     and with several threads the simulations run in parallel in this process.
     :param data: shape (inputs, rows, columns), for every input the rows of stack_reclaim_array
     :param columns: names of the columns of data
@@ -55,9 +63,7 @@ def simulate_batch(
         reclaimincrement = default_reclaim_increment(ppm3)
     batch = getattr(blending_simulator_lib, "simulate_batch", None)
     if batch is not None:
-        result = batch(
-            data, columns, bed_size_x, bed_size_z, DEFAULT_RECLAIM_ANGLE, ppm3, False, DEFAULT_EIGHT_LIKELIHOOD, reclaimincrement, seed, lattice, threads
-        )
+        result = batch(data, columns, bed_size_x, bed_size_z, reclaimangle, ppm3, False, eight, reclaimincrement, seed, lattice, threads)
         return {name: np.asarray(values) for name, values in result.items()}
 
     # Bindings built before the batch function: one simulator per input, in this thread
@@ -68,7 +74,14 @@ def simulate_batch(
         )
     results = [
         BslBlendingSimulator(
-            bed_size_x, bed_size_z, ppm3=ppm3, reclaimincrement=reclaimincrement, seed=None if seed is None else seed + i, lattice=lattice
+            bed_size_x,
+            bed_size_z,
+            reclaimangle=reclaimangle,
+            ppm3=ppm3,
+            eight=eight,
+            reclaimincrement=reclaimincrement,
+            seed=None if seed is None else seed + i,
+            lattice=lattice,
         ).stack_reclaim_array(input_data, columns)
         for i, input_data in enumerate(data)
     ]

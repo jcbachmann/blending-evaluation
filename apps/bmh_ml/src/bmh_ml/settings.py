@@ -5,7 +5,7 @@ import json
 import os
 import re
 from contextlib import contextmanager
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 MATERIAL_LENGTH: int = 50  # Length of material variables array
 DEPOSITION_LENGTH: int = 20  # Length of deposition variables array
@@ -23,22 +23,38 @@ X_MAX: float = BED_SIZE_X - X_MIN
 
 SIMULATOR_ENVIRONMENT_VARIABLE = "BMH_ML_SIMULATOR"
 
+# The simulator release of all results that do not record one (before 2026-10-15): v2026.2, whose fast simulation only refactors v2026.1
+# (same model, other random numbers)
+UNRECORDED_SIMULATOR_VERSION = "2026.2"
+
+
+def get_installed_simulator_version() -> str:
+    """The simulator release the installed blending_simulator_lib is built from; bindings that do not report it are v2026.2 or older."""
+    from bmh.simulation.bsl_blending_simulator import get_simulator_version
+
+    return get_simulator_version() or UNRECORDED_SIMULATOR_VERSION
+
 
 @dataclass(frozen=True)
 class SimulatorSettings:
-    """The detail level of the simulator. `ppm3` is the number of particles per cubic meter; the reclaim step is fixed at 1 m, so every
-    level reclaims the same 60 slices (the simulator's own default step, 1/sqrt(ppm3), would make the slices thinner and F2 smaller just
-    by their width). The defaults are the settings of all data before 2026-10-04."""
+    """The simulator that produced a result: its release and its detail level. `ppm3` is the number of particles per cubic meter; the
+    reclaim step is fixed at 1 m, so every level reclaims the same 60 slices (the simulator's own default step, one particle size, would
+    make the slices thinner and F2 smaller just by their width). New settings are of the installed simulator release; results of
+    different releases must not be mixed. Settings read from records without a release, angle or likelihood are those of all data before
+    2026-10-15 (`from_dict`), the defaults of ppm3 and the reclaim step those of all data before 2026-10-04."""
 
     ppm3: float = 1.0
     reclaim_increment: float = 1.0
+    reclaim_angle: float = 45.0
+    eight_likelihood: float = 0.87
+    version: str = field(default_factory=get_installed_simulator_version)
 
     def as_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, values: dict | None) -> "SimulatorSettings":
-        return cls(**(values or {}))
+        return cls(**{"version": UNRECORDED_SIMULATOR_VERSION, **(values or {})})
 
 
 def get_simulator_settings() -> SimulatorSettings:

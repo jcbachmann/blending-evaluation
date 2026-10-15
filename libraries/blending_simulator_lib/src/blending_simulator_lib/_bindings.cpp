@@ -408,6 +408,7 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 PYBIND11_MODULE(_blending_simulator_lib, m)
 {
 	m.doc() = "Blending Simulator Lib for Python";
+	m.attr("simulator_version") = BLENDING_SIMULATOR_VERSION;
 
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(

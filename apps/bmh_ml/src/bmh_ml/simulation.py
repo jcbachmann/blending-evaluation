@@ -1,4 +1,4 @@
-"""The fast blending simulator as the pipeline uses it, at a detail level (`SimulatorSettings`) that the bundles record."""
+"""The fast blending simulator as the pipeline uses it, at a release and detail level (`SimulatorSettings`) that the bundles record."""
 
 import numpy as np
 import pandas as pd
@@ -6,7 +6,7 @@ from bmh.benchmark.material_deposition import Deposition, Material
 from bmh.helpers.stockpile_math import get_ideal_stockpile_volumes
 from bmh.simulation.bsl_blending_simulator import simulate_batch
 
-from bmh_ml.settings import get_simulator_settings
+from bmh_ml.settings import get_installed_simulator_version, get_simulator_settings
 
 MAX_TIMESTAMP = 86400  # Duration of material and deposition; it has no influence on the results
 
@@ -99,8 +99,22 @@ def evaluate_sims_with_profiles(
     data[:, :, 3] = material
 
     settings = get_simulator_settings()
+    installed = get_installed_simulator_version()
+    if settings.version != installed:
+        raise RuntimeError(
+            f"The active simulator settings are of simulator release {settings.version} (e.g. the level of a bundle built with it), but"
+            f" {installed} is installed: results of different releases must not be mixed, simulate with settings of the installed release"
+        )
     reclaimed = simulate_batch(
-        data, ["x", "z", "volume", "quality"], bed_size_x, bed_size_z, ppm3=settings.ppm3, reclaimincrement=settings.reclaim_increment, threads=threads
+        data,
+        ["x", "z", "volume", "quality"],
+        bed_size_x,
+        bed_size_z,
+        ppm3=settings.ppm3,
+        reclaimincrement=settings.reclaim_increment,
+        threads=threads,
+        reclaimangle=settings.reclaim_angle,
+        eight=settings.eight_likelihood,
     )
 
     volume, quality = reclaimed["volume"], reclaimed["quality"]

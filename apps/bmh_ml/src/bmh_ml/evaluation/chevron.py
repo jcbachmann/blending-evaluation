@@ -31,8 +31,11 @@ def get_reference_key(material: np.ndarray, repeats: int) -> str:
     digest = hashlib.sha256(np.ascontiguousarray(material, dtype=np.float64).tobytes())
     digest.update(json.dumps([BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME, DEPOSITION_LENGTH, X_MIN, X_MAX, repeats]).encode())
     simulator = get_simulator_settings()
-    if simulator != SimulatorSettings():  # references cached before detail levels existed keep their keys
-        digest.update(json.dumps(simulator.as_dict(), sort_keys=True).encode())
+    unrecorded = SimulatorSettings.from_dict(None)
+    if simulator != unrecorded:  # references cached before detail levels existed keep their keys
+        # The fields recorded since 2026-10-15 count only where they differ, so that references cached before keep their keys as well
+        values = {key: value for key, value in simulator.as_dict().items() if key in ("ppm3", "reclaim_increment") or value != getattr(unrecorded, key)}
+        digest.update(json.dumps(values, sort_keys=True).encode())
     return digest.hexdigest()[:16]
 
 
