@@ -33,7 +33,7 @@ class TransferConfig:
     evaluations: int = 20_000
     repeats: int = 16
     reference_set: str = "T2"
-    n_jobs: int | None = None  # processes of the simulation and of the optimizations, default all cores
+    n_jobs: int | None = None  # simulations and optimizations at the same time, default all cores
 
     def params(self, prefix: str = "transfer") -> dict[str, str]:
         return {f"{prefix}.{key}": str(value) for key, value in self.__dict__.items() if key != "n_jobs"}
