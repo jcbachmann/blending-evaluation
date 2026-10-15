@@ -107,11 +107,11 @@ _MODELS: dict[str, object] = {}  # models loaded by this process, by directory
 @dataclass
 class Prescreen:
     """Pre-screening for NSGA-III on the simulator: every generation makes `candidates` offspring, the models rate them and only the
-    `simulated` best are simulated. F1 comes from the model in `f1_model`, F2 from the one in `f2_model` (directories of saved models,
-    possibly the same)."""
+    `simulated` best are simulated. F1 is the mean of the models in `f1_models`, F2 the mean of those in `f2_models` (directories of saved
+    models; one model each, or the training seeds of a family as an ensemble; the two lists may share models)."""
 
-    f1_model: str
-    f2_model: str
+    f1_models: tuple[str, ...]
+    f2_models: tuple[str, ...]
     scope: str
     candidates: int
     simulated: int
@@ -121,16 +121,16 @@ class Prescreen:
         from bmh_ml.datasets.manifest import make_features
         from bmh_ml.models.registry import load_model
 
-        for directory in {self.f1_model, self.f2_model}:
+        for directory in {*self.f1_models, *self.f2_models}:
             if directory not in _MODELS:
                 _MODELS[directory] = load_model(Path(directory))
-        f1_model, f2_model = _MODELS[self.f1_model], _MODELS[self.f2_model]
 
         def predict(depositions: np.ndarray) -> np.ndarray:
             x = make_features(self.scope, np.repeat(np.atleast_2d(material), len(depositions), axis=0), depositions)
-            if f1_model is f2_model:
-                return f1_model.predict(x)
-            return np.column_stack([f1_model.predict(x)[:, 0], f2_model.predict(x)[:, 1]])
+            predictions = {directory: _MODELS[directory].predict(x) for directory in {*self.f1_models, *self.f2_models}}
+            f1 = np.mean([predictions[directory][:, 0] for directory in self.f1_models], axis=0)
+            f2 = np.mean([predictions[directory][:, 1] for directory in self.f2_models], axis=0)
+            return np.column_stack([f1, f2])
 
         return predict
 

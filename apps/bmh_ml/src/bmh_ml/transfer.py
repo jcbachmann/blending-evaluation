@@ -166,18 +166,20 @@ def load_initial_populations(specs: list[str]) -> dict[bytes, np.ndarray]:
     return {key: np.vstack(value) for key, value in initial.items()}
 
 
-def save_prescreen_models(run_ids: list[str], scope: str, candidates: int, simulated: int, directory: Path):
-    """The models of the runs saved into `directory` (worker processes load them from there) as a `prescreen.Prescreen`."""
+def save_prescreen_models(specs: list[str], scope: str, candidates: int, simulated: int, directory: Path):
+    """The models of the runs saved into `directory` (worker processes load them from there) as a `prescreen.Prescreen`. `specs`: one entry
+    for both objectives or two (F1, then F2), each a run id or several, comma-separated, whose models are averaged (an ensemble)."""
     from bmh_ml.prescreen import Prescreen
 
-    if not 1 <= len(run_ids) <= 2:
-        raise ValueError("--prescreen takes one run (both objectives) or two (F1, then F2)")
-    paths = []
-    for i, run_id in enumerate(dict.fromkeys(run_ids)):
-        path = directory / f"model-{i}"
+    if not 1 <= len(specs) <= 2:
+        raise ValueError("--prescreen takes one entry (both objectives) or two (F1, then F2)")
+    paths: dict[str, str] = {}
+    for run_id in dict.fromkeys(run_id for spec in specs for run_id in spec.split(",")):
+        path = directory / f"model-{len(paths)}"
         load_run_model(run_id).save(path)
-        paths.append(str(path))
-    return Prescreen(paths[0], paths[-1], scope, candidates, simulated)
+        paths[run_id] = str(path)
+    f1, f2 = (tuple(paths[run_id] for run_id in spec.split(",")) for spec in (specs[0], specs[-1]))
+    return Prescreen(f1, f2, scope, candidates, simulated)
 
 
 def get_seeded_suffix(seed_population: list[str]) -> str:
@@ -288,8 +290,9 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--prescreen",
         nargs="+",
-        metavar="RUN_ID",
-        help="With --simulator-baseline: models of these runs (one, or F1 then F2) choose which offspring are simulated",
+        metavar="RUN_IDS",
+        help="With --simulator-baseline: models of these runs choose which offspring are simulated; one entry for both objectives or two "
+        "(F1, then F2), each a run id or several comma-separated ones, whose predictions are averaged",
     )
     parser.add_argument("--candidates", type=int, default=300, help="With --prescreen: offspring made per generation")
     parser.add_argument("--simulated", type=int, default=100, help="With --prescreen: offspring simulated per generation, the models' best")

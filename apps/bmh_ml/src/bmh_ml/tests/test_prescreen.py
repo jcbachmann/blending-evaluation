@@ -91,8 +91,32 @@ def test_the_prescreened_optimizer_simulates_only_the_models_picks_within_the_bu
     monkeypatch.setattr(transfer, "simulate", lambda m, d, *a, **k: (simulated.append(len(d)), original(m, d, *a, **k))[1])
     problem = transfer.get_simulator_problem_class()(material)
 
-    objectives, variables = optimize_prescreened(problem, Prescreen(str(tmp_path / "model"), str(tmp_path / "model"), "S2", 16, 4), 8, 30, 1)
+    objectives, variables = optimize_prescreened(problem, Prescreen((str(tmp_path / "model"),), (str(tmp_path / "model"),), "S2", 16, 4), 8, 30, 1)
 
     assert simulated == [8, 4, 4, 4, 4, 4, 2]  # the first population, then the 4 best of 16 candidates, the last generation fills the budget
     assert variables.shape[1] == 20
     assert objectives.shape == (len(variables), 2)
+
+
+def test_an_ensemble_rates_by_the_mean_of_its_models_per_objective(tmp_path):
+    pytest.importorskip("sklearn")
+    from bmh_ml.datasets.manifest import make_features
+    from bmh_ml.models.registry import create_model
+    from bmh_ml.prescreen import Prescreen
+
+    rng = np.random.default_rng(4)
+    material, depositions = random_materials(1, rng), random_depositions(30, rng)
+    x = make_features("S2", np.repeat(material, 30, axis=0), depositions)
+    models = []
+    for i in range(2):
+        model = create_model("ridge")
+        y = rng.random((30, 2))  # two different models
+        model.fit(x, y, x, y, seed=0)
+        model.save(tmp_path / f"m{i}")
+        models.append(model)
+
+    predict = Prescreen((str(tmp_path / "m0"), str(tmp_path / "m1")), (str(tmp_path / "m1"),), "S2", 10, 2).predictor(material)
+
+    predicted = predict(depositions[:5])
+    assert np.allclose(predicted[:, 0], (models[0].predict(x[:5])[:, 0] + models[1].predict(x[:5])[:, 0]) / 2)
+    assert np.allclose(predicted[:, 1], models[1].predict(x[:5])[:, 1])
