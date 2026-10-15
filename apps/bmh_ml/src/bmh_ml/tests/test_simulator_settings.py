@@ -27,13 +27,13 @@ def test_the_active_level_reaches_the_simulator(monkeypatch):
     from bmh_ml import simulation
 
     created = []
-    original = simulation.BslBlendingSimulator
+    original = simulation.simulate_batch
 
     def recording(*args, **kwargs):
         created.append(kwargs)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(simulation, "BslBlendingSimulator", recording)
+    monkeypatch.setattr(simulation, "simulate_batch", recording)
     rng = np.random.default_rng(0)
     material, deposition = random_materials(1, rng)[0], random_depositions(1, rng)[0]
     use_simulator_settings(SimulatorSettings(ppm3=4.0))

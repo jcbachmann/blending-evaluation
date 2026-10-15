@@ -10,7 +10,7 @@ import typing
 import numpy
 import numpy.typing
 
-__all__: list[str] = ["BlendingSimulatorLib"]
+__all__: list[str] = ["BlendingSimulatorLib", "simulate_batch"]
 
 class BlendingSimulatorLib:
     def __init__(
@@ -41,3 +41,18 @@ class BlendingSimulatorLib:
         arg4: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex],
     ) -> None: ...
     def stack_list(self, arg0: typing.Annotated[numpy.typing.ArrayLike, numpy.float64], arg1: collections.abc.Sequence[str]) -> None: ...
+
+def simulate_batch(
+    data: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],
+    columns: collections.abc.Sequence[str],
+    heap_world_size_x: typing.SupportsFloat | typing.SupportsIndex,
+    heap_world_size_z: typing.SupportsFloat | typing.SupportsIndex,
+    reclaim_angle: typing.SupportsFloat | typing.SupportsIndex,
+    particles_per_cubic_meter: typing.SupportsFloat | typing.SupportsIndex,
+    circular: bool,
+    eight_likelihood: typing.SupportsFloat | typing.SupportsIndex,
+    reclaim_increment: typing.SupportsFloat | typing.SupportsIndex,
+    seed: typing.SupportsInt | typing.SupportsIndex | None = None,
+    lattice: bool = False,
+    threads: typing.SupportsInt | typing.SupportsIndex = 1,
+) -> dict: ...

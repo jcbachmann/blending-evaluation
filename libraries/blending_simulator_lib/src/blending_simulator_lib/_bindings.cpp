@@ -1,7 +1,13 @@
+#include <atomic>
 #include <cstdint>
+#include <exception>
 #include <iostream>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
+#include <thread>
+#include <vector>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -242,6 +248,163 @@ class BlendingSimulatorLibPython
 		}
 };
 
+// Stacks and reclaims many inputs in one call: no Python between the simulations, and with several threads the GIL is released and every
+// thread simulates whole inputs. `data` has the shape (inputs, rows, columns) with the columns x, z and volume, a parameter column for
+// every further name and optionally a timestamp column, which is ignored. Input i is seeded with seed + i if a seed is given.
+py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array::forcecast>& data, const std::vector<std::string>& columns,
+	float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular, float eightLikelihood,
+	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads)
+{
+	if (data.ndim() != 3 || data.shape(2) != py::ssize_t(columns.size())) {
+		throw std::invalid_argument("data must have the shape (inputs, rows, columns) with one name per column");
+	}
+	if (reclaimIncrement <= 0.0f) {
+		throw std::invalid_argument("reclaim_increment must be positive");
+	}
+
+	int xCol = -1;
+	int zCol = -1;
+	int volumeCol = -1;
+	std::vector<int> parameterCols;
+	std::vector<std::string> names;
+	for (int i = 0; i < int(columns.size()); i++) {
+		if (columns[i] == "x") {
+			xCol = i;
+		} else if (columns[i] == "z") {
+			zCol = i;
+		} else if (columns[i] == "volume") {
+			volumeCol = i;
+		} else if (columns[i] != "timestamp") {
+			parameterCols.push_back(i);
+			names.push_back(columns[i]);
+		}
+	}
+	if (xCol < 0 || zCol < 0 || volumeCol < 0) {
+		throw std::invalid_argument("columns x, z and volume are required");
+	}
+
+	const py::ssize_t inputs = data.shape(0);
+	const py::ssize_t rows = data.shape(1);
+	const py::ssize_t cols = data.shape(2);
+	const std::size_t parameterCount = parameterCols.size();
+	const double* values = data.data();
+
+	bs::SimulationParameters simulationParameters;
+	simulationParameters.heapWorldSizeX = heapWorldSizeX;
+	simulationParameters.heapWorldSizeZ = heapWorldSizeZ;
+	simulationParameters.reclaimAngle = reclaimAngle;
+	simulationParameters.particlesPerCubicMeter = particlesPerCubicMeter;
+	simulationParameters.circular = circular;
+	simulationParameters.eightLikelihood = eightLikelihood;
+
+	// Per input: reclaimed volume per slice, then the parameters per slice (slice-major)
+	std::vector<std::vector<double>> volumes(inputs);
+	std::vector<std::vector<double>> parameters(inputs);
+	std::vector<float> positions;
+
+	auto simulate = [&](py::ssize_t i) {
+		bs::SimulationParameters p = simulationParameters;
+		if (seed) {
+			p.seed = std::uint32_t(*seed + std::uint64_t(i));
+		}
+		std::unique_ptr<bs::BlendingSimulator<bs::AveragedParameters>> simulator;
+		if (lattice) {
+			simulator = std::make_unique<bs::BlendingSimulatorLattice<bs::AveragedParameters>>(p);
+		} else {
+			simulator = std::make_unique<bs::BlendingSimulatorFast<bs::AveragedParameters>>(p);
+		}
+
+		std::vector<double> rowParameters(parameterCount);
+		for (py::ssize_t r = 0; r < rows; r++) {
+			const double* row = values + (i * rows + r) * cols;
+			for (std::size_t j = 0; j < parameterCount; j++) {
+				rowParameters[j] = row[parameterCols[j]];
+			}
+			simulator->stack(float(row[xCol]), float(row[zCol]), bs::AveragedParameters(row[volumeCol], rowParameters));
+		}
+		simulator->finishStacking();
+
+		std::vector<float> reclaimPositions;
+		float position = 0.0f;
+		while (!simulator->reclaimingFinished()) {
+			const bs::AveragedParameters slice = simulator->reclaim(position);
+			volumes[i].push_back(slice.getVolume());
+			const std::vector<double> sliceValues = slice.getValues();
+			for (std::size_t j = 0; j < parameterCount; j++) {
+				parameters[i].push_back(j < sliceValues.size() ? sliceValues[j] : 0.0);
+			}
+			reclaimPositions.push_back(position);
+			position += reclaimIncrement;
+		}
+		if (i == 0) {
+			positions = std::move(reclaimPositions);
+		}
+	};
+
+	{
+		py::gil_scoped_release release;
+		const int workers = int(std::min<py::ssize_t>(std::max(1, threads > 0 ? threads : int(std::thread::hardware_concurrency())), inputs));
+		std::atomic<py::ssize_t> next{0};
+		std::exception_ptr error;
+		std::mutex errorMutex;
+		auto work = [&]() {
+			try {
+				for (py::ssize_t i = next++; i < inputs; i = next++) {
+					simulate(i);
+				}
+			} catch (...) {
+				std::lock_guard<std::mutex> lock(errorMutex);
+				error = std::current_exception();
+				next = inputs;
+			}
+		};
+		std::vector<std::thread> pool;
+		for (int t = 1; t < workers; t++) {
+			pool.emplace_back(work);
+		}
+		work();
+		for (std::thread& thread : pool) {
+			thread.join();
+		}
+		if (error) {
+			std::rethrow_exception(error);
+		}
+	}
+
+	const py::ssize_t slices = py::ssize_t(positions.size());
+	py::array_t<double> x(slices);
+	py::array_t<double> volume({inputs, slices});
+	std::vector<py::array_t<double>> parameterArrays;
+	for (std::size_t j = 0; j < parameterCount; j++) {
+		parameterArrays.emplace_back(std::vector<py::ssize_t>{inputs, slices});
+	}
+	auto xOut = x.mutable_unchecked<1>();
+	auto volumeOut = volume.mutable_unchecked<2>();
+	for (py::ssize_t s = 0; s < slices; s++) {
+		xOut(s) = positions[s];
+	}
+	for (py::ssize_t i = 0; i < inputs; i++) {
+		if (py::ssize_t(volumes[i].size()) != slices) {
+			throw std::runtime_error("inputs reclaimed into different numbers of slices");
+		}
+		for (py::ssize_t s = 0; s < slices; s++) {
+			volumeOut(i, s) = volumes[i][s];
+		}
+		for (std::size_t j = 0; j < parameterCount; j++) {
+			auto out = parameterArrays[j].mutable_unchecked<2>();
+			for (py::ssize_t s = 0; s < slices; s++) {
+				out(i, s) = parameters[i][s * parameterCount + j];
+			}
+		}
+	}
+
+	py::dict result("x"_a = x, "volume"_a = volume);
+	for (std::size_t j = 0; j < parameterCount; j++) {
+		result[names[j].c_str()] = parameterArrays[j];
+	}
+	return result;
+}
+
 PYBIND11_MODULE(_blending_simulator_lib, m)
 {
 	m.doc() = "Blending Simulator Lib for Python";
@@ -268,4 +431,21 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		.def("reclaim", &BlendingSimulatorLibPython::reclaim)
 		.def("get_heights", &BlendingSimulatorLibPython::getHeights)
 		.def("get_particles", &BlendingSimulatorLibPython::getParticles);
+
+	m.def(
+		"simulate_batch",
+		&simulateBatch,
+		"data"_a,
+		"columns"_a,
+		"heap_world_size_x"_a,
+		"heap_world_size_z"_a,
+		"reclaim_angle"_a,
+		"particles_per_cubic_meter"_a,
+		"circular"_a,
+		"eight_likelihood"_a,
+		"reclaim_increment"_a,
+		"seed"_a = py::none(),
+		"lattice"_a = false,
+		"threads"_a = 1
+	);
 }

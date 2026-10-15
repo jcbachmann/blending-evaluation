@@ -3,12 +3,12 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
-from bmh.benchmark.material_deposition import Material
+from bmh.benchmark.material_deposition import Material, MaterialDeposition
 from bmh.helpers.math import stdev
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
-from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
-from bmh_ml.simulation import evaluate_sim, generate_deposition, generate_material
+from bmh_ml import simulation
+from bmh_ml.simulation import evaluate_sim, evaluate_sim_with_profile, evaluate_sims_with_profiles, generate_deposition, generate_material
 
 BED_SIZE_X = 59.0
 BED_SIZE_Z = 20.0
@@ -50,7 +50,8 @@ def reference_f2(reclaimed: Material) -> float:
 def test_evaluate_sim_returns_homogenization_and_volume_deviation(monkeypatch):
     # The simulation is stochastic, so it is replaced by a fixed reclaimed material to test the evaluation
     reclaimed = make_reclaimed_material()
-    monkeypatch.setattr(BslBlendingSimulator, "stack_reclaim", lambda _self, _material_deposition: reclaimed)
+    batch = {"x": reclaimed.data["x"].to_numpy(), **{name: reclaimed.data[name].to_numpy()[np.newaxis] for name in ["volume", "quality"]}}
+    monkeypatch.setattr(simulation, "simulate_batch", lambda *_args, **_kwargs: batch)
 
     f1, f2 = evaluate_sim(
         material_variables=np.linspace(5, 10, 50),
@@ -62,6 +63,28 @@ def test_evaluate_sim_returns_homogenization_and_volume_deviation(monkeypatch):
 
     assert f1 == pytest.approx(reference_f1(reclaimed), rel=1e-12)
     assert f2 == pytest.approx(reference_f2(reclaimed), rel=1e-12)
+
+
+def test_evaluate_sim_stacks_the_rows_of_the_material_deposition(monkeypatch):
+    rng = np.random.default_rng(5)
+    material_variables = list(rng.uniform(5, 10, 50))
+    deposition_variables = list(rng.uniform(X_MIN, X_MAX, 20))
+    stacked = []
+
+    def record(data, columns, *_args, **_kwargs):
+        stacked.append((data, columns))
+        reclaimed = make_reclaimed_material().data
+        return {"x": reclaimed["x"].to_numpy(), **{name: reclaimed[name].to_numpy()[np.newaxis] for name in ["volume", "quality"]}}
+
+    monkeypatch.setattr(simulation, "simulate_batch", record)
+    evaluate_sim(material_variables, deposition_variables, bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, total_volume=2500.0)
+
+    data, columns = stacked[0][0][0], stacked[0][1]
+    expected = MaterialDeposition(
+        material=generate_material(material_variables, total_volume=2500.0),
+        deposition=generate_deposition(deposition_variables, bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z),
+    ).data[columns]
+    np.testing.assert_array_equal(data, expected.to_numpy())
 
 
 def test_evaluate_sim_of_the_real_simulation_is_plausible():
@@ -76,6 +99,22 @@ def test_evaluate_sim_of_the_real_simulation_is_plausible():
     # The simulation is stochastic, only the order of magnitude is stable (about 1.4 and 16 in repeated runs)
     assert 0.5 < f1 < 3.0
     assert 5.0 < f2 < 40.0
+
+
+def test_a_batch_evaluates_like_single_inputs():
+    rng = np.random.default_rng(6)
+    materials = rng.uniform(5, 10, (3, 50))
+    depositions = rng.uniform(X_MIN, X_MAX, (3, 20))
+    f, profiles = evaluate_sims_with_profiles(materials, depositions, BED_SIZE_X, BED_SIZE_Z, 2500.0, threads=2)
+
+    assert f.shape == (3, 2)
+    assert profiles.shape == (3, 2, 60)
+    for i in range(3):
+        f1, f2, profile = evaluate_sim_with_profile(materials[i], depositions[i], BED_SIZE_X, BED_SIZE_Z, 2500.0)
+        # Different simulations of the same input, so only close: within a few noise standard deviations of one simulation
+        assert f[i, 0] == pytest.approx(f1, abs=0.05)
+        assert f[i, 1] == pytest.approx(f2, abs=1.5)
+        assert profiles[i, 0].sum() == pytest.approx(profile[0].sum())
 
 
 def test_generated_material_and_deposition_have_the_requested_length():

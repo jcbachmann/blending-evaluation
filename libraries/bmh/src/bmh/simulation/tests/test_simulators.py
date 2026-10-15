@@ -1,8 +1,12 @@
+import contextlib
+
+import blending_simulator_lib
+import numpy as np
 import pytest
 from pandas.testing import assert_frame_equal
 
 from ...helpers.simple import generate_material_deposition
-from ..bsl_blending_simulator import BslBlendingSimulator
+from ..bsl_blending_simulator import BslBlendingSimulator, simulate_batch
 from ..mathematical_blending_simulator import MathematicalBlendingSimulator
 from ..smooth_blending_simulator import SmoothBlendingSimulator
 
@@ -46,6 +50,38 @@ def test_bsl_seed_repeatable():
 
 def test_bsl_seed_different():
     assert not bsl_stack_reclaim_with_seed(1).equals(bsl_stack_reclaim_with_seed(2))
+
+
+def test_bsl_stack_reclaim_array_matches_stack_reclaim():
+    material_deposition = make_material_deposition()
+    reclaimed = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=7).stack_reclaim(material_deposition)
+    data = material_deposition.data
+    arrays = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=7).stack_reclaim_array(data.to_numpy(), data.columns.to_list())
+
+    assert set(arrays) == {"x", "volume", "quality"}
+    for name, values in arrays.items():
+        assert values.tolist() == reclaimed.data[name].tolist()
+
+
+@pytest.mark.parametrize("batch_in_bindings", [True, False])
+@pytest.mark.parametrize("lattice", [False, True])
+def test_simulate_batch_matches_single_simulations(monkeypatch, batch_in_bindings, lattice):
+    if not batch_in_bindings:
+        monkeypatch.delattr(blending_simulator_lib, "simulate_batch", raising=False)
+    data = make_material_deposition().data
+    columns = data.columns.to_list()
+    inputs = np.stack([data.to_numpy(), data.assign(x=60 - data["x"]).to_numpy()])
+
+    with contextlib.nullcontext() if batch_in_bindings else pytest.warns(UserWarning, match="simulating serially"):
+        batch = simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=2.0, seed=11, lattice=lattice, threads=2)
+
+    assert batch["volume"].shape == batch["quality"].shape == (2, len(batch["x"]))
+    for i, input_data in enumerate(inputs):
+        single = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=2.0, seed=11 + i, lattice=lattice)
+        expected = single.stack_reclaim_array(input_data, columns)
+        np.testing.assert_array_equal(batch["x"], expected["x"])
+        for name in ["volume", "quality"]:
+            np.testing.assert_array_equal(batch[name][i], expected[name])
 
 
 def test_bsl_stack_reclaim():
