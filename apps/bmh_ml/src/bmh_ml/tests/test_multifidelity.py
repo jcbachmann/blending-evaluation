@@ -196,3 +196,20 @@ def test_the_multifidelity_model_learns_from_the_cheap_result_of_each_input(tmp_
     loaded = load_model(tmp_path / "model")
     loaded.low_results = dict(model.low_results)  # the same cheap results, so the prediction must be the same
     assert np.allclose(loaded.predict(new), prediction, atol=1e-4)
+
+
+def test_the_models_of_an_ensemble_share_the_cheap_simulation_of_an_input():
+    from bmh_ml.models.registry import create_model
+
+    first = create_model("multifidelity_mlp", low_ppm3=2.0)
+    second = create_model("multifidelity_mlp", low_ppm3=2.0)
+    rng = np.random.default_rng(11)
+    x = np.hstack([random_materials(3, rng), random_depositions(3, rng)])
+
+    known = len(first.low_results)
+    first.get_low_results(x)
+
+    assert second.low_results is first.low_results
+    assert len(second.low_results) == known + 3  # the second model finds them without simulating
+    assert np.array_equal(second.get_low_results(x), first.get_low_results(x))
+    assert create_model("multifidelity_mlp", low_ppm3=4.0).low_results is not first.low_results  # another level is another simulation

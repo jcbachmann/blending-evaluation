@@ -351,6 +351,9 @@ class ProfileMLPModel(Model):
             self.scaling = {name: stored[name] for name in stored.files}
 
 
+_LOW_RESULTS: dict[float, dict[bytes, np.ndarray]] = {}  # cheap results by level and input, shared by the models of a process
+
+
 class MultiFidelityMLPModel(ProfileMLPModel):
     """The hybrid profile model with the result of one cheap simulation of the same input as additional input: it learns to correct a
     simulation at a low detail level (`low_ppm3`) to the level of its training labels. An evaluation costs one cheap simulation and the
@@ -359,7 +362,8 @@ class MultiFidelityMLPModel(ProfileMLPModel):
     The inputs are the 70 features, the cheap reclaimed profile (120 values) and the cheap F1 and F2. With `material_scaling` the cheap
     quality and F1 are made relative to the material like the targets. Cheap results of known inputs are reused: preloaded from the
     datasets of `low_bundle` (a bundle at the low level with the same inputs, built with the same seed) and kept for inputs simulated
-    once; every other input is simulated at `low_ppm3` when it is evaluated, e.g. the candidates of an optimizer.
+    once; every other input is simulated at `low_ppm3` when it is evaluated, e.g. the candidates of an optimizer. All models of a process
+    share these results per level, so an ensemble of them costs one cheap simulation per input, not one per model.
     """
 
     name = "multifidelity_mlp"
@@ -367,7 +371,7 @@ class MultiFidelityMLPModel(ProfileMLPModel):
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.low_results: dict[bytes, np.ndarray] = {}
+        self.low_results: dict[bytes, np.ndarray] = _LOW_RESULTS.setdefault(float(self.params["low_ppm3"]), {})
 
     def preload_low_results(self) -> None:
         """The cheap results of every dataset of `low_bundle`, by input."""
