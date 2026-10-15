@@ -23,13 +23,14 @@ X_MAX: float = BED_SIZE_X - X_MIN
 
 SIMULATOR_ENVIRONMENT_VARIABLE = "BMH_ML_SIMULATOR"
 
-# The simulator release of all results that do not record one (before 2026-10-15): v2026.2, whose fast simulation only refactors v2026.1
-# (same model, other random numbers)
-UNRECORDED_SIMULATOR_VERSION = "2026.2"
+# The simulator release of all results that do not record one (before 2026-10-15): the environments that produced the
+# datasets, test sets and Chevron references of the store were built on 2026-10-03 from v2026.1 (checked 2026-10-15: their bindings had no
+# seed argument yet). v2026.2 would give the same model with other random numbers.
+UNRECORDED_SIMULATOR_VERSION = "2026.1"
 
 
 def get_installed_simulator_version() -> str:
-    """The simulator release the installed blending_simulator_lib is built from; bindings that do not report it are v2026.2 or older."""
+    """The simulator release the installed blending_simulator_lib is built from; bindings that do not report it count as unrecorded."""
     from bmh.simulation.bsl_blending_simulator import get_simulator_version
 
     return get_simulator_version() or UNRECORDED_SIMULATOR_VERSION

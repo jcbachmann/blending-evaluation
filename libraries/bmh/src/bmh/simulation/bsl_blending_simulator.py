@@ -26,8 +26,8 @@ DEFAULT_EIGHT_LIKELIHOOD = 0.87
 
 
 def get_simulator_version() -> str | None:
-    """The simulator release blending_simulator_lib is built from, e.g. "2026.3" ("+local" for a local checkout of the simulator), or None
-    for bindings built before they reported it."""
+    """The simulator release blending_simulator_lib is built from, e.g. "2026.3", or for a local checkout of the simulator "+local" with
+    its commit where known, e.g. "2026.2+local.c79867b"; None for bindings built before they reported it."""
     return getattr(blending_simulator_lib, "simulator_version", None)
 
 

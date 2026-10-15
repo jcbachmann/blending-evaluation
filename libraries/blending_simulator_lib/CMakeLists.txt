@@ -26,8 +26,19 @@ FetchContent_MakeAvailable(blending-simulation)
 
 string(REGEX REPLACE "^v" "" BLENDING_SIMULATOR_VERSION ${BLENDING_SIMULATOR_TAG})
 if(FETCHCONTENT_SOURCE_DIR_BLENDING-SIMULATION)
-    # Built from a local checkout, which may hold any state of the simulator: never the release itself
+    # Built from a local checkout, which may hold any state of the simulator: never the release itself, but its commit if it is known
+    # (with "dirty" for uncommitted changes), so that results of two local states are not taken for the same simulator
+    execute_process(
+        COMMAND git describe --always --dirty=.dirty --abbrev=7 --exclude=*
+        WORKING_DIRECTORY ${FETCHCONTENT_SOURCE_DIR_BLENDING-SIMULATION}
+        OUTPUT_VARIABLE BLENDING_SIMULATOR_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
     string(APPEND BLENDING_SIMULATOR_VERSION "+local")
+    if(BLENDING_SIMULATOR_COMMIT)
+        string(APPEND BLENDING_SIMULATOR_VERSION ".${BLENDING_SIMULATOR_COMMIT}")
+    endif()
 endif()
 
 pybind11_add_module(
