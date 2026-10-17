@@ -4,7 +4,7 @@
     "items": [
       {
         "lead": "The angle of repose depends on the method.",
-        "text": "Measured as the cone of the same height and volume, the fast cone has 43.5° at 0.25 m (30.5° with 2 m particles) and the detailed cone about 44° at 1 m. The HCP lattice natively builds hexagonal pyramids (faces 62.1°, edges 58.5°, the volume of a 60.9° cone); compressed to 45° its cones reach 44.3° to 45.0° from 1 m to 0.25 m (36.5° with 2 m)."
+        "text": "Measured as the cone of the same height and volume, the fast cone has 43.5° at 0.25 m (30.5° with 2 m particles). The HCP lattice natively builds hexagonal pyramids (faces 62.1°, edges 58.5°, the volume of a 60.9° cone); compressed to 45° its cones reach 44.3° to 45.0° from 1 m to 0.25 m (36.5° with 2 m)."
       },
       {
         "lead": "Stops at every turning point keep the ridge level.",
@@ -33,7 +33,7 @@
     "items": [
       {
         "lead": "Time slider:",
-        "text": "shows the stockpile at any moment of the stacking, with the stacker as a marker. Fast and HCP show exactly the particles stacked so far, Detailed the latest of 32 evenly spaced snapshots plus up to 32 at layer ends. The cross and long sections follow the slider; the output curves always show the finished pile."
+        "text": "shows the stockpile at any moment of the stacking, with the stacker as a marker. Fast, HCP and Detailed show exactly the particles stacked so far. The cross and long sections follow the slider; the output curves always show the finished pile."
       },
       {
         "lead": "Turning points:",
@@ -45,7 +45,7 @@
       },
       {
         "lead": "Particles and surfaces:",
-        "text": "Fast and HCP export every particle through the Python library. Detailed shows its height map, the height of the frozen particle centers. Mathematical and Smooth have no geometry: each reclaim slice is drawn as a 45° ridge holding its volume."
+        "text": "Fast, HCP and Detailed export every particle through the Python library. Mathematical and Smooth have no geometry: each reclaim slice is drawn as a 45° ridge holding its volume."
       },
       {
         "lead": "Ridge σ:",
@@ -53,7 +53,7 @@
       },
       {
         "lead": "Detailed:",
-        "text": "only the cone and the 1 layer chevron with 1 m particles, dropped from 16 m. The default drop height of half the bed depth equals the pile height, and the pile then grows towards the side the particles are thrown from."
+        "text": "every pattern with 1 m particles, the cone and the chevrons of 1 and 5 layers with 0.5 m particles; the discrete element method of 2026.3 (before: rigid-body cubes in Bullet, which needed a drop height of 16 m to land at the stacker)."
       },
       {
         "lead": "Known artifact:",

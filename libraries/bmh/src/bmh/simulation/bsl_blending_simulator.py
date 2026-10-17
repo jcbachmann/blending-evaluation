@@ -8,10 +8,12 @@ from pandas import DataFrame
 from .blending_simulator import BlendingSimulator, Material, MaterialDeposition
 
 
-def optional_arguments(seed: int | None, lattice: bool, record_particles: bool, cone: bool = False) -> tuple[tuple, dict]:
+def optional_arguments(
+    seed: int | None, lattice: bool, record_particles: bool, cone: bool = False, detailed_parameters: dict[str, float] | None = None
+) -> tuple[tuple, dict]:
     """
-    Arguments of newer simulator versions, only when used: bindings built against simulator v2026.1 have no seed, lattice and particle recording,
-    bindings built before the cone simulator have no cone
+    Arguments of newer simulator versions, only when used: bindings built against simulator v2026.1 have no seed, lattice and particle
+    recording, those before 2026.3 no cone simulator and no parameters of the detailed simulation (the discrete element method)
     """
     seed_argument = () if seed is None else (seed,)
     options: dict = {}
@@ -21,6 +23,8 @@ def optional_arguments(seed: int | None, lattice: bool, record_particles: bool, 
         options["cone"] = True
     if record_particles:
         options["record_particles"] = True
+    if detailed_parameters:
+        options["detailed_parameters"] = detailed_parameters
     return seed_argument, options
 
 
@@ -52,6 +56,8 @@ def simulate_batch(
     reclaimangle: float = DEFAULT_RECLAIM_ANGLE,
     eight: float = DEFAULT_EIGHT_LIKELIHOOD,
     cone: bool = False,
+    detailed: bool = False,
+    detailed_parameters: dict[str, float] | None = None,
 ) -> dict[str, np.ndarray]:
     """
     Stack and reclaim many inputs at once like BslBlendingSimulator, in one call into the simulator: no Python per simulation,
@@ -61,6 +67,9 @@ def simulate_batch(
     :param seed: input i is seeded with seed + i; without a seed every simulation draws its own
     :param threads: simulations at the same time; 0 for one per core
     :param cone: the cone simulator (every row one portion, no particles) instead of the fast one
+    :param detailed: the detailed simulation (discrete element method) instead of the fast one
+    :param detailed_parameters: parameters of the detailed simulation by their snake_case names (e.g. rolling_friction, flow_rate,
+        threads for the threads of each simulation), see DetailedParameters in the simulator
     :return: reclaimer positions x, shape (slices,), and the reclaimed volume and the volume weighted average of each parameter, shape
         (inputs, slices)
     """
@@ -68,7 +77,9 @@ def simulate_batch(
         reclaimincrement = default_reclaim_increment(ppm3)
     batch = getattr(blending_simulator_lib, "simulate_batch", None)
     if batch is not None:
-        extra = {"cone": True} if cone else {}
+        extra: dict = {"cone": True} if cone else {}
+        if detailed:
+            extra |= {"detailed": True, "detailed_parameters": detailed_parameters}
         result = batch(data, columns, bed_size_x, bed_size_z, reclaimangle, ppm3, False, eight, reclaimincrement, seed, lattice, threads, **extra)
         return {name: np.asarray(values) for name, values in result.items()}
 
@@ -89,6 +100,8 @@ def simulate_batch(
             seed=None if seed is None else seed + i,
             lattice=lattice,
             cone=cone,
+            detailed=detailed,
+            detailed_parameters=detailed_parameters,
         ).stack_reclaim_array(input_data, columns)
         for i, input_data in enumerate(data)
     ]
@@ -112,7 +125,10 @@ class BslBlendingSimulator(BlendingSimulator):
         lattice: bool = False,
         record_particles: bool = False,
         cone: bool = False,
+        detailed_parameters: dict[str, float] | None = None,
     ):
+        """bulkdensity and dropheight are not used by simulators from 2026.3 on; detailed_parameters sets the parameters of their detailed
+        simulation (discrete element method) by snake_case names, e.g. {"rolling_friction": 0.2, "threads": 4}"""
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
             reclaimangle = DEFAULT_RECLAIM_ANGLE
@@ -131,7 +147,7 @@ class BslBlendingSimulator(BlendingSimulator):
         if reclaimincrement is None:
             reclaimincrement = default_reclaim_increment(ppm3)
 
-        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone)
+        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters)
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
             bed_size_z,
@@ -189,8 +205,12 @@ class BslBlendingSimulator(BlendingSimulator):
 
         return Material.from_data(data, category="reclaimed")
 
-    def get_heights(self):
-        return self.bsl.get_heights()
+    def get_heights(self, finish_stacking: bool = True):
+        """Heights of the stockpile, after the material in motion came to rest; without finish_stacking the current state, so that looking
+        at the stockpile while stacking does not pause the stacker of the detailed simulation (bindings from 2026.3 on)"""
+        if finish_stacking:
+            return self.bsl.get_heights()
+        return self.bsl.get_heights(finish_stacking=False)
 
     def get_particles(self) -> dict:
         """Particles stacked so far as numpy arrays (position and size n x 3, parameters n x columns), needs record_particles."""

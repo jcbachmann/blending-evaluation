@@ -69,7 +69,7 @@ METHODS = {
     "smooth": "Smooth (Gaussian kernel, bmh)",
     "fast": "Fast (C++ height grid, blending_simulator_lib)",
     "hcp": "HCP lattice (C++ port of hexsim compressed to 45°, blending_simulator_lib)",
-    "detailed": "Detailed (C++ Bullet physics, blending_simulator_lib)",
+    "detailed": "Detailed (C++ discrete element method, blending_simulator_lib)",
 }
 
 

@@ -16,12 +16,12 @@ uv run python -m bmh_apps.simulator_comparison.run_comparison all --out workdir/
 
 * `<out>/runs/<pattern>/input.json`: the deposition (time, stacker position, volume and quality)
 * `<out>/runs/<pattern>/<resolution>/<method>.json`: reclaimed curves, metrics and snapshots for the time slider
-* `<out>/runs/<pattern>/<resolution>/<method>.particles.txt`: particles of `fast` and `hcp`, as base64 text
+* `<out>/runs/<pattern>/<resolution>/<method>.particles.txt`: particles of `fast`, `hcp` and `detailed`, as base64 text
 * `<out>/index.json`: the list of runs and the state of each one (done, failed, timeout)
 
-The last full run (102 runs, 76 MB) took about 12 minutes of total run time. Almost all of it went to the two detailed (Bullet) runs:
-4 minutes for `chevron-1/mid` and 25 s for `cone/mid`. The detailed method only runs for the combinations in `DETAILED_RUNS`, because it
-can take minutes to hours per run. Runs that exceed `--timeout` (default 3 h) are killed.
+The detailed method (the discrete element method of the simulator from 2026.3 on) takes about a minute per pattern with 1 m particles and
+10 to 20 minutes with 0.5 m particles, so it only runs for the combinations in `DETAILED_RUNS`. Runs that exceed `--timeout` (default
+3 h) are killed.
 
 Useful variations:
 

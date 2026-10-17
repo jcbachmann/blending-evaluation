@@ -29,8 +29,9 @@ class BlendingSimulatorLib:
         lattice: bool = False,
         record_particles: bool = False,
         cone: bool = False,
+        detailed_parameters: dict | None = None,
     ) -> None: ...
-    def get_heights(self) -> list[list[float]]: ...
+    def get_heights(self, finish_stacking: bool = True) -> list[list[float]]: ...
     def get_particles(self) -> dict: ...
     def reclaim(self) -> dict: ...
     def stack(
@@ -57,6 +58,8 @@ def simulate_batch(
     lattice: bool = False,
     threads: typing.SupportsInt | typing.SupportsIndex = 1,
     cone: bool = False,
+    detailed: bool = False,
+    detailed_parameters: dict | None = None,
 ) -> dict: ...
 def continuous_drops(
     volumes: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex],

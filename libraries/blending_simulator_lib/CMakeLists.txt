@@ -63,9 +63,13 @@ target_link_libraries(
 target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_VERSION="${BLENDING_SIMULATOR_VERSION}")
 
 if(BUILD_DETAILED_SIMULATOR)
-    # Disabled for Apple
     target_link_libraries(_blending_simulator_lib PRIVATE BlendingSimulator::DetailedLib)
     target_compile_definitions(_blending_simulator_lib PRIVATE BUILD_DETAILED_SIMULATOR)
+endif()
+
+# Simulators from 2026.3 on simulate in detail with the discrete element method and take its parameters (detailed_parameters)
+if(EXISTS "${blending-simulation_SOURCE_DIR}/BlendingSimulatorDetailedLib/include/BlendingSimulator/dem/World.h")
+    target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_DEM)
 endif()
 
 install(TARGETS _blending_simulator_lib DESTINATION ${SKBUILD_PROJECT_NAME})

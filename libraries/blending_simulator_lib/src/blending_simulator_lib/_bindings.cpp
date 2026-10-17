@@ -25,6 +25,53 @@ using namespace pybind11::literals;
 #endif
 #include "BlendingSimulator/ParticleParameters.h"
 
+namespace
+{
+namespace bs_ = blendingsimulator;
+
+// Sets the fields of the detailed simulation's parameters from a dict of snake_case names; unknown names are an error
+void applyDetailedParameters(bs_::SimulationParameters& simulationParameters, const std::optional<py::dict>& values)
+{
+	if (!values) {
+		return;
+	}
+#ifdef BLENDING_SIMULATOR_DEM
+	bs_::DetailedParameters& d = simulationParameters.detailed;
+	for (const auto& [key, value] : *values) {
+		const std::string name = py::str(key);
+		if (name == "threads") {
+			d.threads = value.cast<int>();
+			continue;
+		}
+		const double v = value.cast<double>();
+		if (name == "flow_rate") d.flowRate = v;
+		else if (name == "discharge_height") d.dischargeHeight = v;
+		else if (name == "belt_speed") d.beltSpeed = v;
+		else if (name == "belt_width") d.beltWidth = v;
+		else if (name == "packing_fraction") d.packingFraction = v;
+		else if (name == "size_spread") d.sizeSpread = v;
+		else if (name == "density") d.density = v;
+		else if (name == "youngs_modulus") d.youngsModulus = v;
+		else if (name == "poisson_ratio") d.poissonRatio = v;
+		else if (name == "restitution") d.restitution = v;
+		else if (name == "friction") d.friction = v;
+		else if (name == "rolling_friction") d.rollingFriction = v;
+		else if (name == "rolling_damping") d.rollingDamping = v;
+		else if (name == "time_step_factor") d.timeStepFactor = v;
+		else if (name == "rest_velocity") d.restVelocity = v;
+		else if (name == "rest_time") d.restTime = v;
+		else if (name == "skin_factor") d.skinFactor = v;
+		else throw std::invalid_argument("unknown detailed parameter " + name);
+	}
+#else
+	(void)simulationParameters;
+	if (!values->empty()) {
+		throw std::runtime_error("detailed_parameters need a simulator with the discrete element method (2026.3 or later)");
+	}
+#endif
+}
+}
+
 namespace bs = blendingsimulator;
 
 class BlendingSimulatorLibPython
@@ -32,7 +79,7 @@ class BlendingSimulatorLibPython
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
 			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
-			bool lattice, bool recordParticles, bool cone)
+			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -48,6 +95,7 @@ class BlendingSimulatorLibPython
 			simulationParameters.bulkDensityFactor = bulkDensityFactor;
 			simulationParameters.dropHeight = dropHeight;
 			simulationParameters.seed = seed;
+			applyDetailedParameters(simulationParameters, detailedParameters);
 
 			if (int(detailed) + int(lattice) + int(cone) > 1) {
 				throw std::invalid_argument("choose one of the detailed, the lattice and the cone simulator");
@@ -154,9 +202,13 @@ class BlendingSimulatorLibPython
 			return ret;
 		}
 
-		std::vector<std::vector<float>> getHeights()
+		// Heights of the stockpile; with finish_stacking (the default) after the material in motion has come to rest. Without it the
+		// current state, so that looking at the stockpile while stacking does not pause the stacker of the detailed simulation
+		std::vector<std::vector<float>> getHeights(bool finish)
 		{
-			finishStacking();
+			if (finish) {
+				finishStacking();
+			}
 
 			if (verbose) {
 				std::cerr << "Acquiring heights" << std::endl;
@@ -257,16 +309,22 @@ class BlendingSimulatorLibPython
 // every further name and optionally a timestamp column, which is ignored. Input i is seeded with seed + i if a seed is given.
 py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array::forcecast>& data, const std::vector<std::string>& columns,
 	float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular, float eightLikelihood,
-	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads, bool cone)
+	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads, bool cone, bool detailed,
+	std::optional<py::dict> detailedParameters)
 {
+	if (int(detailed) + int(lattice) + int(cone) > 1) {
+		throw std::invalid_argument("choose one of the detailed, the lattice and the cone simulator");
+	}
+#ifndef BUILD_DETAILED_SIMULATOR
+	if (detailed) {
+		throw std::runtime_error("Detailed simulator not available on this platform.");
+	}
+#endif
 	if (data.ndim() != 3 || data.shape(2) != py::ssize_t(columns.size())) {
 		throw std::invalid_argument("data must have the shape (inputs, rows, columns) with one name per column");
 	}
 	if (reclaimIncrement <= 0.0f) {
 		throw std::invalid_argument("reclaim_increment must be positive");
-	}
-	if (lattice && cone) {
-		throw std::invalid_argument("choose either the lattice or the cone simulator");
 	}
 
 	int xCol = -1;
@@ -303,6 +361,7 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 	simulationParameters.particlesPerCubicMeter = particlesPerCubicMeter;
 	simulationParameters.circular = circular;
 	simulationParameters.eightLikelihood = eightLikelihood;
+	applyDetailedParameters(simulationParameters, detailedParameters);
 
 	// Per input: reclaimed volume per slice, then the parameters per slice (slice-major)
 	std::vector<std::vector<double>> volumes(inputs);
@@ -319,6 +378,10 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 			simulator = std::make_unique<bs::BlendingSimulatorCone<bs::AveragedParameters>>(p);
 		} else if (lattice) {
 			simulator = std::make_unique<bs::BlendingSimulatorLattice<bs::AveragedParameters>>(p);
+		} else if (detailed) {
+#ifdef BUILD_DETAILED_SIMULATOR
+			simulator = std::make_unique<bs::BlendingSimulatorDetailed<bs::AveragedParameters>>(p);
+#endif
 		} else {
 			simulator = std::make_unique<bs::BlendingSimulatorFast<bs::AveragedParameters>>(p);
 		}
@@ -446,7 +509,8 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
-			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool, bool>(),
+			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool, bool,
+				std::optional<py::dict>>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -460,12 +524,13 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"seed"_a = py::none(),
 			"lattice"_a = false,
 			"record_particles"_a = false,
-			"cone"_a = false
+			"cone"_a = false,
+			"detailed_parameters"_a = py::none()
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
 		.def("reclaim", &BlendingSimulatorLibPython::reclaim)
-		.def("get_heights", &BlendingSimulatorLibPython::getHeights)
+		.def("get_heights", &BlendingSimulatorLibPython::getHeights, "finish_stacking"_a = true)
 		.def("get_particles", &BlendingSimulatorLibPython::getParticles);
 
 	m.def(
@@ -483,7 +548,9 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"seed"_a = py::none(),
 		"lattice"_a = false,
 		"threads"_a = 1,
-		"cone"_a = false
+		"cone"_a = false,
+		"detailed"_a = false,
+		"detailed_parameters"_a = py::none()
 	);
 
 	m.def(

@@ -181,5 +181,5 @@ def test_cone_conserves_the_volume_and_is_deterministic():
 
 @cone_available
 def test_cone_needs_a_single_simulator():
-    with pytest.raises(ValueError, match="either the lattice or the cone"):
+    with pytest.raises(ValueError, match="one of the detailed, the lattice and the cone"):
         simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, lattice=True, cone=True)

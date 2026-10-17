@@ -53,11 +53,10 @@ from .scenarios import (
 )
 
 RECLAIM_INCREMENT = 1.0
-# The detailed simulator creates particles at this absolute height 5 m before the stacker position and throws them along z; 16 m lets
-# them land at the stacker position on flat ground, while the default of half the bed depth equals the pile height and shifts the pile
-DETAILED_DROP_HEIGHT = 16.0
 # Methods whose particles are exported for the viewer
-PARTICLE_METHODS = ("fast", "hcp")
+PARTICLE_METHODS = ("fast", "hcp", "detailed")
+# Threads of one detailed simulation (discrete element method); its result does not depend on them
+DETAILED_THREADS = 2
 HEIGHT_MAP_CELL = 0.25
 SEED = 1
 # Stockpile snapshots for the time slider: evenly spaced times plus the ends of up to SNAPSHOT_LAYERS layers (all layer ends are evaluated for
@@ -70,8 +69,9 @@ PARTICLE_COUNT_STEPS = 400
 
 # Methods without a stockpile geometry do not depend on the particle resolution, they run once at their own resolution
 RESOLUTION_FREE_METHODS = ("mathematical", "smooth")
-# The detailed simulation takes minutes to hours per run, it only runs for these patterns and resolutions
-DETAILED_RUNS = (("cone", "mid"), ("chevron-1", "mid"))
+# The detailed simulation takes about a minute per run with 1 m particles and 10 to 20 with 0.5 m particles: every pattern at 1 m, the cone
+# and the chevrons of 1 and 5 layers at 0.5 m
+DETAILED_RUNS = tuple((p, "mid") for p in PATTERNS) + (("cone", "high"), ("chevron-1", "high"), ("chevron-5", "high"))
 
 
 def create_simulator(method: str, ppm3: float):
@@ -87,10 +87,10 @@ def create_simulator(method: str, ppm3: float):
             ppm3=ppm3,
             reclaimincrement=RECLAIM_INCREMENT,
             detailed=detailed,
-            dropheight=DETAILED_DROP_HEIGHT if detailed else None,
             seed=SEED,
             lattice=method == "hcp",
             record_particles=method in PARTICLE_METHODS,
+            detailed_parameters={"threads": DETAILED_THREADS} if detailed else None,
         )
     raise ValueError(f"unknown method {method}")
 
@@ -197,7 +197,8 @@ def run_one(out: Path, pattern: str, resolution: str, method: str) -> dict:
             if len(chunk):
                 sim.bsl.stack_list(chunk.to_numpy(), chunk.columns.to_list())
                 stacked += len(chunk)
-            maps[t] = resample_height_map(sim.get_heights(), SNAPSHOT_CELL)
+            # The detailed simulation is looked at without pausing its stacker
+            maps[t] = resample_height_map(sim.get_heights(finish_stacking=method != "detailed"), SNAPSHOT_CELL)
         heights = resample_height_map(sim.get_heights())
         data_dict = sim.bsl.reclaim()
         reclaimed = pd.DataFrame({k: data_dict[k] for k in ("x", "volume", "quality")})
@@ -276,16 +277,20 @@ def write_particles(file: Path, particles: dict, method: str, expected: int) -> 
     data_bytes = np.round(centers * 100.0).astype("<i2").tobytes() + np.round(quality * 255.0).astype(np.uint8).tobytes()
     with open(file, "w") as f:
         f.write(base64.b64encode(data_bytes).decode("ascii"))
-    # The fast simulator draws its particles at 95 % of their cell, the viewer at 96 % of the given edge
+    # The fast simulator draws its particles at 95 % of their cell, the viewer at 96 % of the given edge; the detailed simulation's spheres
+    # vary in size, the viewer draws them at their mean diameter
     lattice = method == "hcp"
-    size, height = (particles["size"][0, 0], particles["size"][0, 1]) if lattice else (particles["size"][0, 0] / 0.95,) * 2
+    if method == "detailed":
+        size = height = float(np.mean(particles["size"][:, 0]))
+    else:
+        size, height = (particles["size"][0, 0], particles["size"][0, 1]) if lattice else (particles["size"][0, 0] / 0.95,) * 2
     count_times = np.linspace(0.0, DURATION, PARTICLE_COUNT_STEPS + 1)
     return {
         "file": file.name,
         "count": len(centers),
         "size": float(size),
         "height": float(height),
-        "shape": "sphere" if lattice else "box",
+        "shape": "sphere" if lattice or method == "detailed" else "box",
         # Particles that do not fit on the bed are not stacked
         "lost": max(0, expected - len(centers)),
         # Particles are stored in stacking order: the first counts[i] were stacked up to count_times[i]

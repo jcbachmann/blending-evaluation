@@ -531,7 +531,7 @@ async function renderScene(run, data) {
   if (!run) {
     $('empty').hidden = false;
     $('empty-text').textContent = state.method === 'detailed'
-      ? 'Not run: the detailed simulation takes minutes to hours per run and only ran for the cone and the 1 layer chevron with 1 m particles.'
+      ? 'Not run: the detailed simulation runs every pattern with 1 m particles and the cone and the chevrons of 1 and 5 layers with 0.5 m particles.'
       : 'This run is not available.';
     return;
   }
@@ -780,7 +780,7 @@ function renderFacts(run, data) {
     smooth: 'Spreads each increment along x with a Gaussian of σ = 5 m, then reclaims vertically. No stockpile geometry: the 3D view draws each slice as a 45° ridge. Independent of particle size.',
     fast: 'The production simulator through the Python library: cubes in columns of a square grid, each falls to a lower neighbor column until none is lower.',
     hcp: 'Close-packed spheroids stacked ABAB (C++ lattice simulator). A particle rests only when all three sites below it are filled; piles are hexagonal pyramids, and the lattice is compressed vertically so that they hold the volume of a 45° cone (faces 46.4°, edges 42.3°).',
-    detailed: 'Bullet rigid-body cubes thrown from the stacker belt. The surface is the top of the frozen particle centers.',
+    detailed: 'Discrete element method: spheres of slightly different sizes leave the stacker 1.5 m above the pile, collide, slide and roll (Hertz-Mindlin contacts, Coulomb friction, rolling resistance) until they come to rest; the angle of repose of about 45° follows from the rolling resistance.',
   };
   $('fact-note').textContent = notes[state.method];
 }
