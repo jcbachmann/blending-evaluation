@@ -49,6 +49,16 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--ppm3", type=float, default=1.0, help="Detail level of the simulator: particles per cubic meter (reclaim step fixed at 1 m)")
     parser.add_argument("--cross-from", help="Also label the inputs of test sets of this bundle at this bundle's level, as test sets <set>x")
     parser.add_argument("--cross-sets", nargs="+", default=["T6"], help="The test sets of --cross-from to label again (default: T6)")
+    parser.add_argument("--train-from", help="Use the training data of this bundle (same scope and level) instead of generating new training data")
+    parser.add_argument(
+        "--extra-from",
+        nargs="+",
+        default=[],
+        metavar="BUNDLE:SET",
+        help="Label the inputs of these test sets of other bundles at this bundle's level and add them to the training data, e.g. fronts "
+        "optimized at a cheap level (with --profiles also their profiles)",
+    )
+    parser.add_argument("--extra-repeats", type=int, default=1, help="Simulations per input of --extra-from, labels are their mean")
     return parser.parse_args(argv)
 
 
@@ -91,8 +101,7 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
         logging.info(f"{name}: {len(dataset)} rows, repeats {repeats}, {dataset_id}")
         return dataset_id
 
-    train_material, train_deposition = build_inputs(scope, args.train_size, rngs["train"], fixed_material)
-    train = build("train", "random", train_material, train_deposition, args.train_repeats, with_profiles=args.profiles)
+    train, train_extra = get_training_data(args, scope, simulator, rngs, fixed_material, build)
 
     def build_val() -> str:
         val_material, val_deposition = build_inputs(scope, args.val_size, rngs["val"], fixed_material)
@@ -106,12 +115,34 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
             raise ValueError(f"The test sets of {other.name} were labeled with other simulator settings; use --cross-from to label them again")
         val = build_val() if args.new_val else other.val
         tests = {**other.tests, **build_cross_sets(args, build)}
-        return finish(args, Bundle(args.name, scope, train, val, tests, {"tests_from": other.name}, val_extra=other.val_extra))
+        notes = {"tests_from": other.name, **({"train_from": args.train_from} if args.train_from else {})}
+        return finish(args, Bundle(args.name, scope, train, val, tests, notes, train_extra, other.val_extra))
 
     val = build_val()
 
     tests = {**build_tests(args, scope, rngs, fixed_material, build), **build_cross_sets(args, build)}
-    return finish(args, Bundle(args.name, scope, train, val, tests))
+    return finish(args, Bundle(args.name, scope, train, val, tests, {"train_from": args.train_from} if args.train_from else {}, train_extra))
+
+
+def get_training_data(args: argparse.Namespace, scope: str, simulator: SimulatorSettings, rngs: dict, fixed_material, build) -> tuple[str, list[str]]:
+    """The training data of the new bundle: new random inputs, or those of --train-from, followed by the inputs of the --extra-from sets
+    labeled at this bundle's level (`extra-<bundle>-<set>`)."""
+    if args.train_from:
+        other = load_bundle(args.train_from)
+        if other.scope != scope or get_bundle_simulator(other) != simulator:
+            raise ValueError(f"The training data of {other.name} has another scope or other simulator settings")
+        train, train_extra = other.train, list(other.train_extra)
+    else:
+        train_material, train_deposition = build_inputs(scope, args.train_size, rngs["train"], fixed_material)
+        train, train_extra = build("train", "random", train_material, train_deposition, args.train_repeats, with_profiles=args.profiles), []
+    for spec in args.extra_from:
+        bundle_name, _, set_name = spec.partition(":")
+        other = load_bundle(bundle_name)
+        dataset = load_dataset(other.tests[set_name])
+        source = {"extra_from": other.name, "set": set_name, "dataset": other.tests[set_name], "simulator": get_bundle_simulator(other).as_dict()}
+        name = f"extra-{bundle_name}-{set_name}"
+        train_extra.append(build(name, f"{dataset.generator}-extra", dataset.material, dataset.deposition, args.extra_repeats, source, args.profiles))
+    return train, train_extra
 
 
 def build_cross_sets(args: argparse.Namespace, build) -> dict[str, str]:
