@@ -5,6 +5,8 @@ import pytest
 
 from bmh_ml.datasets.generators import random_depositions, random_materials
 from bmh_ml.datasets.manifest import Dataset
+from bmh_ml.evaluation import transfer as transfer_module
+from bmh_ml.evaluation.chevron import get_chevron_objectives
 from bmh_ml.evaluation.transfer import (
     TransferConfig,
     get_front_metrics,
@@ -90,8 +92,12 @@ def test_simulator_runs_are_judged_by_the_labels_of_the_reference_set(tmp_path):
         get_simulator_run_metrics([unknown], reference, chevron=np.array([0.3, 6.0]))
 
 
-def test_the_transfer_test_optimizes_the_model_and_simulates_what_it_finds():
+def test_the_transfer_test_optimizes_the_model_and_simulates_what_it_finds(monkeypatch):
     pytest.importorskip("sklearn")
+    # The made-up reference front beats the constant-speed Chevron of its material, not the scheduled one
+    monkeypatch.setattr(
+        transfer_module, "get_chevron_objectives", lambda material, **kwargs: get_chevron_objectives(material, variant="constant-speed", **kwargs)
+    )
     reference = make_reference_dataset()
     rng = np.random.default_rng(1)
     x = random_depositions(50, rng)

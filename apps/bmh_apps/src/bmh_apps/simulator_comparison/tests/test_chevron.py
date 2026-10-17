@@ -3,9 +3,9 @@ import math
 
 import numpy as np
 import pytest
+from bmh.helpers.chevron import front_volume, ideal_radius, schedule, stops_path
 from scipy import integrate
 
-from ..chevron import front_volume, ideal_radius, schedule, stops_path
 from ..scenarios import DURATION, PATTERNS, X_MAX, X_MIN, get_layer_end_times, get_pattern_volume, make_material_deposition
 
 VOLUME = get_pattern_volume("chevron-5")

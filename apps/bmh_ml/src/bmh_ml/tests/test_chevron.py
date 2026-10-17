@@ -36,13 +36,13 @@ def test_only_what_beats_chevron_in_both_objectives_counts():
 def test_the_reference_is_simulated_once_per_material_and_then_read(monkeypatch):
     material = random_materials(1, np.random.default_rng(0))
     calls = []
-    original = chevron_module.simulate
+    original = chevron_module.simulate_chevron
 
     def counting_simulate(*args, **kwargs):
         calls.append(1)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(chevron_module, "simulate", counting_simulate)
+    monkeypatch.setattr(chevron_module, "simulate_chevron", counting_simulate)
 
     first = get_chevron_objectives(material, repeats=3, n_jobs=1)
     second = get_chevron_objectives(material, repeats=3, n_jobs=1)
@@ -52,3 +52,26 @@ def test_the_reference_is_simulated_once_per_material_and_then_read(monkeypatch)
     assert np.all(first > 0)
     get_chevron_objectives(random_materials(1, np.random.default_rng(1)), repeats=3, n_jobs=1)
     assert len(calls) == 2
+
+
+def test_the_reference_chevron_has_stops_and_point_drop_settings_keep_the_old_one():
+    from bmh_ml.evaluation.chevron import CHEVRON_LAYERS, chevron_path, get_default_variant, get_reference_key
+    from bmh_ml.settings import BED_SIZE_X, SimulatorSettings, simulator_settings
+    from bmh_ml.simulation import MAX_TIMESTAMP
+
+    assert get_default_variant() == "stops-shrinking"
+    with simulator_settings(SimulatorSettings(drops="point")):
+        assert get_default_variant() == "constant-speed"
+    times, x = chevron_path("stops-shrinking")
+    assert times[0] == 0.0
+    assert times[-1] == pytest.approx(MAX_TIMESTAMP)
+    assert np.all(np.diff(times) >= 0)
+    assert np.sum(np.diff(x) == 0) >= CHEVRON_LAYERS  # the stacker stands at the turning points
+    assert 0.0 < x.min() < X_MIN  # early layers turn further out, so that the toe stays in place
+    assert X_MAX < x.max() < BED_SIZE_X
+    _, fixed_x = chevron_path("stops-fixed")
+    assert fixed_x.min() == X_MIN
+    assert fixed_x.max() == X_MAX
+    material = random_materials(1, np.random.default_rng(0))
+    keys = {get_reference_key(material, 3, variant) for variant in ("stops-shrinking", "stops-fixed", "constant-speed")}
+    assert len(keys) == 3

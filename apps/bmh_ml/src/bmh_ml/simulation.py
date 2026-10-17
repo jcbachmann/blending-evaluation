@@ -77,9 +77,11 @@ def evaluate_sims_with_profiles(
     bed_size_z: float,
     total_volume: float,
     threads: int = 1,
+    deposition_times: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """F1 and F2 of many inputs, shape (inputs, 2), and their reclaimed profiles, shape (inputs, 2, slices); one row of material and of
-    deposition variables per input.
+    deposition variables per input. The deposition variables are stacker positions at equal time steps over the stacking time, or at
+    `deposition_times` (one time per variable, from 0 to `MAX_TIMESTAMP`, the same for all inputs): a repeated position is a stop.
 
     With drops "cells" (the default of every new setting) the material flows evenly over the stacking time, portion i from i / n to
     (i + 1) / n, while the stacker follows the piecewise linear path of the deposition variables, and every grid cell of the simulator that
@@ -96,7 +98,9 @@ def evaluate_sims_with_profiles(
     x_max = bed_size_x - x_min
 
     settings = get_simulator_settings()
-    deposition_timestamps = np.linspace(0, MAX_TIMESTAMP, deposition.shape[1])
+    deposition_timestamps = np.linspace(0, MAX_TIMESTAMP, deposition.shape[1]) if deposition_times is None else np.asarray(deposition_times, float)
+    if len(deposition_timestamps) != deposition.shape[1]:
+        raise ValueError("need one deposition time per deposition variable")
     if settings.drops == "point":
         material_timestamps = np.linspace(0, MAX_TIMESTAMP, count)
         data = np.empty((inputs, count, 4))

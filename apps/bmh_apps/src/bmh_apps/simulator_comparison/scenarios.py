@@ -13,9 +13,8 @@ or move inwards as the stockpile grows.
 import numpy as np
 import pandas as pd
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
+from bmh.helpers.chevron import stops_path
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
-
-from .chevron import stops_path
 
 BED_SIZE_X = 60.0
 BED_SIZE_Z = 20.0
