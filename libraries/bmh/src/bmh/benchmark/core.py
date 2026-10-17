@@ -76,7 +76,7 @@ def process(identifier: str, material_meta: MaterialMeta, deposition_meta: Depos
 
     logger.debug("Combining material and deposition")
     material_deposition = MaterialDeposition(material_meta.get_material(), deposition_meta.get_deposition())
-    logger.debug(f"Material and deposition combined:\n{material_deposition.data.describe()}")
+    logger.debug(f"Material and deposition combined: {len(material_deposition.material.data)} portions, {len(material_deposition.deposition.data)} positions")
 
     logger.debug("Stacking and reclaiming material")
     reclaimed_material = sim.stack_reclaim(material_deposition)

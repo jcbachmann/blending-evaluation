@@ -72,6 +72,9 @@ class ParticleSimulator(BlendingSimulator):
         """Vertical extent of a particle in m."""
         return self.particle_size
 
+    def drop_grid(self) -> tuple[float, float]:
+        return self.particle_size, self.particle_size
+
     def drop(self, x: float, z: float) -> tuple[float, float, float] | None:
         """Drop a particle at (x, z), returning its resting position (center x, base y, center z) or None if it did not fit on the bed."""
         raise NotImplementedError()

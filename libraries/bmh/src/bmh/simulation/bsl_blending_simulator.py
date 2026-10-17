@@ -5,6 +5,7 @@ import numpy as np
 from blending_simulator_lib import BlendingSimulatorLib
 from pandas import DataFrame
 
+from ..helpers.continuous_drops import drop_grid
 from .blending_simulator import BlendingSimulator, Material, MaterialDeposition
 
 
@@ -147,6 +148,9 @@ class BslBlendingSimulator(BlendingSimulator):
         if reclaimincrement is None:
             reclaimincrement = default_reclaim_increment(ppm3)
 
+        self.simulator = "cone" if cone else "lattice" if lattice else "detailed" if detailed else "fast"
+        self.ppm3 = ppm3
+
         seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters)
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
@@ -185,14 +189,18 @@ class BslBlendingSimulator(BlendingSimulator):
         self.bsl.stack_list(data, columns)
         return {name: np.asarray(values, dtype=float) for name, values in self.bsl.reclaim().items()}
 
+    def drop_grid(self) -> tuple[float, float]:
+        return drop_grid(self.simulator, self.ppm3, self.bed_size_x, self.bed_size_z)
+
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """
         Stack material according to material deposition and reclaim into new blended material.
-        :param material_deposition: material and deposition data
+        :param material_deposition: material and deposition data, stacked as continuous drops on the simulator's grid
         :return: reclaimed material
         """
 
-        data_dict = self.stack_reclaim_array(material_deposition.data.to_numpy(), material_deposition.data.columns.to_list())
+        drops = material_deposition.drops(*self.drop_grid())
+        data_dict = self.stack_reclaim_array(drops.to_numpy(), drops.columns.to_list())
 
         # Extract reclaimer speed from deposition meta
         reclaim_x_per_s = material_deposition.deposition.meta.reclaim_x_per_s

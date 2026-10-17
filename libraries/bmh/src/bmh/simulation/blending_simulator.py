@@ -32,17 +32,25 @@ class BlendingSimulator:
         """
         raise NotImplementedError()
 
+    def drop_grid(self) -> tuple[float, float]:
+        """
+        Cell size in x and z at which this simulator distinguishes drop positions: `stack_reclaim` drops the material continuously on this
+        grid (`MaterialDeposition.drops`).
+        """
+        raise NotImplementedError()
+
     def stack_reclaim(self, material_deposition: MaterialDeposition) -> Material:
         """
         Stack material according to material deposition and reclaim into new blended material.
-        :param material_deposition: material and deposition data
+        :param material_deposition: material and deposition data, stacked as continuous drops on the simulator's grid
         :return: reclaimed material
         """
 
-        # call self.stack for every material-deposition row
+        # call self.stack for every drop
+        drops = material_deposition.drops(*self.drop_grid())
         param_cols = material_deposition.material.get_parameter_columns()
-        material_deposition_data = material_deposition.data.filter(["timestamp", "x", "z", "volume"]).to_dict(orient="records")
-        material_deposition_parameters = material_deposition.data.filter(param_cols).to_dict(orient="split")["data"]
+        material_deposition_data = drops.filter(["timestamp", "x", "z", "volume"]).to_dict(orient="records")
+        material_deposition_parameters = drops.filter(param_cols).to_dict(orient="split")["data"]
         for i, p in enumerate(material_deposition_parameters):
             material_deposition_data[i]["parameter"] = p  # WTF? Parameter? Multiple parameters?
 

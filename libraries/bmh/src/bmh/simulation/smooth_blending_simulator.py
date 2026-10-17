@@ -29,5 +29,9 @@ class SmoothBlendingSimulator(BlendingSimulator):
             elem[1] += v
             elem[2] += v * parameter[0]
 
+    def drop_grid(self) -> tuple[float, float]:
+        # one cell per buffer slot along the bed; the model has no extent across it
+        return self.bed_size_x / self.buffer_size, 1e6
+
     def reclaim(self) -> list[list[float | list[float]]]:
         return [[b[0], b[1], [b[2] / b[1] if b[1] > 0 else 0]] for b in self.buffer]

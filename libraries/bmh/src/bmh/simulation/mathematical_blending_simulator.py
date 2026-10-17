@@ -15,6 +15,10 @@ class MathematicalBlendingSimulator(BlendingSimulator):
         self.volumes.append(volume)
         self.qualities.append(parameter)
 
+    def drop_grid(self) -> tuple[float, float]:
+        # one cell per buffer slot along the bed; the model has no extent across it
+        return self.bed_size_x / self.buffer_size, 1e6
+
     def reclaim(self) -> list[list[float | list[float]]]:
         volumes, qualities = mathematical_blending.calculate_blended_output(
             time_slots=len(self.positions),

@@ -98,3 +98,24 @@ def test_the_native_code_gives_the_drops_of_the_numpy_code(implementation, monke
         monkeypatch.setattr(module, "_NUMPY_ONLY", False)
         assert native.shape == reference.shape
         np.testing.assert_allclose(native, reference, rtol=1e-12, atol=1e-12)
+
+
+def test_evenly_spaced_portions_flow_in_equal_intervals():
+    from ..continuous_drops import portion_bounds
+
+    np.testing.assert_allclose(portion_bounds(np.linspace(0.0, 10.0, 6)), np.linspace(0.0, 10.0, 7))
+    bounds = portion_bounds(np.array([0.0, 1.0, 3.0, 4.0]))
+    assert bounds[0] == 0.0
+    assert bounds[-1] == 4.0
+    assert np.all(np.diff(bounds) > 0)
+
+
+def test_material_deposition_drops_keep_the_volume_and_follow_the_path():
+    from ..continuous_drops import material_deposition_drops
+
+    rows = material_deposition_drops(
+        np.linspace(0.0, 1.0, 5), np.full(5, 20.0), np.arange(5.0), np.array([0.0, 1.0]), np.array([5.0, 45.0]), np.full(2, 10.0), 1.0, 1.0, with_times=True
+    )
+    np.testing.assert_allclose(rows[:, 3].sum(), 100.0)
+    assert np.all(np.diff(rows[:, 0]) > 0)  # times increase along the path
+    np.testing.assert_allclose(rows[:, 1], 5.0 + 40.0 * rows[:, 0], atol=0.5)  # a drop lies where the stacker is at its time

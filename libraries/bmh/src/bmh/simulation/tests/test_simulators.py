@@ -55,7 +55,7 @@ def test_bsl_seed_different():
 def test_bsl_stack_reclaim_array_matches_stack_reclaim():
     material_deposition = make_material_deposition()
     reclaimed = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=7).stack_reclaim(material_deposition)
-    data = material_deposition.data
+    data = material_deposition.drops(1.0, 1.0)  # the grid of the default ppm3 = 1
     arrays = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=7).stack_reclaim_array(data.to_numpy(), data.columns.to_list())
 
     assert set(arrays) == {"x", "volume", "quality"}
@@ -68,7 +68,7 @@ def test_bsl_stack_reclaim_array_matches_stack_reclaim():
 def test_simulate_batch_matches_single_simulations(monkeypatch, batch_in_bindings, lattice):
     if not batch_in_bindings:
         monkeypatch.delattr(blending_simulator_lib, "simulate_batch", raising=False)
-    data = make_material_deposition().data
+    data = make_material_deposition().drops(1.0, 1.0)
     columns = data.columns.to_list()
     inputs = np.stack([data.to_numpy(), data.assign(x=60 - data["x"]).to_numpy()])
 
@@ -124,7 +124,7 @@ def test_bsl_parameter_count_mismatch():
 
 def test_bsl_stack_list_twice():
     material_deposition = make_material_deposition()
-    data = material_deposition.data
+    data = material_deposition.drops(1.0, 1.0)  # the grid of the default ppm3 = 1
     sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, seed=0)
 
     half = len(data) // 2
@@ -137,7 +137,7 @@ def test_bsl_stack_list_twice():
 
 
 def test_bsl_stack_list_different_columns():
-    data = make_material_deposition().data
+    data = make_material_deposition().drops(1.0, 1.0)
     sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z)
     sim.bsl.stack_list(data.to_numpy(), data.columns.to_list())
 
@@ -168,7 +168,7 @@ cone_available = pytest.mark.skipif(
 
 @cone_available
 def test_cone_conserves_the_volume_and_is_deterministic():
-    data = make_material_deposition().data
+    data = make_material_deposition().drops(1.0, 1.0)
     columns = data.columns.to_list()
     inputs = np.stack([data.to_numpy(), data.to_numpy()])
     batch = simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=8.0, seed=1, cone=True, threads=2, reclaimincrement=1.0)
@@ -183,3 +183,24 @@ def test_cone_conserves_the_volume_and_is_deterministic():
 def test_cone_needs_a_single_simulator():
     with pytest.raises(ValueError, match="one of the detailed, the lattice and the cone"):
         simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, lattice=True, cone=True)
+
+
+@pytest.mark.parametrize(
+    "sim",
+    [
+        BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=4.0, seed=3),
+        MathematicalBlendingSimulator(bed_size_x=BED_SIZE_X, buffer_size=30),
+    ],
+    ids=["bsl", "mathematical"],
+)
+def test_stack_reclaim_drops_continuously_on_the_simulator_grid(sim, monkeypatch):
+    material_deposition = make_material_deposition()
+    stacked = []
+    original = material_deposition.drops
+    monkeypatch.setattr(material_deposition, "drops", lambda cx, cz: stacked.append((cx, cz)) or original(cx, cz))
+
+    reclaimed = sim.stack_reclaim(material_deposition)
+
+    assert stacked == [sim.drop_grid()]
+    assert len(original(*sim.drop_grid())) > len(material_deposition.material.data)  # more drops than portions: the stacker moves
+    assert reclaimed.data["volume"].sum() == pytest.approx(TOTAL_VOLUME)

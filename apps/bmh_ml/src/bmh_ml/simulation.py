@@ -81,13 +81,13 @@ def evaluate_sims_with_profiles(
     """F1 and F2 of many inputs, shape (inputs, 2), and their reclaimed profiles, shape (inputs, 2, slices); one row of material and of
     deposition variables per input.
 
-    With point drops (the default) it builds the rows that `MaterialDeposition` makes of `generate_material` and `generate_deposition` (each
-    material portion stacked at the stacker position interpolated at its timestamp, portion i at time i / (n - 1)); with drops "cells" the
-    material flows evenly over the stacking time, portion i from i / n to (i + 1) / n, while the stacker follows the piecewise linear path
-    of the deposition variables, and every grid cell of the simulator that the path crosses gets the volume of the time spent over it
-    (`continuous_drops`). It simulates all inputs in one call and evaluates them like `ReclaimedMaterialEvaluator`, with numpy for all
-    inputs at once: at a coarse detail level pandas took several times as long as the simulation itself. `threads` simulations run at the
-    same time in this process.
+    With drops "cells" (the default of every new setting) the material flows evenly over the stacking time, portion i from i / n to
+    (i + 1) / n, while the stacker follows the piecewise linear path of the deposition variables, and every grid cell of the simulator that
+    the path crosses gets the volume of the time spent over it (`continuous_drops`, as `MaterialDeposition.drops`). Drops "point" exist only
+    to reproduce results from before simulator release 2026.3 (settings recorded without drops): every material portion at the stacker
+    position of its timestamp, portion i at time i / (n - 1), the rows of `MaterialDeposition.point_drops`. It simulates all inputs in
+    one call and evaluates them like `ReclaimedMaterialEvaluator`, with numpy for all inputs at once: at a coarse detail level pandas took
+    several times as long as the simulation itself. `threads` simulations run at the same time in this process.
     """
     material = np.atleast_2d(np.asarray(material_variables, dtype=float))
     deposition = np.atleast_2d(np.asarray(deposition_variables, dtype=float))

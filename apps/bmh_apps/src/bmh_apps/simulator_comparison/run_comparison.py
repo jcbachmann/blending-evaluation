@@ -176,9 +176,9 @@ def reclaim_frame(sim) -> pd.DataFrame:
 def run_one(out: Path, pattern: str, resolution: str, method: str) -> dict:
     ppm3 = RESOLUTIONS[resolution]
     material_deposition = make_material_deposition(pattern)
-    data = material_deposition.data
     evaluated, stored, layer_ends = snapshot_times(pattern)
     sim = create_simulator(method, ppm3)
+    data = material_deposition.drops(*sim.drop_grid())
     record = method in PARTICLE_METHODS
     if record:
         # Every particle carries the time it was stacked as an additional parameter

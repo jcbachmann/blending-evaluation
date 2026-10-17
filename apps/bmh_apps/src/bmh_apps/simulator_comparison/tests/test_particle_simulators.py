@@ -90,7 +90,8 @@ def test_run_one(tmp_path, method):
 
 @pytest.mark.parametrize("layers", [1, 5, 25])
 def test_chevron_start_cone(layers):
-    data = make_material_deposition(f"chevron-{layers}").data
+    # the stacker position at every material timestamp: a test of the path, not of how the material is dropped
+    data = make_material_deposition(f"chevron-{layers}").point_drops()
     cone_volume = get_start_cone_volume(5046.8, layers)
     at_start = data[data["timestamp"] <= DURATION * cone_volume / data["volume"].sum()]
     # The stacker stays at the start until the cone of the first layer height is stacked, then travels

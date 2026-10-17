@@ -28,7 +28,8 @@ def drop_grid(simulator: str, ppm3: float, bed_size_x: float, bed_size_z: float)
     """Cell size in x and z at which a simulator distinguishes drop positions: the particle size of the fast simulator, the column
     spacing of the lattice, the grid cells of the cone simulator (about the particle size, adjusted to tile the bed exactly)."""
     size = ppm3 ** (-1.0 / 3.0)
-    if simulator == "fast":
+    if simulator in ("fast", "detailed"):
+        # the detailed simulation releases a stream of spheres of this size around each drop
         return size, size
     if simulator == "cone":
         return bed_size_x / max(1, round(bed_size_x / size)), bed_size_z / max(1, round(bed_size_z / size))
@@ -50,8 +51,10 @@ def continuous_drops(
     cell_x: float,
     cell_z: float,
     z: float | None = None,
+    with_times: bool = False,
 ) -> np.ndarray:
-    """Rows (x, z, volume, parameters...) for a material flowing along a piecewise linear stacker path.
+    """Rows (x, z, volume, parameters...) for a material flowing along a piecewise linear stacker path, with with_times=True rows (time, x,
+    z, volume, parameters...) where time is the volume-weighted mean time of the drop's material.
 
     :param volumes: volume of each of the n portions
     :param parameters: parameters of each portion, shape (n,) or (n, k)
@@ -63,6 +66,7 @@ def continuous_drops(
     :param cell_x: cell size of the simulator's grid in x (`drop_grid`)
     :param cell_z: cell size in z
     :param z: the constant z if path_z is None
+    :param with_times: also return the time of every drop (numpy code only, for callers that stack up to given times)
     """
     volumes = np.asarray(volumes, dtype=float)
     parameters = np.asarray(parameters, dtype=float)
@@ -76,7 +80,7 @@ def continuous_drops(
     if len(bounds_t) != n + 1 or len(parameters) != n:
         raise ValueError("need n + 1 portion times and n parameter rows for n portions")
     native = getattr(blending_simulator_lib, "continuous_drops", None)
-    if native is not None and not _NUMPY_ONLY:
+    if native is not None and not _NUMPY_ONLY and not with_times:
         # the same algorithm in C++, about 50 times faster than the numpy code below, which stays for bindings built before it
         return np.asarray(native(volumes, parameters, bounds_t, tx, x, zs, cell_x, cell_z))
 
@@ -111,4 +115,38 @@ def continuous_drops(
     volume = np.bincount(group, piece)
     gx = mx[head] + np.bincount(group, piece * (mx - mx[head][group])) / volume
     gz = mz[head] + np.bincount(group, piece * (mz - mz[head][group])) / volume
-    return np.column_stack([gx, gz, volume, parameters[portion[first]]])
+    rows = np.column_stack([gx, gz, volume, parameters[portion[first]]])
+    if with_times:
+        return np.column_stack([np.bincount(group, piece * mid) / volume, rows])
+    return rows
+
+
+def portion_bounds(timestamps: np.ndarray) -> np.ndarray:
+    """The n + 1 times at which n material portions with the given timestamps start and end: the midpoints between neighbouring
+    timestamps, the first and last portion extended by half their spacing, and the whole mapped linearly onto the span of the
+    timestamps. Evenly spaced timestamps give n equal intervals, portion i from i / n to (i + 1) / n of the stacking time."""
+    t = np.asarray(timestamps, dtype=float)
+    if len(t) == 1:
+        return np.array([t[0], t[0]])
+    bounds = np.concatenate([[1.5 * t[0] - 0.5 * t[1]], 0.5 * (t[1:] + t[:-1]), [1.5 * t[-1] - 0.5 * t[-2]]])
+    return t[0] + (bounds - bounds[0]) * (t[-1] - t[0]) / (bounds[-1] - bounds[0])
+
+
+def material_deposition_drops(
+    material_timestamps: np.ndarray,
+    volumes: np.ndarray,
+    parameters: np.ndarray,
+    deposition_timestamps: np.ndarray,
+    deposition_x: np.ndarray,
+    deposition_z: np.ndarray,
+    cell_x: float,
+    cell_z: float,
+    with_times: bool = False,
+) -> np.ndarray:
+    """Drops of a material (portions at timestamps, `portion_bounds`) flowing while the stacker follows a deposition (positions at
+    timestamps, linear in between): `continuous_drops` on the simulator's grid."""
+    bounds = portion_bounds(material_timestamps)
+    if bounds[-1] <= bounds[0]:
+        # a single portion (or portions without a time span) flows during the whole deposition
+        bounds = np.linspace(deposition_timestamps[0], deposition_timestamps[-1], len(bounds))
+    return continuous_drops(volumes, parameters, bounds, deposition_timestamps, deposition_x, deposition_z, cell_x, cell_z, with_times=with_times)
