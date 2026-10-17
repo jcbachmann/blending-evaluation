@@ -71,7 +71,7 @@ PARTICLE_COUNT_STEPS = 400
 RESOLUTION_FREE_METHODS = ("mathematical", "smooth")
 # The detailed simulation takes about a minute per run with 1 m particles and 10 to 20 with 0.5 m particles: every pattern at 1 m, the cone
 # and the chevrons of 1 and 5 layers at 0.5 m
-DETAILED_RUNS = tuple((p, "mid") for p in PATTERNS) + (("cone", "high"), ("chevron-1", "high"), ("chevron-5", "high"))
+DETAILED_RUNS = (*((p, "mid") for p in PATTERNS), ("cone", "high"), ("chevron-1", "high"), ("chevron-5", "high"))
 
 
 def create_simulator(method: str, ppm3: float):
