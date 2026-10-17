@@ -17,6 +17,8 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 #include "BlendingSimulator/BlendingSimulatorFast.h"
+#include "BlendingSimulator/BlendingSimulatorCone.h"
+#include "BlendingSimulator/ContinuousDrops.h"
 #include "BlendingSimulator/BlendingSimulatorLattice.h"
 #ifdef BUILD_DETAILED_SIMULATOR
 #include "BlendingSimulator/BlendingSimulatorDetailed.h"
@@ -30,7 +32,7 @@ class BlendingSimulatorLibPython
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
 			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
-			bool lattice, bool recordParticles)
+			bool lattice, bool recordParticles, bool cone)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -47,10 +49,12 @@ class BlendingSimulatorLibPython
 			simulationParameters.dropHeight = dropHeight;
 			simulationParameters.seed = seed;
 
-			if (detailed && lattice) {
-				throw std::invalid_argument("choose either the detailed or the lattice simulator");
+			if (int(detailed) + int(lattice) + int(cone) > 1) {
+				throw std::invalid_argument("choose one of the detailed, the lattice and the cone simulator");
 			}
-			if (lattice) {
+			if (cone) {
+				simulator = new bs::BlendingSimulatorCone<bs::AveragedParameters>(simulationParameters);
+			} else if (lattice) {
 				simulator = new bs::BlendingSimulatorLattice<bs::AveragedParameters>(simulationParameters);
 			} else if (detailed) {
 #ifdef BUILD_DETAILED_SIMULATOR
@@ -253,13 +257,16 @@ class BlendingSimulatorLibPython
 // every further name and optionally a timestamp column, which is ignored. Input i is seeded with seed + i if a seed is given.
 py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array::forcecast>& data, const std::vector<std::string>& columns,
 	float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular, float eightLikelihood,
-	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads)
+	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads, bool cone)
 {
 	if (data.ndim() != 3 || data.shape(2) != py::ssize_t(columns.size())) {
 		throw std::invalid_argument("data must have the shape (inputs, rows, columns) with one name per column");
 	}
 	if (reclaimIncrement <= 0.0f) {
 		throw std::invalid_argument("reclaim_increment must be positive");
+	}
+	if (lattice && cone) {
+		throw std::invalid_argument("choose either the lattice or the cone simulator");
 	}
 
 	int xCol = -1;
@@ -308,7 +315,9 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 			p.seed = std::uint32_t(*seed + std::uint64_t(i));
 		}
 		std::unique_ptr<bs::BlendingSimulator<bs::AveragedParameters>> simulator;
-		if (lattice) {
+		if (cone) {
+			simulator = std::make_unique<bs::BlendingSimulatorCone<bs::AveragedParameters>>(p);
+		} else if (lattice) {
 			simulator = std::make_unique<bs::BlendingSimulatorLattice<bs::AveragedParameters>>(p);
 		} else {
 			simulator = std::make_unique<bs::BlendingSimulatorFast<bs::AveragedParameters>>(p);
@@ -405,6 +414,31 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 	return result;
 }
 
+// Drops of a material flowing while the stacker moves (BlendingSimulator/ContinuousDrops.h): rows x, z, volume and the parameters of each
+// drop's portion, shape (drops, 3 + parameters)
+py::array_t<double> continuousDropsArray(const std::vector<double>& volumes,
+	const py::array_t<double, py::array::c_style | py::array::forcecast>& parameters, const std::vector<double>& portionTimes,
+	const std::vector<double>& pathTimes, const std::vector<double>& pathX, const std::vector<double>& pathZ, double cellX, double cellZ)
+{
+	if (parameters.ndim() != 2 || parameters.shape(0) != py::ssize_t(volumes.size())) {
+		throw std::invalid_argument("parameters must have the shape (portions, parameters)");
+	}
+	const std::vector<bs::ContinuousDrop> drops = bs::continuousDrops(volumes, portionTimes, pathTimes, pathX, pathZ, cellX, cellZ);
+	const py::ssize_t k = parameters.shape(1);
+	py::array_t<double> result({py::ssize_t(drops.size()), 3 + k});
+	auto out = result.mutable_unchecked<2>();
+	auto in = parameters.unchecked<2>();
+	for (py::ssize_t r = 0; r < py::ssize_t(drops.size()); r++) {
+		out(r, 0) = drops[r].x;
+		out(r, 1) = drops[r].z;
+		out(r, 2) = drops[r].volume;
+		for (py::ssize_t j = 0; j < k; j++) {
+			out(r, 3 + j) = in(drops[r].portion, j);
+		}
+	}
+	return result;
+}
+
 PYBIND11_MODULE(_blending_simulator_lib, m)
 {
 	m.doc() = "Blending Simulator Lib for Python";
@@ -412,7 +446,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
-			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool>(),
+			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool, bool>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -425,7 +459,8 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"reclaim_increment"_a,
 			"seed"_a = py::none(),
 			"lattice"_a = false,
-			"record_particles"_a = false
+			"record_particles"_a = false,
+			"cone"_a = false
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
@@ -447,6 +482,20 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"reclaim_increment"_a,
 		"seed"_a = py::none(),
 		"lattice"_a = false,
-		"threads"_a = 1
+		"threads"_a = 1,
+		"cone"_a = false
+	);
+
+	m.def(
+		"continuous_drops",
+		&continuousDropsArray,
+		"volumes"_a,
+		"parameters"_a,
+		"portion_times"_a,
+		"path_times"_a,
+		"path_x"_a,
+		"path_z"_a,
+		"cell_x"_a,
+		"cell_z"_a
 	);
 }

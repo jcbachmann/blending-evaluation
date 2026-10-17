@@ -159,3 +159,27 @@ def test_python_simulators_stack_reclaim(sim):
 
     assert reclaimed.data["volume"].sum() == pytest.approx(TOTAL_VOLUME)
     assert list(reclaimed.data.columns) == ["timestamp", "volume", "quality"]
+
+
+cone_available = pytest.mark.skipif(
+    "cone" not in (blending_simulator_lib.simulate_batch.__doc__ or ""), reason="blending_simulator_lib built without the cone simulator"
+)
+
+
+@cone_available
+def test_cone_conserves_the_volume_and_is_deterministic():
+    data = make_material_deposition().data
+    columns = data.columns.to_list()
+    inputs = np.stack([data.to_numpy(), data.to_numpy()])
+    batch = simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=8.0, seed=1, cone=True, threads=2, reclaimincrement=1.0)
+    np.testing.assert_allclose(batch["volume"].sum(axis=1), TOTAL_VOLUME)
+    np.testing.assert_array_equal(batch["volume"][0], batch["volume"][1])  # the seed changes nothing
+    single = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=8.0, cone=True, reclaimincrement=1.0)
+    expected = single.stack_reclaim_array(inputs[0], columns)
+    np.testing.assert_array_equal(batch["volume"][0], expected["volume"])
+
+
+@cone_available
+def test_cone_needs_a_single_simulator():
+    with pytest.raises(ValueError, match="either the lattice or the cone"):
+        simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, lattice=True, cone=True)

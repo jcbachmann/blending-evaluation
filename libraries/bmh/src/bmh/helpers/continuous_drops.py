@@ -1,0 +1,108 @@
+"""Drops for a stacker that moves while the material flows.
+
+A simulator stacks every row it gets at one point. Stacking each material portion at the one stacker position of its time (as
+`MaterialDeposition.prepare` does) turns a moving stacker into separate piles whenever the portions are large compared to the distance the
+stacker travels meanwhile. `continuous_drops` instead cuts the stacker path where it crosses a cell boundary of the simulator's grid or a
+portion starts or ends: every piece gets the volume that flows during it, and the pieces of one cell and portion become one drop. Every
+cell along the path receives the volume of the time the stacker spends over it, the first and the last cell of a pass only the share of
+their overlap, and a stacker standing still makes one drop. With the grid of the simulator (`drop_grid`) this is as fine as the simulator
+resolves positions anyway, so finer drops change nothing.
+"""
+
+import math
+
+import blending_simulator_lib
+import numpy as np
+
+# Tests compare the C++ code of the bindings with the numpy code by setting this
+_NUMPY_ONLY = False
+
+
+def drop_grid(simulator: str, ppm3: float, bed_size_x: float, bed_size_z: float) -> tuple[float, float]:
+    """Cell size in x and z at which a simulator distinguishes drop positions: the particle size of the fast simulator, the column
+    spacing of the lattice, the grid cells of the cone simulator (about the particle size, adjusted to tile the bed exactly)."""
+    size = ppm3 ** (-1.0 / 3.0)
+    if simulator == "fast":
+        return size, size
+    if simulator == "cone":
+        return bed_size_x / max(1, round(bed_size_x / size)), bed_size_z / max(1, round(bed_size_z / size))
+    if simulator == "lattice":
+        # BlendingSimulatorLattice: spheres of diameter d on rows sqrt(3) / 2 d apart, compressed vertically to a 45 degree pile
+        vertical_scale = 1.0 / (4.0 / 3.0 * math.sqrt(math.pi / math.sqrt(3.0)))
+        diameter = (math.sqrt(2.0) / ppm3 / vertical_scale) ** (1.0 / 3.0)
+        return diameter, diameter * math.sqrt(3.0) / 2.0
+    raise ValueError(f"unknown simulator {simulator}")
+
+
+def continuous_drops(
+    volumes: np.ndarray,
+    parameters: np.ndarray,
+    portion_times: np.ndarray,
+    path_times: np.ndarray,
+    path_x: np.ndarray,
+    path_z: np.ndarray | None,
+    cell_x: float,
+    cell_z: float,
+    z: float | None = None,
+) -> np.ndarray:
+    """Rows (x, z, volume, parameters...) for a material flowing along a piecewise linear stacker path.
+
+    :param volumes: volume of each of the n portions
+    :param parameters: parameters of each portion, shape (n,) or (n, k)
+    :param portion_times: the n + 1 times at which the portions start and end; portion i flows evenly from portion_times[i] to
+        portion_times[i + 1] (a portion of volume 0 is a gap without flow)
+    :param path_times: times of the path's knots, increasing
+    :param path_x: stacker position x at the knots
+    :param path_z: stacker position z at the knots, or None for a constant z
+    :param cell_x: cell size of the simulator's grid in x (`drop_grid`)
+    :param cell_z: cell size in z
+    :param z: the constant z if path_z is None
+    """
+    volumes = np.asarray(volumes, dtype=float)
+    parameters = np.asarray(parameters, dtype=float)
+    if parameters.ndim == 1:
+        parameters = parameters[:, None]
+    bounds_t = np.asarray(portion_times, dtype=float)
+    tx = np.asarray(path_times, dtype=float)
+    x = np.asarray(path_x, dtype=float)
+    zs = np.full(len(tx), float(z)) if path_z is None else np.asarray(path_z, dtype=float)
+    n = len(volumes)
+    if len(bounds_t) != n + 1 or len(parameters) != n:
+        raise ValueError("need n + 1 portion times and n parameter rows for n portions")
+    native = getattr(blending_simulator_lib, "continuous_drops", None)
+    if native is not None and not _NUMPY_ONLY:
+        # the same algorithm in C++, about 50 times faster than the numpy code below, which stays for bindings built before it
+        return np.asarray(native(volumes, parameters, bounds_t, tx, x, zs, cell_x, cell_z))
+
+    start, end = bounds_t[0], bounds_t[-1]
+    times = np.unique(np.concatenate([tx, bounds_t]))
+    times = times[(times >= start) & (times <= end)]
+    px, pz = np.interp(times, tx, x), np.interp(times, tx, zs)
+    cuts = [times]
+    for pos, c in ((px, cell_x), (pz, cell_z)):
+        a, b, pa, pb = times[:-1], times[1:], pos[:-1], pos[1:]
+        lo, hi = np.minimum(pa, pb), np.maximum(pa, pb)
+        # segments with a cell boundary k c strictly between their ends
+        for i in np.nonzero(np.ceil(hi / c) - np.floor(lo / c) >= 2)[0]:
+            k = np.arange(np.floor(lo[i] / c) + 1, np.ceil(hi[i] / c))
+            cuts.append(a[i] + (k * c - pa[i]) / (pb[i] - pa[i]) * (b[i] - a[i]))
+    cut = np.unique(np.concatenate(cuts))
+    mid = 0.5 * (cut[:-1] + cut[1:])
+    portion = np.clip(np.searchsorted(bounds_t, mid, side="right") - 1, 0, n - 1)
+    duration = np.diff(bounds_t)
+    rate = np.divide(volumes, duration, out=np.zeros(n), where=duration > 0)
+    piece = np.diff(cut) * rate[portion]
+    keep = piece > 0
+    mid, piece, portion = mid[keep], piece[keep], portion[keep]
+    mx, mz = np.interp(mid, tx, x), np.interp(mid, tx, zs)
+
+    # one drop per run of pieces in the same cell and portion, at the pieces' volume-weighted mean position, computed relative to the
+    # run's first position so that pieces sharing one position (e.g. on a cell boundary) keep it exactly
+    cell = np.floor(mx / cell_x).astype(np.int64) * 1_000_003 + np.floor(mz / cell_z).astype(np.int64)
+    first = np.concatenate([[True], (cell[1:] != cell[:-1]) | (portion[1:] != portion[:-1])])
+    group = np.cumsum(first) - 1
+    head = np.nonzero(first)[0]
+    volume = np.bincount(group, piece)
+    gx = mx[head] + np.bincount(group, piece * (mx - mx[head][group])) / volume
+    gz = mz[head] + np.bincount(group, piece * (mz - mz[head][group])) / volume
+    return np.column_stack([gx, gz, volume, parameters[portion[first]]])
