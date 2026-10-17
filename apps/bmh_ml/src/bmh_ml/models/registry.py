@@ -31,6 +31,6 @@ def create_model(name: str, **params) -> Model:
 
 def load_model(directory: Path) -> Model:
     stored = json.loads((directory / MODEL_FILE).read_text())
-    model = create_model(stored["name"], **stored["params"])
+    model = create_model(stored["name"], **get_model_class(stored["name"]).upgrade_params(stored["params"]))
     model.load_files(directory)
     return model

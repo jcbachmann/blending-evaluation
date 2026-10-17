@@ -1,8 +1,10 @@
-"""The fast blending simulator as the pipeline uses it, at a release and detail level (`SimulatorSettings`) that the bundles record."""
+"""The blending simulator as the pipeline uses it, at a release, simulation, detail level and drop mode (`SimulatorSettings`) that the
+bundles record."""
 
 import numpy as np
 import pandas as pd
 from bmh.benchmark.material_deposition import Deposition, Material
+from bmh.helpers.continuous_drops import continuous_drops, drop_grid
 from bmh.helpers.stockpile_math import get_ideal_stockpile_volumes
 from bmh.simulation.bsl_blending_simulator import simulate_batch
 
@@ -79,10 +81,13 @@ def evaluate_sims_with_profiles(
     """F1 and F2 of many inputs, shape (inputs, 2), and their reclaimed profiles, shape (inputs, 2, slices); one row of material and of
     deposition variables per input.
 
-    Builds the rows that `MaterialDeposition` makes of `generate_material` and `generate_deposition` (each material portion stacked at the
-    stacker position interpolated at its timestamp), simulates all inputs in one call and evaluates them like `ReclaimedMaterialEvaluator`,
-    with numpy for all inputs at once: at a coarse detail level pandas took several times as long as the simulation itself. `threads`
-    simulations run at the same time in this process.
+    With point drops (the default) it builds the rows that `MaterialDeposition` makes of `generate_material` and `generate_deposition` (each
+    material portion stacked at the stacker position interpolated at its timestamp, portion i at time i / (n - 1)); with drops "cells" the
+    material flows evenly over the stacking time, portion i from i / n to (i + 1) / n, while the stacker follows the piecewise linear path
+    of the deposition variables, and every grid cell of the simulator that the path crosses gets the volume of the time spent over it
+    (`continuous_drops`). It simulates all inputs in one call and evaluates them like `ReclaimedMaterialEvaluator`, with numpy for all
+    inputs at once: at a coarse detail level pandas took several times as long as the simulation itself. `threads` simulations run at the
+    same time in this process.
     """
     material = np.atleast_2d(np.asarray(material_variables, dtype=float))
     deposition = np.atleast_2d(np.asarray(deposition_variables, dtype=float))
@@ -90,15 +95,29 @@ def evaluate_sims_with_profiles(
     x_min = bed_size_z * 0.5
     x_max = bed_size_x - x_min
 
-    material_timestamps = np.linspace(0, MAX_TIMESTAMP, count)
-    deposition_timestamps = np.linspace(0, MAX_TIMESTAMP, deposition.shape[1])
-    data = np.empty((inputs, count, 4))
-    data[:, :, 0] = [np.interp(material_timestamps, deposition_timestamps, row) for row in deposition]
-    data[:, :, 1] = 0.5 * bed_size_z
-    data[:, :, 2] = total_volume / count
-    data[:, :, 3] = material
-
     settings = get_simulator_settings()
+    deposition_timestamps = np.linspace(0, MAX_TIMESTAMP, deposition.shape[1])
+    if settings.drops == "point":
+        material_timestamps = np.linspace(0, MAX_TIMESTAMP, count)
+        data = np.empty((inputs, count, 4))
+        data[:, :, 0] = [np.interp(material_timestamps, deposition_timestamps, row) for row in deposition]
+        data[:, :, 1] = 0.5 * bed_size_z
+        data[:, :, 2] = total_volume / count
+        data[:, :, 3] = material
+    else:
+        cell_x, cell_z = drop_grid(settings.simulator, settings.ppm3, bed_size_x, bed_size_z)
+        portion_times = np.linspace(0, MAX_TIMESTAMP, count + 1)
+        volumes = np.full(count, total_volume / count)
+        rows = [
+            continuous_drops(volumes, material[i], portion_times, deposition_timestamps, deposition[i], None, cell_x, cell_z, z=0.5 * bed_size_z)
+            for i in range(inputs)
+        ]
+        # inputs drop different numbers of times: rows without volume fill the batch up, the simulators skip them
+        data = np.zeros((inputs, max(len(r) for r in rows), 4))
+        data[:, :, :2] = [x_min, 0.5 * bed_size_z]
+        for i, r in enumerate(rows):
+            data[i, : len(r)] = r
+
     installed = get_installed_simulator_version()
     if settings.version != installed:
         raise RuntimeError(
@@ -115,6 +134,8 @@ def evaluate_sims_with_profiles(
         threads=threads,
         reclaimangle=settings.reclaim_angle,
         eight=settings.eight_likelihood,
+        lattice=settings.simulator == "lattice",
+        cone=settings.simulator == "cone",
     )
 
     volume, quality = reclaimed["volume"], reclaimed["quality"]

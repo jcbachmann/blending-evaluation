@@ -16,7 +16,7 @@ from bmh_ml.datasets.manifest import SCOPE_FIXED_MATERIAL, SCOPE_GENERAL_MATERIA
 from bmh_ml.datasets.simulate import build_dataset
 from bmh_ml.datasets.store import Bundle, bundle_exists, get_bundle_simulator, get_evaluation_sets, load_bundle, load_dataset, save_bundle, save_dataset
 from bmh_ml.evaluation.noise import format_noise_table, get_noise_summary
-from bmh_ml.settings import DEPOSITION_LENGTH, TRAINING_DATA_FILE, SimulatorSettings, use_simulator_settings
+from bmh_ml.settings import DEPOSITION_LENGTH, DROPS, SIMULATORS, TRAINING_DATA_FILE, SimulatorSettings, use_simulator_settings
 
 
 def get_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -47,6 +47,8 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--new-val", action="store_true", help="With --tests-from: generate a new validation set, keep only the test sets")
     parser.add_argument("--profiles", action="store_true", help="Store the reclaimed profiles of the training and validation data (for profile models)")
     parser.add_argument("--ppm3", type=float, default=1.0, help="Detail level of the simulator: particles per cubic meter (reclaim step fixed at 1 m)")
+    parser.add_argument("--simulator", choices=SIMULATORS, default="fast", help="Simulation: fast (default), lattice or cone (ppm3 sets its cell size)")
+    parser.add_argument("--drops", choices=DROPS, default="cells", help="Continuous flow in the simulator's cells (default) or point drops")
     parser.add_argument("--cross-from", help="Also label the inputs of test sets of this bundle at this bundle's level, as test sets <set>x")
     parser.add_argument("--cross-sets", nargs="+", default=["T6"], help="The test sets of --cross-from to label again (default: T6)")
     parser.add_argument("--train-from", help="Use the training data of this bundle (same scope and level) instead of generating new training data")
@@ -76,7 +78,7 @@ def build_bundle(args: argparse.Namespace) -> Bundle:
     rngs = {name: np.random.default_rng(seed) for name, seed in zip(names, seeds, strict=True)}
     scope = args.scope
     settings = {"scope": scope}
-    simulator = SimulatorSettings(ppm3=args.ppm3)
+    simulator = SimulatorSettings(ppm3=args.ppm3, simulator=args.simulator, drops=args.drops)
     use_simulator_settings(simulator)  # every dataset of the bundle, the T6 fronts included, is simulated at this level
 
     fixed_material, material_source = None, {}

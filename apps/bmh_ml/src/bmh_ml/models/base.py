@@ -47,6 +47,11 @@ class Model(ABC):
     def load_files(self, directory: Path) -> None:
         """The counterpart of `save_files` on a model created with the stored parameters."""
 
+    @classmethod
+    def upgrade_params(cls, params: dict[str, Any]) -> dict[str, Any]:
+        """The parameters of a model stored by an earlier version, completed with the values it was trained with (`registry.load_model`)."""
+        return params
+
     def save(self, directory: Path) -> None:
         directory.mkdir(parents=True, exist_ok=True)
         (directory / MODEL_FILE).write_text(json.dumps({"name": self.name, "params": self.params}, indent=2, sort_keys=True))

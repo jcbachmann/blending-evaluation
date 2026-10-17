@@ -174,7 +174,7 @@ def test_the_multifidelity_model_learns_from_the_cheap_result_of_each_input(tmp_
     from bmh_ml.settings import use_simulator_settings
 
     args = ["--train-size", "40", "--profiles", *SMALL, *TESTS]
-    build_bundle.build_bundle(build_bundle.get_args(["--name", "cheap", *args]))
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "cheap", "--simulator", "cone", *args]))  # the default cheap level
     build_bundle.build_bundle(build_bundle.get_args(["--name", "detailed", "--ppm3", "4", *args]))
     detailed = load_bundle("detailed")
     train, val = load_dataset(detailed.train), load_dataset(detailed.val)
@@ -213,3 +213,22 @@ def test_the_models_of_an_ensemble_share_the_cheap_simulation_of_an_input():
     assert len(second.low_results) == known + 3  # the second model finds them without simulating
     assert np.array_equal(second.get_low_results(x), first.get_low_results(x))
     assert create_model("multifidelity_mlp", low_ppm3=4.0).low_results is not first.low_results  # another level is another simulation
+
+
+def test_a_model_stored_before_the_cheap_level_could_be_chosen_keeps_the_fast_simulator():
+    from bmh_ml.models.registry import create_model, get_model_class
+
+    assert create_model("multifidelity_mlp").low_settings_key() == (1.0, "cone", "cells")  # new models
+    stored = {k: v for k, v in create_model("multifidelity_mlp").params.items() if k not in ("low_simulator", "low_drops")}  # as saved before
+    upgraded = create_model("multifidelity_mlp", **get_model_class("multifidelity_mlp").upgrade_params(stored))  # what load_model does
+    assert upgraded.low_settings_key() == (1.0, "fast", "point")
+
+
+def test_the_cheap_level_must_match_the_low_bundle():
+    pytest.importorskip("keras")
+    from bmh_ml.models.registry import create_model
+
+    build_bundle.build_bundle(build_bundle.get_args(["--name", "cheap-fast", "--train-size", "20", "--profiles", *SMALL, *TESTS]))
+    model = create_model("multifidelity_mlp", low_bundle="cheap-fast")  # the bundle is the fast simulator, the model's level the cone
+    with pytest.raises(ValueError, match="cheap level"):
+        model.preload_low_results()

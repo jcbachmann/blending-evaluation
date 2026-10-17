@@ -8,6 +8,7 @@ from bmh.helpers.math import stdev
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 
 from bmh_ml import simulation
+from bmh_ml.settings import SimulatorSettings, simulator_settings
 from bmh_ml.simulation import evaluate_sim, evaluate_sim_with_profile, evaluate_sims_with_profiles, generate_deposition, generate_material
 
 BED_SIZE_X = 59.0
@@ -65,7 +66,7 @@ def test_evaluate_sim_returns_homogenization_and_volume_deviation(monkeypatch):
     assert f2 == pytest.approx(reference_f2(reclaimed), rel=1e-12)
 
 
-def test_evaluate_sim_stacks_the_rows_of_the_material_deposition(monkeypatch):
+def test_evaluate_sim_with_point_drops_stacks_the_rows_of_the_material_deposition(monkeypatch):
     rng = np.random.default_rng(5)
     material_variables = list(rng.uniform(5, 10, 50))
     deposition_variables = list(rng.uniform(X_MIN, X_MAX, 20))
@@ -77,7 +78,8 @@ def test_evaluate_sim_stacks_the_rows_of_the_material_deposition(monkeypatch):
         return {"x": reclaimed["x"].to_numpy(), **{name: reclaimed[name].to_numpy()[np.newaxis] for name in ["volume", "quality"]}}
 
     monkeypatch.setattr(simulation, "simulate_batch", record)
-    evaluate_sim(material_variables, deposition_variables, bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, total_volume=2500.0)
+    with simulator_settings(SimulatorSettings(drops="point")):
+        evaluate_sim(material_variables, deposition_variables, bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, total_volume=2500.0)
 
     data, columns = stacked[0][0][0], stacked[0][1]
     expected = MaterialDeposition(
@@ -124,3 +126,20 @@ def test_generated_material_and_deposition_have_the_requested_length():
     assert len(material.data) == 50
     assert material.data["volume"].sum() == pytest.approx(2500.0)
     assert len(deposition.data) == 20
+
+
+@pytest.mark.parametrize("simulator", ["fast", "lattice", "cone"])
+def test_continuous_drops_conserve_the_volume_of_every_simulator(simulator):
+    from blending_simulator_lib import simulate_batch
+
+    if simulator == "cone" and "cone" not in (simulate_batch.__doc__ or ""):
+        pytest.skip("blending_simulator_lib built without the cone simulator")
+    rng = np.random.default_rng(3)
+    materials = rng.uniform(5, 10, (2, 50))
+    depositions = rng.uniform(10, 49, (2, 20))
+    with simulator_settings(SimulatorSettings(ppm3=4.0, simulator=simulator, drops="cells")):
+        f, profiles = evaluate_sims_with_profiles(materials, depositions, 59.0, 20.0, 2500.0)
+    assert f.shape == (2, 2)
+    assert np.all(np.isfinite(f))
+    # at most the volume of one particle stays in the simulator's buffer at the end
+    np.testing.assert_allclose(profiles[:, 0].sum(axis=1), 2500.0, atol=0.25 + 1e-6)

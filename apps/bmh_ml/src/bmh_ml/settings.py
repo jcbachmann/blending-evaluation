@@ -36,26 +36,43 @@ def get_installed_simulator_version() -> str:
     return get_simulator_version() or UNRECORDED_SIMULATOR_VERSION
 
 
+SIMULATORS = ("fast", "lattice", "cone")
+DROPS = ("point", "cells")
+
+
 @dataclass(frozen=True)
 class SimulatorSettings:
     """The simulator that produced a result: its release and its detail level. `ppm3` is the number of particles per cubic meter; the
     reclaim step is fixed at 1 m, so every level reclaims the same 60 slices (the simulator's own default step, one particle size, would
     make the slices thinner and F2 smaller just by their width). New settings are of the installed simulator release; results of
     different releases must not be mixed. Settings read from records without a release, angle or likelihood are those of all data before
-    2026-10-15 (`from_dict`), the defaults of ppm3 and the reclaim step those of all data before 2026-10-04."""
+    2026-10-15 (`from_dict`), the defaults of ppm3 and the reclaim step those of all data before 2026-10-04.
+
+    `simulator` chooses the simulation ("fast", "lattice" or "cone"; ppm3 sets the particle or cell size of each), `drops` how the stacker's
+    path becomes simulator input: "cells" (new results) lets the material flow while the stacker moves and drops it proportionally in
+    every grid cell the path crosses (`bmh.helpers.continuous_drops`), "point" stacks every material portion at the one stacker position
+    of its time, as all data before 2026-10-17 did. Records without them read as the fast simulator with point drops."""
 
     ppm3: float = 1.0
     reclaim_increment: float = 1.0
     reclaim_angle: float = 45.0
     eight_likelihood: float = 0.87
     version: str = field(default_factory=get_installed_simulator_version)
+    simulator: str = "fast"
+    drops: str = "cells"
+
+    def __post_init__(self):
+        if self.simulator not in SIMULATORS:
+            raise ValueError(f"unknown simulator {self.simulator!r}, one of {SIMULATORS}")
+        if self.drops not in DROPS:
+            raise ValueError(f"unknown drops {self.drops!r}, one of {DROPS}")
 
     def as_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, values: dict | None) -> "SimulatorSettings":
-        return cls(**{"version": UNRECORDED_SIMULATOR_VERSION, **(values or {})})
+        return cls(**{"version": UNRECORDED_SIMULATOR_VERSION, "simulator": "fast", "drops": "point", **(values or {})})
 
 
 def get_simulator_settings() -> SimulatorSettings:

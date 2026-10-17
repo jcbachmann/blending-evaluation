@@ -351,13 +351,15 @@ class ProfileMLPModel(Model):
             self.scaling = {name: stored[name] for name in stored.files}
 
 
-_LOW_RESULTS: dict[float, dict[bytes, np.ndarray]] = {}  # cheap results by level and input, shared by the models of a process
+_LOW_RESULTS: dict[tuple, dict[bytes, np.ndarray]] = {}  # cheap results by level and input, shared by the models of a process
 
 
 class MultiFidelityMLPModel(ProfileMLPModel):
     """The hybrid profile model with the result of one cheap simulation of the same input as additional input: it learns to correct a
-    simulation at a low detail level (`low_ppm3`) to the level of its training labels. An evaluation costs one cheap simulation and the
-    network; the cheap profile carries most of the answer, the network adds what the detailed level does differently.
+    simulation at a low detail level (`low_ppm3` of the `low_simulator` with `low_drops`; new models: the cone simulation at 1 m cells with
+    continuous drops, models stored before 2026-10-17 the fast simulation with point drops) to the level of its training labels. An
+    evaluation costs one cheap simulation and the network; the cheap profile carries most of the answer, the network adds what the
+    detailed level does differently.
 
     The inputs are the 70 features, the cheap reclaimed profile (120 values) and the cheap F1 and F2. With `material_scaling` the cheap
     quality and F1 are made relative to the material like the targets. Cheap results of known inputs are reused: preloaded from the
@@ -367,11 +369,24 @@ class MultiFidelityMLPModel(ProfileMLPModel):
     """
 
     name = "multifidelity_mlp"
-    defaults: ClassVar[dict[str, Any]] = {**ProfileMLPModel.defaults, "low_ppm3": 1.0, "low_bundle": None}
+    defaults: ClassVar[dict[str, Any]] = {**ProfileMLPModel.defaults, "low_ppm3": 1.0, "low_simulator": "cone", "low_drops": "cells", "low_bundle": None}
+
+    @classmethod
+    def upgrade_params(cls, params: dict[str, Any]) -> dict[str, Any]:
+        """Models stored before the cheap level could be chosen simulated it with the fast simulator and point drops."""
+        return {"low_simulator": "fast", "low_drops": "point", **params}
 
     def __init__(self, **params):
         super().__init__(**params)
-        self.low_results: dict[bytes, np.ndarray] = _LOW_RESULTS.setdefault(float(self.params["low_ppm3"]), {})
+        self.low_results: dict[bytes, np.ndarray] = _LOW_RESULTS.setdefault(self.low_settings_key(), {})
+
+    def low_settings(self):
+        from bmh_ml.settings import SimulatorSettings
+
+        return SimulatorSettings(ppm3=float(self.params["low_ppm3"]), simulator=self.params["low_simulator"], drops=self.params["low_drops"])
+
+    def low_settings_key(self) -> tuple:
+        return (float(self.params["low_ppm3"]), self.params["low_simulator"], self.params["low_drops"])
 
     def preload_low_results(self) -> None:
         """The cheap results of every dataset of `low_bundle`, by input."""
@@ -379,6 +394,11 @@ class MultiFidelityMLPModel(ProfileMLPModel):
         from bmh_ml.datasets.store import get_evaluation_sets, load_bundle, load_dataset
 
         bundle = load_bundle(self.params["low_bundle"])
+        from bmh_ml.datasets.store import get_bundle_simulator
+
+        level, wanted = get_bundle_simulator(bundle), self.low_settings()
+        if (level.ppm3, level.simulator, level.drops) != (wanted.ppm3, wanted.simulator, wanted.drops):
+            raise ValueError(f"low_bundle {bundle.name} is simulated with {level}, but the model's cheap level is {wanted}")
         for dataset_id in dict.fromkeys([bundle.train, *bundle.train_extra, *get_evaluation_sets(bundle).values()]):
             dataset = load_dataset(dataset_id)
             if dataset.profiles is None:
@@ -394,13 +414,13 @@ class MultiFidelityMLPModel(ProfileMLPModel):
     def get_low_results(self, x: np.ndarray) -> np.ndarray:
         """The cheap profile and objectives of every input, shape (n, 122), simulated at `low_ppm3` where they are not known yet."""
         from bmh_ml.datasets.simulate import simulate_with_profiles
-        from bmh_ml.settings import SimulatorSettings, simulator_settings
+        from bmh_ml.settings import simulator_settings
 
         rows = np.ascontiguousarray(x[:, : MATERIAL_LENGTH + DEPOSITION_LENGTH], dtype=np.float64)
         keys = [row.tobytes() for row in rows]
         missing = [i for i, key in enumerate(keys) if key not in self.low_results]
         if missing:
-            with simulator_settings(SimulatorSettings(ppm3=self.params["low_ppm3"])):
+            with simulator_settings(self.low_settings()):
                 y, _, profiles = simulate_with_profiles(rows[missing, :MATERIAL_LENGTH], rows[missing, MATERIAL_LENGTH:], 1)
             self.store_low_results(rows[missing], profiles, y)
         return np.stack([self.low_results[key] for key in keys])
