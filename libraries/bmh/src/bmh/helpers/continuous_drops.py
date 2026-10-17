@@ -7,6 +7,12 @@ portion starts or ends: every piece gets the volume that flows during it, and th
 cell along the path receives the volume of the time the stacker spends over it, the first and the last cell of a pass only the share of
 their overlap, and a stacker standing still makes one drop. With the grid of the simulator (`drop_grid`) this is as fine as the simulator
 resolves positions anyway, so finer drops change nothing.
+
+The drops follow the path continuously except where a turnaround of the stacker crosses a cell boundary: while its tip lies inside a
+cell, the pieces before and after it are one drop, once the tip enters the next cell they become two, and the results jump slightly
+(0.1 % in F1 and 0.01 % in F2 for a 19-pass chevron in the cone simulation with 1 m cells). Finite differences and line searches should
+know it. Merging only pieces of the same path segment removes the jumps but approximated a fine-grained reference no better
+(measured 2026-10-17).
 """
 
 import math
