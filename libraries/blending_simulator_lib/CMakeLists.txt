@@ -15,7 +15,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # The simulator release the bindings are built from, available as blending_simulator_lib.simulator_version: bmh_ml records it with every
 # simulation result, so that results of different simulator versions are never mixed
-set(BLENDING_SIMULATOR_TAG v2026.2)
+set(BLENDING_SIMULATOR_TAG v2026.3)
 
 FetchContent_Declare(
     blending-simulation
