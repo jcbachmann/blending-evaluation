@@ -8,34 +8,11 @@ from datetime import datetime
 import numpy as np
 from bmh.benchmark import core
 from bmh.benchmark.data import BenchmarkData
-from bmh.benchmark.material_deposition import Deposition, DepositionMeta, MaterialMeta
+from bmh.benchmark.material_deposition import DepositionMeta, MaterialMeta
 from bmh.helpers.identifiers import get_identifier
 from bmh.optimization.optimization import DepositionOptimizer
-from pandas import DataFrame
 
 from bmh_apps.helpers.configure_logging import configure_logging
-
-
-def set_chevron_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta, chevron_layers: int, starting_side: int = 0) -> None:
-    """
-    Set the deposition to traditional Chevron stacking in layers
-    :param identifier: identifier of this deposition computation
-    :param material_meta: material description to current knowledge which will be stacked
-    :param deposition_meta: deposition meta to which the deposition data will be added
-    :param chevron_layers: amount of layers for Chevron stacking
-    :param starting_side: set 0 for same side as reclaimer or 1 for opposite side
-    """
-    core_length = deposition_meta.bed_size_x - deposition_meta.bed_size_z
-
-    deposition_data = DataFrame(
-        {
-            "timestamp": [material_meta.time * layer / chevron_layers for layer in range(chevron_layers + 1)],
-            "x": [0.5 * deposition_meta.bed_size_z + core_length * float((layer + starting_side) % 2) for layer in range(chevron_layers + 1)],
-            "z": [0.5 * deposition_meta.bed_size_z] * (chevron_layers + 1),
-        }
-    )
-    deposition_meta.data = Deposition(data=deposition_data, meta=deposition_meta)
-    deposition_meta.label = f"{identifier} - Chevron {chevron_layers} layers"
 
 
 def set_optimized_deposition(identifier: str, material_meta: MaterialMeta, deposition_meta: DepositionMeta, chevron_layers: int, objectives: list[str]) -> None:

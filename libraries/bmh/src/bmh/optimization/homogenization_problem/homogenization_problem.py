@@ -95,96 +95,6 @@ def variables_to_deposition_generic(
     return deposition
 
 
-def get_chevron_deposition(x_min: float, x_max: float, max_timestamp: float, v: float, deposition_meta: DepositionMeta):
-    x_diff = x_max - x_min
-    time_per_layer = x_diff / v
-    layers = max_timestamp / time_per_layer
-    steps = math.ceil(layers) + 1
-
-    def get_chevron():
-        last_at_min = False
-        positions = []
-        for i in range(steps):
-            if last_at_min:
-                if i == steps - 1:
-                    positions.append(x_min + x_diff * (layers % 1))
-                else:
-                    positions.append(x_max)
-                last_at_min = False
-            else:
-                if i == steps - 1:
-                    positions.append(x_max - x_diff * (layers % 1))
-                else:
-                    positions.append(x_min)
-                last_at_min = True
-
-        return positions
-
-    deposition = Deposition(
-        meta=deposition_meta.copy(),
-        data=DataFrame(
-            {
-                "timestamp": np.append(np.arange(0, max_timestamp, time_per_layer), max_timestamp),
-                "x": get_chevron(),
-                "z": [deposition_meta.bed_size_z / 2] * steps,
-            }
-        ),
-    )
-
-    deposition.meta.time = deposition.data["timestamp"].iloc[-1]
-
-    return deposition
-
-
-def get_chevron_ideal_deposition(variables: list[float], *, x_min: float, x_max: float, max_timestamp: float, v_max: float, deposition_meta: DepositionMeta):
-    layers = len(variables) - 1
-    move_time_v_max_per_layer = (x_max - x_min) / v_max
-    move_time_v_max_total = move_time_v_max_per_layer * layers
-    stand_time_count = len(variables)
-    stand_time_max_total = max_timestamp - move_time_v_max_total
-    stand_time_max = stand_time_max_total / stand_time_count
-    stand_time_total = sum(variables) * stand_time_max
-    move_time_total = max_timestamp - stand_time_total
-    move_time_per_layer = move_time_total / layers
-
-    def get_timestamps():
-        timestamps: list[float] = [0.0, stand_time_max * variables[0]]
-
-        for i in range(1, len(variables)):
-            timestamps.append(timestamps[-1] + move_time_per_layer)
-            timestamps.append(timestamps[-1] + stand_time_max * variables[i])
-
-        return timestamps
-
-    def get_positions():
-        last_at_min = False
-        positions = []
-        for _i in range(len(variables)):
-            if last_at_min:
-                positions.extend([x_max, x_max])
-                last_at_min = False
-            else:
-                positions.extend([x_min, x_min])
-                last_at_min = True
-
-        return positions
-
-    deposition = Deposition(
-        meta=deposition_meta.copy(),
-        data=DataFrame(
-            {
-                "timestamp": get_timestamps(),
-                "x": get_positions(),
-                "z": [deposition_meta.bed_size_z / 2] * (2 * len(variables)),
-            }
-        ),
-    )
-
-    deposition.meta.time = deposition.data["timestamp"].iloc[-1]
-
-    return deposition
-
-
 def get_full_speed_deposition(x_min: float, x_max: float, deposition_meta: DepositionMeta, t_max: float, v_max: float) -> Deposition:
     # Generate a Chevron deposition with maximum speed
     x_center = 0.5 * (x_min + x_max)
@@ -340,14 +250,6 @@ class HomogenizationProblem(FloatProblem):
             deposition_prefix=self.deposition_prefix,
             timestamps=self.timestamps,
         )
-        # return get_chevron_deposition(
-        #     x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v=self.v_max * variables[0],
-        #     deposition_meta=self.deposition_meta
-        # )
-        # return get_chevron_ideal_deposition(
-        #     variables, x_min=self.x_min, x_max=self.x_max, max_timestamp=self.max_timestamp, v_max=self.v_max,
-        #     deposition_meta=self.deposition_meta
-        # )
 
     def get_reference_relative(self) -> tuple[Deposition, Material, dict[str, float]]:
         return self.reference_deposition, self.reference_reclaimed_material, self.reference_deposition_objectives

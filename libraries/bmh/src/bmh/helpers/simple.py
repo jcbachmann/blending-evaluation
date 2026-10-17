@@ -10,8 +10,9 @@ def generate_material_deposition(quality: list[float], total_volume: float, x_po
 
     This helper function generates a MaterialDeposition object from the provided lists for quality and x-position. It serves as a simple entrypoint into
     blending simulation. It falls back on simple defaults: All variables are automatically matched in size. Timestamps are linearly spaced between 0 and max
-    timestamp of 24 hours in seconds. The volume of is divided equally among the qualities. The reclaim rate is set to 1 per second. The z-position is set to be
-    in the middle of the bed. Material quality is interpolated to up to 1000 chunks depending on the total volume, with each chunk having a size of 100 units.
+    timestamp of 24 hours in seconds. The volume is divided equally among the qualities. The reclaimer covers the bed during the same 24
+    hours. The z-position is set to be in the middle of the bed. Material quality is interpolated to up to 1000 chunks depending on the
+    total volume, with each chunk having a size of 100 units.
 
     :param quality: List of material qualities.
     :param total_volume: Total volume of material to be deposited.

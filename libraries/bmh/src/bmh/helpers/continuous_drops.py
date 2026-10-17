@@ -1,7 +1,7 @@
 """Drops for a stacker that moves while the material flows.
 
 A simulator stacks every row it gets at one point. Stacking each material portion at the one stacker position of its time (as
-`MaterialDeposition.prepare` does) turns a moving stacker into separate piles whenever the portions are large compared to the distance the
+`MaterialDeposition.point_drops` does) turns a moving stacker into separate piles whenever the portions are large compared to the distance the
 stacker travels meanwhile. `continuous_drops` instead cuts the stacker path where it crosses a cell boundary of the simulator's grid or a
 portion starts or ends: every piece gets the volume that flows during it, and the pieces of one cell and portion become one drop. Every
 cell along the path receives the volume of the time the stacker spends over it, the first and the last cell of a pass only the share of

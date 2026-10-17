@@ -79,7 +79,7 @@ class BlendingSimulator:
         # calculate timestamp column from x positions
         data["timestamp"] = data["x"] / reclaim_x_per_s
 
-        # reorder columns and remove x position
-        data = data[["timestamp", "volume", *material_deposition.material.get_parameter_columns()]]
+        # reorder columns; the reclaimer position x stays, as in BslBlendingSimulator, for the evaluation against the ideal stockpile
+        data = data[["timestamp", "x", "volume", *material_deposition.material.get_parameter_columns()]]
 
         return Material.from_data(data, category="reclaimed")

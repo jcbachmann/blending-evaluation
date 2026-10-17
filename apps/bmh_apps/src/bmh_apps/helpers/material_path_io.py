@@ -9,7 +9,7 @@ def read_material(filepath: str, col_timestamp: str = "timestamp", col_volume: s
     df = pd.read_csv(filepath, delimiter="\t", index_col=None)
     if cols_p is None:
         # Use all columns except for timestamp and volume
-        cols_p = list(df.columns.drop(col_timestamp, col_volume))
+        cols_p = list(df.columns.drop([col_timestamp, col_volume]))
     required_cols = [col_timestamp, col_volume, *cols_p]
     if not set(required_cols).issubset(df.columns):
         raise Exception(f"required columns ({required_cols}) not found in material file")

@@ -5,7 +5,7 @@ All runs use the same bed: 60 m long and 20 m deep, so that an ideal stockpile w
 Chevron patterns fill the bed with exactly that ideal stockpile (core from x = 10 m to 50 m), the cone pattern builds the cone of radius 10 m
 in the middle of the bed. The material quality rises linearly from 0 to 1 over the deposition time, so colors show the deposition order.
 
-Chevron stacking follows the schedule of chevron.py: the stacker stops at the turning points so that the stockpile is an ideal stockpile
+Chevron stacking follows the schedule of `bmh.helpers.chevron`: the stacker stops at the turning points so that the stockpile is an ideal stockpile
 after every layer (for one layer just a start cone), at a constant material flow. The turning points either stay at the ends of the core
 or move inwards as the stockpile grows.
 """

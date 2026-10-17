@@ -158,7 +158,7 @@ def test_python_simulators_stack_reclaim(sim):
     reclaimed = sim.stack_reclaim(make_material_deposition())
 
     assert reclaimed.data["volume"].sum() == pytest.approx(TOTAL_VOLUME)
-    assert list(reclaimed.data.columns) == ["timestamp", "volume", "quality"]
+    assert list(reclaimed.data.columns) == ["timestamp", "x", "volume", "quality"]
 
 
 cone_available = pytest.mark.skipif(
