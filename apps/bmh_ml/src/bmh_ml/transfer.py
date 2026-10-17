@@ -253,6 +253,36 @@ def simulator_baseline(
     return run.info.run_id
 
 
+def transfer_ensemble(
+    run_ids: list[str], kappa: float, f1_source: str | None, references: list[str], label: str, config: TransferConfig, run_name: str, with_plots: bool = True
+) -> tuple[str, TransferResult]:
+    """The transfer test of the models of several runs as one ensemble (`models.ensemble`), at the level of the references, logged as a run of
+    its own with the metrics `transfer_<label>/...`."""
+    from bmh_ml.models.ensemble import EnsembleModel
+    from bmh_ml.tracking.environment import get_code_version
+    from bmh_ml.tracking.runs import get_experiment_id, get_experiment_name
+
+    reference, scope = load_references(references)
+    model = EnsembleModel.from_runs(run_ids, kappa, f1_source)
+    result = run_transfer_test(model, scope, reference, config)
+    mlflow = configure_mlflow()
+    names = [mlflow.get_run(run_id).info.run_name for run_id in run_ids]
+    with mlflow.start_run(experiment_id=get_experiment_id(get_experiment_name(scope)), run_name=run_name) as run:
+        mlflow.log_params(
+            {
+                "model": "ensemble",
+                "members": " ".join(run_ids),
+                "member_names": " ".join(names),
+                "kappa": kappa,
+                "f1_source": f1_source or "of the members",
+                f"transfer_{label}.references": " ".join(references),
+            }
+        )
+        mlflow.set_tags({"code_version": get_code_version(), "purpose": "Phase 2B: a model alone in the optimizer"})
+    log_transfer(run.info.run_id, result, config, with_plots, f"transfer_{label}")
+    return run.info.run_id, result
+
+
 def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     defaults = TransferConfig()
     parser = argparse.ArgumentParser(
@@ -296,37 +326,55 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--candidates", type=int, default=300, help="With --prescreen: offspring made per generation")
     parser.add_argument("--simulated", type=int, default=100, help="With --prescreen: offspring simulated per generation, the models' best")
+    parser.add_argument(
+        "--ensemble", nargs="+", metavar="RUN_ID", help="Instead: the transfer test of the models of these runs as one ensemble, needs --references"
+    )
+    parser.add_argument("--kappa", type=float, default=0.0, help="With --ensemble: the optimizer sees mean + kappa x spread of the members")
+    parser.add_argument("--f1-source", choices=["head", "profile"], help="With --ensemble: where the members take F1 from (default: their own setting)")
+    parser.add_argument("--run-name", help="With --ensemble: name of the run")
     args = parser.parse_args(argv)
     if args.references and not args.label:
         parser.error("--references needs --label")
-    if not args.run_id and not args.simulator_runs and not args.simulator_baseline:
+    if not args.run_id and not args.simulator_runs and not args.simulator_baseline and not args.ensemble:
         parser.error("give --run-id or --simulator-runs")
+    if args.ensemble and not (args.references and args.run_name):
+        parser.error("--ensemble needs --references, --label and --run-name")
     if args.simulator_runs and not args.bundle:
         parser.error("--simulator-runs needs --bundle")
     return args
+
+
+def print_simulator_runs(args: argparse.Namespace) -> None:
+    """The hypervolume ratio of each optimization run on the simulator in a directory (--simulator-runs)."""
+    bundle = load_bundle(args.bundle)
+    use_bundle_simulator(bundle)
+    reference = load_dataset(bundle.tests[args.reference_set])
+    chevron = get_chevron_objectives(reference.material[:1], n_jobs=args.n_jobs)
+    metrics = get_simulator_run_metrics(find_result_files(args.simulator_runs), reference, chevron)
+    print(f"{len(metrics['hv_ratio'])} runs on the simulator, Chevron F1 {chevron[0]:.4f} F2 {chevron[1]:.3f}:")
+    for name, values in metrics.items():
+        print(f"  {name:<22} mean {values.mean():.4f}, min {values.min():.4f}, max {values.max():.4f}")
+
+
+def run_simulator_baselines(args: argparse.Namespace) -> None:
+    """NSGA-III on the simulator with each budget of --simulator-baseline."""
+    if not args.bundle and not args.references:
+        raise SystemExit("--simulator-baseline needs --bundle or --references")
+    for budget in args.simulator_baseline:
+        config = TransferConfig(tuple(args.seeds), args.population_size, budget, args.repeats, args.reference_set, args.n_jobs)
+        run_id = simulator_baseline(
+            args.bundle, config, not args.no_plots, args.references, args.label or "", args.seed_population, args.prescreen, args.candidates, args.simulated
+        )
+        print(f"simulator NSGA-III, {budget} simulations per run: run {run_id}")
 
 
 def main(argv: list[str] | None = None):
     args = get_args(argv)
     logging.basicConfig(level=logging.INFO)
     if args.simulator_runs:
-        bundle = load_bundle(args.bundle)
-        use_bundle_simulator(bundle)
-        reference = load_dataset(bundle.tests[args.reference_set])
-        chevron = get_chevron_objectives(reference.material[:1], n_jobs=args.n_jobs)
-        metrics = get_simulator_run_metrics(find_result_files(args.simulator_runs), reference, chevron)
-        print(f"{len(metrics['hv_ratio'])} runs on the simulator, Chevron F1 {chevron[0]:.4f} F2 {chevron[1]:.3f}:")
-        for name, values in metrics.items():
-            print(f"  {name:<22} mean {values.mean():.4f}, min {values.min():.4f}, max {values.max():.4f}")
+        print_simulator_runs(args)
     if args.simulator_baseline:
-        if not args.bundle and not args.references:
-            raise SystemExit("--simulator-baseline needs --bundle or --references")
-        for budget in args.simulator_baseline:
-            config = TransferConfig(tuple(args.seeds), args.population_size, budget, args.repeats, args.reference_set, args.n_jobs)
-            run_id = simulator_baseline(
-                args.bundle, config, not args.no_plots, args.references, args.label or "", args.seed_population, args.prescreen, args.candidates, args.simulated
-            )
-            print(f"simulator NSGA-III, {budget} simulations per run: run {run_id}")
+        run_simulator_baselines(args)
         return
     if args.recompute:
         for run_id in args.run_id:
@@ -335,6 +383,10 @@ def main(argv: list[str] | None = None):
         return
 
     config = TransferConfig(tuple(args.seeds), args.population_size, args.evaluations, args.repeats, args.reference_set, args.n_jobs)
+    if args.ensemble:
+        run_id, result = transfer_ensemble(args.ensemble, args.kappa, args.f1_source, args.references, args.label, config, args.run_name, not args.no_plots)
+        print(f"ensemble run {run_id}: {args.label}: share of the improvement over Chevron per run {result.metrics['chevron_hv_ratio_run_mean']:.4f}")
+        return
     for run_id in args.run_id:
         if args.references:
             metrics = transfer_run_against(run_id, args.references, args.label, config, not args.no_plots).metrics

@@ -14,6 +14,7 @@ MODELS = {
     "profile_mlp": "bmh_ml.models.keras_models:ProfileMLPModel",
     "mixing_mlp": "bmh_ml.models.keras_models:MixingMLPModel",
     "multifidelity_mlp": "bmh_ml.models.keras_models:MultiFidelityMLPModel",
+    "ensemble": "bmh_ml.models.ensemble:EnsembleModel",
 }
 
 
