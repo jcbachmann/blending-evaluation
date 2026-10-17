@@ -38,6 +38,7 @@ def get_installed_simulator_version() -> str:
 
 SIMULATORS = ("fast", "lattice", "cone")
 DROPS = ("point", "cells")
+IDEAL_STOCKPILE_RULES = ("integrated", "point")
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,10 @@ class SimulatorSettings:
     `simulator` chooses the simulation ("fast", "lattice" or "cone"; ppm3 sets the particle or cell size of each), `drops` how the stacker's
     path becomes simulator input: "cells" (new results) lets the material flow while the stacker moves and drops it proportionally in
     every grid cell the path crosses (`bmh.helpers.continuous_drops`), "point" stacks every material portion at the one stacker position
-    of its time, as all data before 2026-10-17 did. Records without them read as the fast simulator with point drops."""
+    of its time, as all data before 2026-10-17 did. Records without them read as the fast simulator with point drops. `ideal_stockpile`
+    is the rule of the ideal slice volumes in F2 (`bmh.helpers.stockpile_math.get_ideal_stockpile_volumes`): "integrated" (new results)
+    integrates the cut area over each slice, "point" takes it at the slice position, as all data before 2026-10-18; records without it read
+    as "point"."""
 
     ppm3: float = 1.0
     reclaim_increment: float = 1.0
@@ -60,19 +64,22 @@ class SimulatorSettings:
     version: str = field(default_factory=get_installed_simulator_version)
     simulator: str = "fast"
     drops: str = "cells"
+    ideal_stockpile: str = "integrated"
 
     def __post_init__(self):
         if self.simulator not in SIMULATORS:
             raise ValueError(f"unknown simulator {self.simulator!r}, one of {SIMULATORS}")
         if self.drops not in DROPS:
             raise ValueError(f"unknown drops {self.drops!r}, one of {DROPS}")
+        if self.ideal_stockpile not in IDEAL_STOCKPILE_RULES:
+            raise ValueError(f"unknown ideal stockpile rule {self.ideal_stockpile!r}, one of {IDEAL_STOCKPILE_RULES}")
 
     def as_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def from_dict(cls, values: dict | None) -> "SimulatorSettings":
-        return cls(**{"version": UNRECORDED_SIMULATOR_VERSION, "simulator": "fast", "drops": "point", **(values or {})})
+        return cls(**{"version": UNRECORDED_SIMULATOR_VERSION, "simulator": "fast", "drops": "point", "ideal_stockpile": "point", **(values or {})})
 
 
 def get_simulator_settings() -> SimulatorSettings:

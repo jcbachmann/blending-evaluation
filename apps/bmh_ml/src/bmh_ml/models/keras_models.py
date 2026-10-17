@@ -356,8 +356,9 @@ _LOW_RESULTS: dict[tuple, dict[bytes, np.ndarray]] = {}  # cheap results by leve
 
 class MultiFidelityMLPModel(ProfileMLPModel):
     """The hybrid profile model with the result of one cheap simulation of the same input as additional input: it learns to correct a
-    simulation at a low detail level (`low_ppm3` of the `low_simulator` with `low_drops`; new models: the cone simulation at 1 m cells with
-    continuous drops, models stored before 2026-10-17 the fast simulation with point drops) to the level of its training labels. An
+    simulation at a low detail level (`low_ppm3` of the `low_simulator` with `low_drops` and F2 by `low_ideal_stockpile`; new models: the
+    cone simulation at 1 m cells with continuous drops and the integrated ideal stockpile, models stored before 2026-10-17 the fast
+    simulation with point drops and the point rule) to the level of its training labels. An
     evaluation costs one cheap simulation and the network; the cheap profile carries most of the answer, the network adds what the
     detailed level does differently.
 
@@ -369,12 +370,20 @@ class MultiFidelityMLPModel(ProfileMLPModel):
     """
 
     name = "multifidelity_mlp"
-    defaults: ClassVar[dict[str, Any]] = {**ProfileMLPModel.defaults, "low_ppm3": 1.0, "low_simulator": "cone", "low_drops": "cells", "low_bundle": None}
+    defaults: ClassVar[dict[str, Any]] = {
+        **ProfileMLPModel.defaults,
+        "low_ppm3": 1.0,
+        "low_simulator": "cone",
+        "low_drops": "cells",
+        "low_ideal_stockpile": "integrated",
+        "low_bundle": None,
+    }
 
     @classmethod
     def upgrade_params(cls, params: dict[str, Any]) -> dict[str, Any]:
-        """Models stored before the cheap level could be chosen simulated it with the fast simulator and point drops."""
-        return {"low_simulator": "fast", "low_drops": "point", **params}
+        """Models stored before the cheap level could be chosen simulated it with the fast simulator and point drops, and their F2 used
+        the point rule of the ideal stockpile."""
+        return {"low_simulator": "fast", "low_drops": "point", "low_ideal_stockpile": "point", **params}
 
     def __init__(self, **params):
         super().__init__(**params)
@@ -383,10 +392,15 @@ class MultiFidelityMLPModel(ProfileMLPModel):
     def low_settings(self):
         from bmh_ml.settings import SimulatorSettings
 
-        return SimulatorSettings(ppm3=float(self.params["low_ppm3"]), simulator=self.params["low_simulator"], drops=self.params["low_drops"])
+        return SimulatorSettings(
+            ppm3=float(self.params["low_ppm3"]),
+            simulator=self.params["low_simulator"],
+            drops=self.params["low_drops"],
+            ideal_stockpile=self.params["low_ideal_stockpile"],
+        )
 
     def low_settings_key(self) -> tuple:
-        return (float(self.params["low_ppm3"]), self.params["low_simulator"], self.params["low_drops"])
+        return (float(self.params["low_ppm3"]), self.params["low_simulator"], self.params["low_drops"], self.params["low_ideal_stockpile"])
 
     def preload_low_results(self) -> None:
         """The cheap results of every dataset of `low_bundle`, by input."""
@@ -397,7 +411,7 @@ class MultiFidelityMLPModel(ProfileMLPModel):
         from bmh_ml.datasets.store import get_bundle_simulator
 
         level, wanted = get_bundle_simulator(bundle), self.low_settings()
-        if (level.ppm3, level.simulator, level.drops) != (wanted.ppm3, wanted.simulator, wanted.drops):
+        if (level.ppm3, level.simulator, level.drops, level.ideal_stockpile) != (wanted.ppm3, wanted.simulator, wanted.drops, wanted.ideal_stockpile):
             raise ValueError(f"low_bundle {bundle.name} is simulated with {level}, but the model's cheap level is {wanted}")
         for dataset_id in dict.fromkeys([bundle.train, *bundle.train_extra, *get_evaluation_sets(bundle).values()]):
             dataset = load_dataset(dataset_id)

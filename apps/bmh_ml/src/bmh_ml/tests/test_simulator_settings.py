@@ -27,7 +27,7 @@ def store(tmp_path, monkeypatch):
 
 def test_the_default_level_is_the_simulator_of_all_earlier_data():
     assert get_simulator_settings() == SimulatorSettings(ppm3=1.0, reclaim_increment=1.0)  # the simulator's own step, one particle, is 1 m as well
-    assert SimulatorSettings.from_dict(None) == SimulatorSettings(version=UNRECORDED_SIMULATOR_VERSION, drops="point")
+    assert SimulatorSettings.from_dict(None) == SimulatorSettings(version=UNRECORDED_SIMULATOR_VERSION, drops="point", ideal_stockpile="point")
 
 
 def test_the_active_level_reaches_the_simulator(monkeypatch):
@@ -135,7 +135,9 @@ def test_chevron_references_cached_before_the_release_was_recorded_keep_their_ke
 def test_records_without_release_are_of_the_simulator_before_releases_were_recorded():
     settings = SimulatorSettings.from_dict({"ppm3": 4.0, "reclaim_increment": 1.0})  # a manifest of 2026-10-04 to 2026-10-14
 
-    expected = SimulatorSettings(ppm3=4.0, reclaim_angle=45.0, eight_likelihood=0.87, version=UNRECORDED_SIMULATOR_VERSION, simulator="fast", drops="point")
+    expected = SimulatorSettings(
+        ppm3=4.0, reclaim_angle=45.0, eight_likelihood=0.87, version=UNRECORDED_SIMULATOR_VERSION, simulator="fast", drops="point", ideal_stockpile="point"
+    )
     assert settings == expected
     assert SimulatorSettings().version == get_installed_simulator_version()  # new results are of the installed release
     assert SimulatorSettings.from_dict(SimulatorSettings(ppm3=16.0).as_dict()) == SimulatorSettings(ppm3=16.0)
@@ -160,6 +162,10 @@ def test_new_settings_drop_continuously_and_old_records_read_as_point_drops():
         SimulatorSettings(simulator="bullet")
     with pytest.raises(ValueError, match="unknown drops"):
         SimulatorSettings(drops="lines")
+    assert SimulatorSettings().ideal_stockpile == "integrated"
+    assert old.ideal_stockpile == "point"
+    with pytest.raises(ValueError, match="unknown ideal stockpile rule"):
+        SimulatorSettings(ideal_stockpile="mean")
 
 
 def test_chevron_references_of_point_drops_keep_their_keys_and_continuous_drops_get_new_ones():
@@ -168,7 +174,7 @@ def test_chevron_references_of_point_drops_keep_their_keys_and_continuous_drops_
     material = np.linspace(5.0, 10.0, 50)
     use_simulator_settings(SimulatorSettings.from_dict({"ppm3": 16.0, "reclaim_increment": 1.0, "version": get_installed_simulator_version()}))
     key = get_reference_key(material, 4)
-    use_simulator_settings(SimulatorSettings(ppm3=16.0, simulator="fast", drops="point"))
+    use_simulator_settings(SimulatorSettings(ppm3=16.0, simulator="fast", drops="point", ideal_stockpile="point"))
     assert get_reference_key(material, 4) == key
     use_simulator_settings(SimulatorSettings(ppm3=16.0))
     assert get_reference_key(material, 4) != key

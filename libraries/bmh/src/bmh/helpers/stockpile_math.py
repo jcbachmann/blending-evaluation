@@ -75,8 +75,53 @@ def get_stockpile_slice_volume(x: float | np.ndarray, core_length: float, height
     return get_stockpile_slice_volume_norm(x - x_min + height, core_length, height, x_diff)
 
 
-def get_ideal_stockpile_volumes(x: np.ndarray, volume: float, x_min: float, x_max: float) -> np.ndarray:
+def get_ideal_reclaimed_volume(p: float | np.ndarray, core_length: float, radius: float) -> np.ndarray:
+    """
+    Volume reclaimed from an ideal stockpile with a 45 degree slope (base radius and height `radius`, core from 0 to `core_length`) when
+    the cut of the reclaimer has reached the ground position p: the integral of the cut area over the reclaimer's travel, in closed form
+    for any position and any core length (core and the two half-cones are integrated separately and added). 0 for p <= -radius, the
+    whole volume for p >= core_length + radius.
+    """
+    p = np.asarray(p, dtype=float)
+    r = radius
+
+    def clamp(v, a, b):
+        return np.clip(v, a, b)
+
+    def k(u):
+        return clamp(u, 0.0, r) ** 3 / 3.0 + r * r * np.maximum(u - r, 0.0)
+
+    def w(q):  # a complete cone up to q
+        q = clamp(q, -r, r)
+        root = np.sqrt(np.maximum(r * r - q * q, 0.0))
+        return r / 3.0 * q * root + r**3 / 3.0 * np.arcsin(q / r) + pi / 6.0 * r**3 + 2.0 / 9.0 * root**3
+
+    def right_part(q):  # the part of a cone beyond its split plane
+        return np.where(q <= 0.0, 2.0 / 9.0 * clamp(r + q, 0.0, r) ** 3, w(q) - pi / 6.0 * r**3)
+
+    left_cone = w(p) - right_part(p)
+    core = k(r + p) - k(r + p - core_length)
+    return left_cone + core + right_part(p - core_length)
+
+
+IDEAL_STOCKPILE_RULES = ("integrated", "point")
+
+
+def get_ideal_stockpile_volumes(x: np.ndarray, volume: float, x_min: float, x_max: float, rule: str = "integrated") -> np.ndarray:
+    """
+    Volume of an ideal stockpile (core from x_min to x_max, 45 degree slopes, the given volume) in each reclaimed slice, the slice at x
+    reaching from the previous reclaimer position to x (the first one from the start of the stockpile).
+
+    rule "integrated" (default) integrates the cut area over each slice (`get_ideal_reclaimed_volume`), so the slices sum to the volume;
+    "point" takes the cut area at x times the slice width, the rule of all results before 2026-10-17.
+    """
+    x = np.asarray(x, dtype=float)
     core_length = x_max - x_min
     height = get_stockpile_height(volume=volume, core_length=core_length)
-    x_diff = np.diff(x, prepend=x[0])
-    return get_stockpile_slice_volume(x=x, core_length=core_length, height=height, x_min=x_min, x_diff=x_diff)
+    if rule == "point":
+        x_diff = np.diff(x, prepend=x[0])
+        return get_stockpile_slice_volume(x=x, core_length=core_length, height=height, x_min=x_min, x_diff=x_diff)
+    if rule != "integrated":
+        raise ValueError(f"unknown ideal stockpile rule {rule!r}, one of {IDEAL_STOCKPILE_RULES}")
+    reclaimed = get_ideal_reclaimed_volume(x - x_min, core_length, height)
+    return np.diff(reclaimed, prepend=0.0)

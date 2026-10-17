@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 from numpy.testing import assert_array_equal
 
 from ...benchmark.material_deposition import Material
@@ -41,7 +42,7 @@ def test_ideal_volumes_equal_the_rowwise_reference():
     for seed in range(5):
         reclaimed = make_reclaimed_material(seed)
 
-        ideal = get_ideal_stockpile_volumes(reclaimed.data["x"].to_numpy(), reclaimed.data["volume"].sum(), X_MIN, X_MAX)
+        ideal = get_ideal_stockpile_volumes(reclaimed.data["x"].to_numpy(), reclaimed.data["volume"].sum(), X_MIN, X_MAX, rule="point")
 
         assert_array_equal(ideal, reference_ideal_volumes(reclaimed))
 
@@ -51,14 +52,14 @@ def test_volume_stdev_equals_the_rowwise_reference():
         reclaimed = make_reclaimed_material(seed)
         expected = stdev(reference_ideal_volumes(reclaimed) - reclaimed.data["volume"].to_numpy())
 
-        assert ReclaimedMaterialEvaluator(reclaimed=reclaimed, x_min=X_MIN, x_max=X_MAX).get_volume_stdev() == expected
+        assert ReclaimedMaterialEvaluator(reclaimed=reclaimed, x_min=X_MIN, x_max=X_MAX, rule="point").get_volume_stdev() == expected
 
 
 def test_ideal_reclaimed_material_is_homogeneous_with_the_ideal_volume_curve():
     reclaimed = make_reclaimed_material()
     original = reclaimed.data.copy()
 
-    ideal = get_ideal_reclaimed_material(reclaimed, X_MIN, X_MAX)
+    ideal = get_ideal_reclaimed_material(reclaimed, X_MIN, X_MAX, rule="point")
 
     for parameter in ("quality", "other"):
         expected = np.average(original[parameter], weights=original["volume"])
@@ -78,3 +79,12 @@ def test_ideal_reclaimed_material_adds_no_columns_and_leaves_the_input_untouched
     assert list(ideal.data.columns) == list(original.columns)
     assert sorted(ideal.get_parameter_columns()) == ["other", "quality"]
     pd.testing.assert_frame_equal(reclaimed.data, original)
+
+
+def test_the_evaluator_integrates_the_ideal_stockpile_by_default():
+    reclaimed = make_reclaimed_material()
+    total = reclaimed.data["volume"].sum()
+    ideal = get_ideal_reclaimed_material(reclaimed, X_MIN, X_MAX)
+    assert ideal.data["volume"].sum() == pytest.approx(total)  # the integrated rule keeps the volume, if the slices cover the pile
+    expected = stdev(get_ideal_stockpile_volumes(reclaimed.data["x"].to_numpy(), total, X_MIN, X_MAX) - reclaimed.data["volume"].to_numpy())
+    assert ReclaimedMaterialEvaluator(reclaimed=reclaimed, x_min=X_MIN, x_max=X_MAX).get_volume_stdev() == expected

@@ -146,6 +146,6 @@ def evaluate_sims_with_profiles(
     total = volume.sum(axis=1, keepdims=True)
     mean_quality = (quality * volume).sum(axis=1, keepdims=True) / total
     f1 = np.sqrt((volume * (quality - mean_quality) ** 2).sum(axis=1, keepdims=True) / total)[:, 0]
-    deviation = get_ideal_stockpile_volumes(reclaimed["x"], total, x_min, x_max) - volume
+    deviation = get_ideal_stockpile_volumes(reclaimed["x"], total, x_min, x_max, rule=settings.ideal_stockpile) - volume
     f2 = np.sqrt(((deviation - deviation.mean(axis=1, keepdims=True)) ** 2).mean(axis=1))
     return np.stack([f1, f2], axis=1), np.stack([volume, quality], axis=1)

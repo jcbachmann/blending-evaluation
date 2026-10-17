@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 from bmh.benchmark.material_deposition import Material, MaterialDeposition
 from bmh.helpers.math import stdev
+from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 
 from bmh_ml import simulation
@@ -54,16 +55,23 @@ def test_evaluate_sim_returns_homogenization_and_volume_deviation(monkeypatch):
     batch = {"x": reclaimed.data["x"].to_numpy(), **{name: reclaimed.data[name].to_numpy()[np.newaxis] for name in ["volume", "quality"]}}
     monkeypatch.setattr(simulation, "simulate_batch", lambda *_args, **_kwargs: batch)
 
-    f1, f2 = evaluate_sim(
-        material_variables=np.linspace(5, 10, 50),
-        deposition_variables=np.linspace(X_MIN, X_MAX, 20),
-        bed_size_x=BED_SIZE_X,
-        bed_size_z=BED_SIZE_Z,
-        total_volume=2500.0,
-    )
+    def evaluate():
+        return evaluate_sim(
+            material_variables=np.linspace(5, 10, 50),
+            deposition_variables=np.linspace(X_MIN, X_MAX, 20),
+            bed_size_x=BED_SIZE_X,
+            bed_size_z=BED_SIZE_Z,
+            total_volume=2500.0,
+        )
 
+    with simulator_settings(SimulatorSettings(ideal_stockpile="point")):  # the row-wise reference uses the point rule
+        f1, f2 = evaluate()
     assert f1 == pytest.approx(reference_f1(reclaimed), rel=1e-12)
     assert f2 == pytest.approx(reference_f2(reclaimed), rel=1e-12)
+    # new settings integrate the ideal stockpile, as bmh's evaluator does by default
+    f1, f2 = evaluate()
+    expected = ReclaimedMaterialEvaluator(reclaimed=reclaimed, x_min=X_MIN, x_max=X_MAX).get_volume_stdev()
+    assert f2 == pytest.approx(expected, rel=1e-12)
 
 
 def test_evaluate_sim_with_point_drops_stacks_the_rows_of_the_material_deposition(monkeypatch):

@@ -61,3 +61,22 @@ class TestStockpileMath(unittest.TestCase):
                 core_length=entry["length"],
                 height=entry["height"],
             ) == pytest.approx(entry["volume"], abs=entry["delta"])
+
+
+def test_integrated_ideal_volumes_sum_to_the_volume_and_match_a_numerical_integral():
+    from bmh.helpers.stockpile_math import get_ideal_reclaimed_volume, get_ideal_stockpile_volumes, get_stockpile_height
+
+    x = np.arange(0.0, 60.0)
+    integrated = get_ideal_stockpile_volumes(x, 2500.0, 10.0, 49.0)
+    point = get_ideal_stockpile_volumes(x, 2500.0, 10.0, 49.0, rule="point")
+    assert integrated.sum() == pytest.approx(2500.0, rel=1e-12)
+    assert point.sum() == pytest.approx(2503.48, abs=0.01)  # the point rule overshoots
+    assert integrated[30] == pytest.approx(point[30])  # inside the core both rules agree
+
+    # the volume reclaimed up to cut position p, from the stockpile's height function (cut plane x = p + y at 45 degrees)
+    core, r, d = 39.0, get_stockpile_height(2500.0, 39.0), 0.05
+    gx, gz = np.meshgrid(np.arange(-r, core + r, d) + d / 2, np.arange(-r, r, d) + d / 2, indexing="ij")
+    height = np.maximum(np.where(gx < 0, r - np.hypot(gx, gz), np.where(gx > core, r - np.hypot(gx - core, gz), r - np.abs(gz))), 0.0)
+    for p in (-5.0, 0.0, 20.0, core, core + 4.0):
+        numeric = np.clip(height - np.maximum(gx - p, 0.0), 0.0, None).sum() * d * d
+        assert get_ideal_reclaimed_volume(p, core, r) == pytest.approx(numeric, rel=2e-3)
