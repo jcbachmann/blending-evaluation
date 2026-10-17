@@ -104,19 +104,25 @@ def test_evaluate_sim_of_the_real_simulation_is_plausible():
 
 
 def test_a_batch_evaluates_like_single_inputs():
+    from blending_simulator_lib import simulate_batch
+
+    if "cone" not in (simulate_batch.__doc__ or ""):
+        pytest.skip("blending_simulator_lib built without the cone simulator")
     rng = np.random.default_rng(6)
     materials = rng.uniform(5, 10, (3, 50))
     depositions = rng.uniform(X_MIN, X_MAX, (3, 20))
-    f, profiles = evaluate_sims_with_profiles(materials, depositions, BED_SIZE_X, BED_SIZE_Z, 2500.0, threads=2)
+    # The cone simulation is deterministic, so the batch must give exactly the results of single inputs (single runs of the stochastic
+    # fast simulation differ by up to about 0.08 in F1 with continuous drops)
+    with simulator_settings(SimulatorSettings(simulator="cone")):
+        f, profiles = evaluate_sims_with_profiles(materials, depositions, BED_SIZE_X, BED_SIZE_Z, 2500.0, threads=2)
+        single = [evaluate_sim_with_profile(materials[i], depositions[i], BED_SIZE_X, BED_SIZE_Z, 2500.0) for i in range(3)]
 
     assert f.shape == (3, 2)
     assert profiles.shape == (3, 2, 60)
-    for i in range(3):
-        f1, f2, profile = evaluate_sim_with_profile(materials[i], depositions[i], BED_SIZE_X, BED_SIZE_Z, 2500.0)
-        # Different simulations of the same input, so only close: within a few noise standard deviations of one simulation
-        assert f[i, 0] == pytest.approx(f1, abs=0.05)
-        assert f[i, 1] == pytest.approx(f2, abs=1.5)
-        assert profiles[i, 0].sum() == pytest.approx(profile[0].sum())
+    for i, (f1, f2, profile) in enumerate(single):
+        assert f[i, 0] == pytest.approx(f1, rel=1e-12)
+        assert f[i, 1] == pytest.approx(f2, rel=1e-12)
+        np.testing.assert_allclose(profiles[i], profile, rtol=1e-12)
 
 
 def test_generated_material_and_deposition_have_the_requested_length():
