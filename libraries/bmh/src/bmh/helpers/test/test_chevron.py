@@ -85,3 +85,11 @@ def test_stops_path(shrinking):
     assert layer_ends[-1] == pytest.approx(DURATION)
     assert x.min() >= X_MIN - RADIUS - 1e-9
     assert x.max() <= X_MAX + RADIUS + 1e-9
+
+
+@pytest.mark.parametrize("duration", [1.0, 2500.0, DURATION])
+def test_stops_path_does_not_depend_on_the_unit_of_time(duration):
+    reference, x_reference, _ = stops_path(VOLUME, DURATION, X_MIN, X_MAX, 19, shrinking=True)
+    timestamps, x, _ = stops_path(VOLUME, duration, X_MIN, X_MAX, 19, shrinking=True)
+    np.testing.assert_allclose(timestamps / duration, reference / DURATION, rtol=1e-12, atol=1e-15)
+    np.testing.assert_array_equal(x, x_reference)

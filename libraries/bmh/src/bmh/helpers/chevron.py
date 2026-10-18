@@ -82,10 +82,14 @@ def schedule(volume: float, x_min: float, x_max: float, layers: int, shrinking: 
     return layer_list
 
 
+# Time of a move between the turning points of two layers, as a share of the stacking time (one second of a day)
+MOVE_SHARE = 1.0 / 86400.0
+
+
 def stops_path(volume: float, duration: float, x_min: float, x_max: float, layers: int, shrinking: bool = False, tan_theta: float = 1.0):
     """
     Stacker path (timestamps, positions) and layer end times at a constant material flow, with the stops of schedule(). With shrinking
-    limits the stacker moves to the next turning point within one second between two layers.
+    limits the stacker moves to the next turning point between two layers within `MOVE_SHARE` of the duration, whatever its unit.
     """
     seconds_per_volume = duration / volume
     t = 0.0
@@ -93,7 +97,7 @@ def stops_path(volume: float, duration: float, x_min: float, x_max: float, layer
     for k, layer in enumerate(schedule(volume, x_min, x_max, layers, shrinking, tan_theta)):
         here, there = (layer["low"], layer["high"]) if k % 2 == 0 else (layer["high"], layer["low"])
         if positions and positions[-1] != here:
-            t += 1.0
+            t += MOVE_SHARE * duration
         timestamps.append(t)
         positions.append(here)
         t += layer["start"] * seconds_per_volume
@@ -106,6 +110,6 @@ def stops_path(volume: float, duration: float, x_min: float, x_max: float, layer
         timestamps.append(t)
         positions.append(there)
         layer_ends.append(t)
-    # The moves between turning points take a few seconds in total, scale them away so that the path ends with the material flow
+    # The moves between turning points take a tiny share of the time, scale them away so that the path ends with the material flow
     timestamps = np.array(timestamps) * duration / t
     return timestamps, np.array(positions), [e * duration / t for e in layer_ends]
