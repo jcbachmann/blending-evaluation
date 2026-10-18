@@ -65,6 +65,7 @@ def simulate_batch(
     formula: bool = False,
     eight_height_scale: typing.SupportsFloat | typing.SupportsIndex = 0.0,
 ) -> dict: ...
+def fitted_eight_likelihood(particles_per_cubic_meter: typing.SupportsFloat | typing.SupportsIndex) -> float: ...
 def continuous_drops(
     volumes: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex],
     parameters: typing.Annotated[numpy.typing.ArrayLike, numpy.float64],

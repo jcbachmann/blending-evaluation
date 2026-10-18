@@ -41,7 +41,16 @@ def optional_arguments(
 
 
 DEFAULT_RECLAIM_ANGLE = 45.0
+# The eight likelihood of every fast simulation up to simulator release 2026.3; newer releases fit it to the particle size by default
 DEFAULT_EIGHT_LIKELIHOOD = 0.87
+
+
+def fitted_eight_likelihood(ppm3: float) -> float:
+    """The fast simulation's eight likelihood fitted to the detailed simulation for the particle size, the default from simulator release
+    2026.4 on (0.60, 0.60, 0.70, 0.75, 0.80, 0.85 at 1, 4, 16, 64, 256, 1,024 particles per cubic meter); bindings built against older
+    releases have no fitted value and keep 0.87."""
+    fitted = getattr(blending_simulator_lib, "fitted_eight_likelihood", None)
+    return DEFAULT_EIGHT_LIKELIHOOD if fitted is None else float(fitted(ppm3))
 
 
 def get_simulator_version() -> str | None:
@@ -66,7 +75,7 @@ def simulate_batch(
     lattice: bool = False,
     threads: int = 1,
     reclaimangle: float = DEFAULT_RECLAIM_ANGLE,
-    eight: float = DEFAULT_EIGHT_LIKELIHOOD,
+    eight: float | None = None,
     cone: bool = False,
     detailed: bool = False,
     detailed_parameters: dict[str, float] | None = None,
@@ -88,11 +97,14 @@ def simulate_batch(
         threads for the threads of each simulation), see DetailedParameters in the simulator
     :param eight_height_scale: if positive, the fast simulation's eight likelihood is max(0, 1 - eight_height_scale / h) for a particle
         dropped on a pile h particles high instead of `eight`, which keeps round 45° piles at every ppm3 (6.5; simulator after 2026.3)
+    :param eight: the fast simulation's eight likelihood; None for the value fitted to the particle size (`fitted_eight_likelihood`)
     :return: reclaimer positions x, shape (slices,), and the reclaimed volume and the volume weighted average of each parameter, shape
         (inputs, slices)
     """
     if reclaimincrement is None:
         reclaimincrement = default_reclaim_increment(ppm3)
+    if eight is None:
+        eight = fitted_eight_likelihood(ppm3)
     batch = getattr(blending_simulator_lib, "simulate_batch", None)
     if batch is not None:
         extra: dict = {"cone": True} if cone else {}
@@ -156,7 +168,8 @@ class BslBlendingSimulator(BlendingSimulator):
         """bulkdensity and dropheight are not used by simulators from 2026.3 on; detailed_parameters sets the parameters of their detailed
         simulation (discrete element method) by snake_case names, e.g. {"rolling_friction": 0.2, "threads": 4}; formula chooses the formula
         simulation (the cone simulation reduced to the stacker line; the stacker must not move across the bed, no circular beds);
-        eight_height_scale replaces the fast simulation's constant eight likelihood by one scaled with the pile height (see simulate_batch)"""
+        eight_height_scale replaces the fast simulation's constant eight likelihood by one scaled with the pile height (see simulate_batch);
+        eight None is the eight likelihood fitted to the particle size (`fitted_eight_likelihood`)"""
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
             reclaimangle = DEFAULT_RECLAIM_ANGLE
@@ -165,7 +178,7 @@ class BslBlendingSimulator(BlendingSimulator):
         if circular is None:
             circular = False
         if eight is None:
-            eight = DEFAULT_EIGHT_LIKELIHOOD
+            eight = fitted_eight_likelihood(ppm3)
         if bulkdensity is None:
             bulkdensity = 1.0
         if dropheight is None:

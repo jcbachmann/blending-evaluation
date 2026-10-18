@@ -54,12 +54,14 @@ class SimulatorSettings:
     integrates the cut area over each slice, "point" takes it at the slice position, as all data before 2026-10-18; records without it read
     as "point". `eight_height_scale` (fast simulation, simulator after 2026.3), if positive, replaces the constant `eight_likelihood` by
     max(0, 1 - eight_height_scale / h) for a particle dropped on a pile h particles high, which keeps round 45° piles at every ppm3 (6.5);
-    0, the default and the reading of records without it, is the constant likelihood."""
+    0, the default and the reading of records without it, is the constant likelihood. `eight_likelihood` defaults to the value fitted
+    to the detailed simulation for the particle size (simulator 2026.4 on, `bmh.simulation.bsl_blending_simulator.fitted_eight_likelihood`:
+    0.60 at ppm3 1 up to 0.85 at 1,024); records without it read as 0.87, the value of all fast simulations before."""
 
     ppm3: float = 1.0
     reclaim_increment: float = 1.0
     reclaim_angle: float = 45.0
-    eight_likelihood: float = 0.87
+    eight_likelihood: float | None = None
     eight_height_scale: float = 0.0
     version: str = field(default_factory=get_installed_simulator_version)
     simulator: str = "fast"
@@ -67,6 +69,11 @@ class SimulatorSettings:
     ideal_stockpile: str = "integrated"
 
     def __post_init__(self):
+        if self.eight_likelihood is None:
+            # the fast simulation's eight likelihood fitted to the particle size, the default of simulator releases from 2026.4 on
+            from bmh.simulation.bsl_blending_simulator import fitted_eight_likelihood
+
+            object.__setattr__(self, "eight_likelihood", fitted_eight_likelihood(self.ppm3))
         if self.simulator not in SIMULATORS:
             raise ValueError(f"unknown simulator {self.simulator!r}, one of {SIMULATORS}")
         if self.drops not in DROPS:
@@ -81,7 +88,16 @@ class SimulatorSettings:
 
     @classmethod
     def from_dict(cls, values: dict | None) -> "SimulatorSettings":
-        return cls(**{"version": UNRECORDED_SIMULATOR_VERSION, "simulator": "fast", "drops": "point", "ideal_stockpile": "point", **(values or {})})
+        return cls(
+            **{
+                "version": UNRECORDED_SIMULATOR_VERSION,
+                "eight_likelihood": 0.87,
+                "simulator": "fast",
+                "drops": "point",
+                "ideal_stockpile": "point",
+                **(values or {}),
+            }
+        )
 
 
 def get_simulator_settings() -> SimulatorSettings:

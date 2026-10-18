@@ -218,14 +218,18 @@ def test_the_models_of_an_ensemble_share_the_cheap_simulation_of_an_input():
 
 
 def test_a_model_stored_before_the_cheap_level_could_be_chosen_keeps_the_fast_simulator():
+    from bmh.simulation.bsl_blending_simulator import fitted_eight_likelihood
+
     from bmh_ml.models.registry import create_model, get_model_class
 
-    assert create_model("multifidelity_mlp").low_settings_key() == (1.0, "cone", "cells", "integrated")  # new models
+    assert create_model("multifidelity_mlp").low_settings_key() == (1.0, "cone", "cells", "integrated", fitted_eight_likelihood(1.0))  # new models
     stored = {
-        k: v for k, v in create_model("multifidelity_mlp").params.items() if k not in ("low_simulator", "low_drops", "low_ideal_stockpile")
+        k: v
+        for k, v in create_model("multifidelity_mlp").params.items()
+        if k not in ("low_simulator", "low_drops", "low_ideal_stockpile", "low_eight_likelihood")
     }  # as saved before
     upgraded = create_model("multifidelity_mlp", **get_model_class("multifidelity_mlp").upgrade_params(stored))  # what load_model does
-    assert upgraded.low_settings_key() == (1.0, "fast", "point", "point")
+    assert upgraded.low_settings_key() == (1.0, "fast", "point", "point", 0.87)
 
 
 def test_the_cheap_level_must_match_the_low_bundle():

@@ -608,6 +608,15 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"eight_height_scale"_a = 0.0f
 	);
 
+#ifdef BLENDING_SIMULATOR_FITTED_EIGHT
+	m.def(
+		"fitted_eight_likelihood",
+		&bs::fittedEightLikelihood,
+		"particles_per_cubic_meter"_a,
+		"The fast simulation's eight likelihood fitted to the detailed simulation for a particle size (the default from simulator 2026.4 on)"
+	);
+#endif
+
 	m.def(
 		"continuous_drops",
 		&continuousDropsArray,

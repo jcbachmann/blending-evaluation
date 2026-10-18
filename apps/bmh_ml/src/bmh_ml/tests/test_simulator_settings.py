@@ -27,7 +27,9 @@ def store(tmp_path, monkeypatch):
 
 def test_the_default_level_is_the_simulator_of_all_earlier_data():
     assert get_simulator_settings() == SimulatorSettings(ppm3=1.0, reclaim_increment=1.0)  # the simulator's own step, one particle, is 1 m as well
-    assert SimulatorSettings.from_dict(None) == SimulatorSettings(version=UNRECORDED_SIMULATOR_VERSION, drops="point", ideal_stockpile="point")
+    assert SimulatorSettings.from_dict(None) == SimulatorSettings(
+        version=UNRECORDED_SIMULATOR_VERSION, drops="point", ideal_stockpile="point", eight_likelihood=0.87
+    )
 
 
 def test_the_active_level_reaches_the_simulator(monkeypatch):
@@ -163,6 +165,12 @@ def test_new_settings_drop_continuously_and_old_records_read_as_point_drops():
     with pytest.raises(ValueError, match="unknown drops"):
         SimulatorSettings(drops="lines")
     assert SimulatorSettings().ideal_stockpile == "integrated"
+    from bmh.simulation.bsl_blending_simulator import fitted_eight_likelihood
+
+    assert SimulatorSettings().eight_likelihood == fitted_eight_likelihood(1.0)  # new settings: the fitted value of their particle size
+    assert SimulatorSettings(ppm3=256.0).eight_likelihood == fitted_eight_likelihood(256.0)
+    assert SimulatorSettings(eight_likelihood=0.5).eight_likelihood == 0.5
+    assert old.eight_likelihood == 0.87  # records without it: all fast simulations before 2026.4
     assert old.ideal_stockpile == "point"
     with pytest.raises(ValueError, match="unknown ideal stockpile rule"):
         SimulatorSettings(ideal_stockpile="mean")
@@ -174,7 +182,7 @@ def test_chevron_references_of_point_drops_keep_their_keys_and_continuous_drops_
     material = np.linspace(5.0, 10.0, 50)
     use_simulator_settings(SimulatorSettings.from_dict({"ppm3": 16.0, "reclaim_increment": 1.0, "version": get_installed_simulator_version()}))
     key = get_reference_key(material, 4)
-    use_simulator_settings(SimulatorSettings(ppm3=16.0, simulator="fast", drops="point", ideal_stockpile="point"))
+    use_simulator_settings(SimulatorSettings(ppm3=16.0, simulator="fast", drops="point", ideal_stockpile="point", eight_likelihood=0.87))
     assert get_reference_key(material, 4) == key
     use_simulator_settings(SimulatorSettings(ppm3=16.0))
     assert get_reference_key(material, 4) != key
