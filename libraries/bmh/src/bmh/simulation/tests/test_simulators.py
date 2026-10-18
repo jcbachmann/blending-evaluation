@@ -243,3 +243,34 @@ def test_stack_reclaim_drops_continuously_on_the_simulator_grid(sim, monkeypatch
     assert stacked == [sim.drop_grid()]
     assert len(original(*sim.drop_grid())) > len(material_deposition.material.data)  # more drops than portions: the stacker moves
     assert reclaimed.data["volume"].sum() == pytest.approx(TOTAL_VOLUME)
+
+
+def eight_height_scale_available() -> bool:
+    """Bindings built against a simulator release with the eight likelihood scaled with the pile height (after 2026.3)"""
+    try:
+        simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, eight_height_scale=6.5)
+    except (TypeError, RuntimeError):
+        return False
+    return True
+
+
+eight_height_scale_available_mark = pytest.mark.skipif(
+    not eight_height_scale_available(), reason="blending_simulator_lib built without the eight likelihood scaled with the pile height"
+)
+
+
+@eight_height_scale_available_mark
+def test_eight_height_scale_reaches_the_simulator():
+    data = make_material_deposition().drops(0.5, 0.5)
+    inputs = data.to_numpy()[None]
+    columns = data.columns.to_list()
+
+    def reclaimed(**options):
+        return simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=8.0, seed=3, reclaimincrement=1.0, **options)["volume"][0]
+
+    # A scale above every pile height leaves only the 4 direct fall directions, like eight likelihood 0, with the same random numbers
+    np.testing.assert_array_equal(reclaimed(eight_height_scale=1e6), reclaimed(eight=0.0))
+    assert not np.array_equal(reclaimed(eight_height_scale=6.5), reclaimed())
+    np.testing.assert_allclose(reclaimed(eight_height_scale=6.5).sum(), TOTAL_VOLUME, rtol=1e-9)
+    single = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=8.0, seed=3, reclaimincrement=1.0, eight_height_scale=6.5)
+    np.testing.assert_array_equal(single.stack_reclaim_array(inputs[0], columns)["volume"], reclaimed(eight_height_scale=6.5))

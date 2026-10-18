@@ -68,6 +68,12 @@ if(TARGET BlendingSimulator::FormulaLib)
     target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_FORMULA)
 endif()
 
+# Simulators after 2026.3 can scale the fast simulation's eight likelihood with the pile height (eight_height_scale)
+file(READ "${blending-simulation_SOURCE_DIR}/BlendingSimulatorLib/include/BlendingSimulator/SimulationParameters.h" SIMULATION_PARAMETERS)
+if(SIMULATION_PARAMETERS MATCHES "eightHeightScale")
+    target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_EIGHT_HEIGHT_SCALE)
+endif()
+
 if(BUILD_DETAILED_SIMULATOR)
     target_link_libraries(_blending_simulator_lib PRIVATE BlendingSimulator::DetailedLib)
     target_compile_definitions(_blending_simulator_lib PRIVATE BUILD_DETAILED_SIMULATOR)

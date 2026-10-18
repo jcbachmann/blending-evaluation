@@ -16,11 +16,12 @@ def optional_arguments(
     cone: bool = False,
     detailed_parameters: dict[str, float] | None = None,
     formula: bool = False,
+    eight_height_scale: float = 0.0,
 ) -> tuple[tuple, dict]:
     """
     Arguments of newer simulator versions, only when used: bindings built against simulator v2026.1 have no seed, lattice and particle
     recording, those before 2026.3 no cone simulator and no parameters of the detailed simulation (the discrete element method), those
-    of 2026.3 no formula simulator
+    of 2026.3 no formula simulator and no eight likelihood scaled with the pile height
     """
     seed_argument = () if seed is None else (seed,)
     options: dict = {}
@@ -30,6 +31,8 @@ def optional_arguments(
         options["cone"] = True
     if formula:
         options["formula"] = True
+    if eight_height_scale:
+        options["eight_height_scale"] = eight_height_scale
     if record_particles:
         options["record_particles"] = True
     if detailed_parameters:
@@ -68,6 +71,7 @@ def simulate_batch(
     detailed: bool = False,
     detailed_parameters: dict[str, float] | None = None,
     formula: bool = False,
+    eight_height_scale: float = 0.0,
 ) -> dict[str, np.ndarray]:
     """
     Stack and reclaim many inputs at once like BslBlendingSimulator, in one call into the simulator: no Python per simulation,
@@ -82,6 +86,8 @@ def simulate_batch(
     :param detailed: the detailed simulation (discrete element method) instead of the fast one
     :param detailed_parameters: parameters of the detailed simulation by their snake_case names (e.g. rolling_friction, flow_rate,
         threads for the threads of each simulation), see DetailedParameters in the simulator
+    :param eight_height_scale: if positive, the fast simulation's eight likelihood is max(0, 1 - eight_height_scale / h) for a particle
+        dropped on a pile h particles high instead of `eight`, which keeps round 45° piles at every ppm3 (6.5; simulator after 2026.3)
     :return: reclaimer positions x, shape (slices,), and the reclaimed volume and the volume weighted average of each parameter, shape
         (inputs, slices)
     """
@@ -92,6 +98,8 @@ def simulate_batch(
         extra: dict = {"cone": True} if cone else {}
         if formula:
             extra["formula"] = True
+        if eight_height_scale:
+            extra["eight_height_scale"] = eight_height_scale
         if detailed:
             extra |= {"detailed": True, "detailed_parameters": detailed_parameters}
         result = batch(data, columns, bed_size_x, bed_size_z, reclaimangle, ppm3, False, eight, reclaimincrement, seed, lattice, threads, **extra)
@@ -117,6 +125,7 @@ def simulate_batch(
             detailed=detailed,
             detailed_parameters=detailed_parameters,
             formula=formula,
+            eight_height_scale=eight_height_scale,
         ).stack_reclaim_array(input_data, columns)
         for i, input_data in enumerate(data)
     ]
@@ -142,10 +151,12 @@ class BslBlendingSimulator(BlendingSimulator):
         cone: bool = False,
         detailed_parameters: dict[str, float] | None = None,
         formula: bool = False,
+        eight_height_scale: float = 0.0,
     ):
         """bulkdensity and dropheight are not used by simulators from 2026.3 on; detailed_parameters sets the parameters of their detailed
         simulation (discrete element method) by snake_case names, e.g. {"rolling_friction": 0.2, "threads": 4}; formula chooses the formula
-        simulation (the cone simulation reduced to the stacker line; the stacker must not move across the bed, no circular beds)"""
+        simulation (the cone simulation reduced to the stacker line; the stacker must not move across the bed, no circular beds);
+        eight_height_scale replaces the fast simulation's constant eight likelihood by one scaled with the pile height (see simulate_batch)"""
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
             reclaimangle = DEFAULT_RECLAIM_ANGLE
@@ -167,7 +178,7 @@ class BslBlendingSimulator(BlendingSimulator):
         self.simulator = "cone" if cone else "formula" if formula else "lattice" if lattice else "detailed" if detailed else "fast"
         self.ppm3 = ppm3
 
-        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters, formula)
+        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters, formula, eight_height_scale)
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
             bed_size_z,

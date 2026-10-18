@@ -86,6 +86,19 @@ void checkSimulatorChoice(bool detailed, bool lattice, bool cone, bool formula)
 	}
 #endif
 }
+
+// The fast simulation's eight likelihood scaled with the pile height exists in simulator releases after 2026.3
+void applyEightHeightScale(bs_::SimulationParameters& simulationParameters, float eightHeightScale)
+{
+#ifdef BLENDING_SIMULATOR_EIGHT_HEIGHT_SCALE
+	simulationParameters.eightHeightScale = eightHeightScale;
+#else
+	(void)simulationParameters;
+	if (eightHeightScale != 0.0f) {
+		throw std::runtime_error("eight_height_scale needs bindings built against a simulator release after 2026.3");
+	}
+#endif
+}
 }
 
 namespace bs = blendingsimulator;
@@ -95,7 +108,7 @@ class BlendingSimulatorLibPython
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
 			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
-			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters, bool formula)
+			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters, bool formula, float eightHeightScale)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -112,6 +125,7 @@ class BlendingSimulatorLibPython
 			simulationParameters.dropHeight = dropHeight;
 			simulationParameters.seed = seed;
 			applyDetailedParameters(simulationParameters, detailedParameters);
+			applyEightHeightScale(simulationParameters, eightHeightScale);
 
 			checkSimulatorChoice(detailed, lattice, cone, formula);
 			if (cone) {
@@ -328,7 +342,7 @@ class BlendingSimulatorLibPython
 py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array::forcecast>& data, const std::vector<std::string>& columns,
 	float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular, float eightLikelihood,
 	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads, bool cone, bool detailed,
-	std::optional<py::dict> detailedParameters, bool formula)
+	std::optional<py::dict> detailedParameters, bool formula, float eightHeightScale)
 {
 	checkSimulatorChoice(detailed, lattice, cone, formula);
 #ifndef BUILD_DETAILED_SIMULATOR
@@ -378,6 +392,7 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 	simulationParameters.circular = circular;
 	simulationParameters.eightLikelihood = eightLikelihood;
 	applyDetailedParameters(simulationParameters, detailedParameters);
+	applyEightHeightScale(simulationParameters, eightHeightScale);
 
 	// Per input: reclaimed volume per slice, then the parameters per slice (slice-major)
 	std::vector<std::vector<double>> volumes(inputs);
@@ -546,7 +561,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
 			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool, bool,
-				std::optional<py::dict>, bool>(),
+				std::optional<py::dict>, bool, float>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -562,7 +577,8 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"record_particles"_a = false,
 			"cone"_a = false,
 			"detailed_parameters"_a = py::none(),
-			"formula"_a = false
+			"formula"_a = false,
+			"eight_height_scale"_a = 0.0f
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
@@ -588,7 +604,8 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"cone"_a = false,
 		"detailed"_a = false,
 		"detailed_parameters"_a = py::none(),
-		"formula"_a = false
+		"formula"_a = false,
+		"eight_height_scale"_a = 0.0f
 	);
 
 	m.def(
