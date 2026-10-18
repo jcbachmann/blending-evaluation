@@ -102,6 +102,7 @@ def evaluate_sims_with_profiles(
         threads=threads,
         reclaimangle=settings.reclaim_angle,
         eight=settings.eight_likelihood,
+        eight_height_scale=settings.eight_height_scale,
         lattice=settings.simulator == "lattice",
         cone=settings.simulator == "cone",
         formula=settings.simulator == "formula",

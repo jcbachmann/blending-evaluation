@@ -180,3 +180,29 @@ def test_chevron_references_of_point_drops_keep_their_keys_and_continuous_drops_
     assert get_reference_key(material, 4) != key
     use_simulator_settings(SimulatorSettings(ppm3=16.0, simulator="cone"))
     assert len({key, get_reference_key(material, 4)}) == 2
+
+
+def test_the_eight_height_scale_reaches_the_simulator_and_old_records_read_as_the_constant_likelihood(monkeypatch):
+    from bmh_ml import simulation
+    from bmh_ml.evaluation.chevron import get_reference_key
+
+    created = []
+
+    def recording(*_args, **kwargs):
+        created.append(kwargs)
+        return {"x": np.arange(60.0), "volume": np.full((1, 60), 2500.0 / 60), "quality": np.ones((1, 60))}
+
+    monkeypatch.setattr(simulation, "simulate_batch", recording)
+    rng = np.random.default_rng(0)
+    material, deposition = random_materials(1, rng)[0], random_depositions(1, rng)[0]
+    simulation.evaluate_sim(material, deposition, 59, 20, 2500)
+    use_simulator_settings(SimulatorSettings(ppm3=64.0, eight_height_scale=6.5))
+    simulation.evaluate_sim(material, deposition, 59, 20, 2500)
+
+    assert [c["eight_height_scale"] for c in created] == [0.0, 6.5]
+    assert SimulatorSettings.from_dict({"ppm3": 4.0, "reclaim_increment": 1.0}).eight_height_scale == 0.0
+    with pytest.raises(ValueError, match="must not be negative"):
+        SimulatorSettings(eight_height_scale=-1.0)
+    scaled_key = get_reference_key(material, 4)
+    use_simulator_settings(SimulatorSettings(ppm3=64.0))
+    assert get_reference_key(material, 4) != scaled_key  # the scaled likelihood simulates its own Chevron references

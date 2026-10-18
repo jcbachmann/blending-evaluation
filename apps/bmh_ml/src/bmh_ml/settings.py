@@ -52,12 +52,15 @@ class SimulatorSettings:
     the fast simulator with point drops. `ideal_stockpile`
     is the rule of the ideal slice volumes in F2 (`bmh.helpers.stockpile_math.get_ideal_stockpile_volumes`): "integrated" (new results)
     integrates the cut area over each slice, "point" takes it at the slice position, as all data before 2026-10-18; records without it read
-    as "point"."""
+    as "point". `eight_height_scale` (fast simulation, simulator after 2026.3), if positive, replaces the constant `eight_likelihood` by
+    max(0, 1 - eight_height_scale / h) for a particle dropped on a pile h particles high, which keeps round 45° piles at every ppm3 (6.5);
+    0, the default and the reading of records without it, is the constant likelihood."""
 
     ppm3: float = 1.0
     reclaim_increment: float = 1.0
     reclaim_angle: float = 45.0
     eight_likelihood: float = 0.87
+    eight_height_scale: float = 0.0
     version: str = field(default_factory=get_installed_simulator_version)
     simulator: str = "fast"
     drops: str = "cells"
@@ -68,6 +71,8 @@ class SimulatorSettings:
             raise ValueError(f"unknown simulator {self.simulator!r}, one of {SIMULATORS}")
         if self.drops not in DROPS:
             raise ValueError(f"unknown drops {self.drops!r}, one of {DROPS}")
+        if self.eight_height_scale < 0.0:
+            raise ValueError(f"eight_height_scale must not be negative, got {self.eight_height_scale}")
         if self.ideal_stockpile not in IDEAL_STOCKPILE_RULES:
             raise ValueError(f"unknown ideal stockpile rule {self.ideal_stockpile!r}, one of {IDEAL_STOCKPILE_RULES}")
 
