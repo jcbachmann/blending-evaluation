@@ -41,6 +41,8 @@ def optional_arguments(
 
 
 DEFAULT_RECLAIM_ANGLE = 45.0
+# 1 m slices at every particle size, so that F2 does not depend on the simulator's resolution through the slice width
+DEFAULT_RECLAIM_INCREMENT = 1.0
 # The eight likelihood of every fast simulation up to simulator release 2026.3; newer releases fit it to the particle size by default
 DEFAULT_EIGHT_LIKELIHOOD = 0.87
 
@@ -59,8 +61,9 @@ def get_simulator_version() -> str | None:
     return getattr(blending_simulator_lib, "simulator_version", None)
 
 
-def default_reclaim_increment(ppm3: float) -> float:
-    """One particle size, the edge of a cube of the particle volume, like the C++ command line program"""
+def particle_reclaim_increment(ppm3: float) -> float:
+    """One particle size, the edge of a cube of the particle volume: the reclaim step of the C++ command line program, and of bmh before
+    it took 1 m (DEFAULT_RECLAIM_INCREMENT) at every particle size"""
     return ppm3 ** (-1.0 / 3.0)
 
 
@@ -98,11 +101,12 @@ def simulate_batch(
     :param eight_height_scale: if positive, the fast simulation's eight likelihood is max(0, 1 - eight_height_scale / h) for a particle
         dropped on a pile h particles high instead of `eight`, which keeps round 45° piles at every ppm3 (6.5; simulator after 2026.3)
     :param eight: the fast simulation's eight likelihood; None for the value fitted to the particle size (`fitted_eight_likelihood`)
+    :param reclaimincrement: the reclaimer's step, None for 1 m (`particle_reclaim_increment` gives the particle size)
     :return: reclaimer positions x, shape (slices,), and the reclaimed volume and the volume weighted average of each parameter, shape
         (inputs, slices)
     """
     if reclaimincrement is None:
-        reclaimincrement = default_reclaim_increment(ppm3)
+        reclaimincrement = DEFAULT_RECLAIM_INCREMENT
     if eight is None:
         eight = fitted_eight_likelihood(ppm3)
     batch = getattr(blending_simulator_lib, "simulate_batch", None)
@@ -186,7 +190,7 @@ class BslBlendingSimulator(BlendingSimulator):
         if detailed is None:
             detailed = False
         if reclaimincrement is None:
-            reclaimincrement = default_reclaim_increment(ppm3)
+            reclaimincrement = DEFAULT_RECLAIM_INCREMENT
 
         self.simulator = "cone" if cone else "formula" if formula else "lattice" if lattice else "detailed" if detailed else "fast"
         self.ppm3 = ppm3

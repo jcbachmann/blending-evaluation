@@ -102,8 +102,17 @@ def test_bsl_stack_reclaim():
 def test_bsl_default_reclaim_increment(ppm3):
     sim = BslBlendingSimulator(bed_size_x=10.0, bed_size_z=4.0, ppm3=ppm3, seed=0)
     sim.stack(0.0, 5.0, 2.0, 2.0, [1.0])  # noqa: PD013
-    # Reclaimer positions from 0 m to the bed length in steps of one particle size
-    size = ppm3 ** (-1.0 / 3.0)
+    # Reclaimer positions from 0 m to the bed length in steps of 1 m at every particle size
+    assert [row[0] for row in sim.reclaim()] == pytest.approx([float(i) for i in range(11)])
+
+
+@pytest.mark.parametrize("ppm3", [8.0, 64.0])
+def test_bsl_reclaim_increment_of_one_particle_on_request(ppm3):
+    from bmh.simulation.bsl_blending_simulator import particle_reclaim_increment
+
+    size = particle_reclaim_increment(ppm3)
+    sim = BslBlendingSimulator(bed_size_x=10.0, bed_size_z=4.0, ppm3=ppm3, seed=0, reclaimincrement=size)
+    sim.stack(0.0, 5.0, 2.0, 2.0, [1.0])  # noqa: PD013
     assert [row[0] for row in sim.reclaim()] == pytest.approx([i * size for i in range(round(10.0 / size) + 1)])
 
 
