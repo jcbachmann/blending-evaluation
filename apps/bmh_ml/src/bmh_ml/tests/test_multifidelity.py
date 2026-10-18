@@ -112,7 +112,9 @@ def test_the_simulator_baseline_can_start_from_the_fronts_of_another_level():
 def test_the_simulator_baseline_can_start_from_the_fronts_a_model_found():
     mlflow = pytest.importorskip("mlflow")
     pytest.importorskip("sklearn")
-    from bmh_ml.evaluation.transfer import TransferConfig, get_nondominated, split_by_material
+    from bmh.helpers.fronts import get_nondominated
+
+    from bmh_ml.evaluation.transfer import TransferConfig, split_by_material
     from bmh_ml.train import run_training
     from bmh_ml.transfer import load_initial_populations, simulator_baseline
 

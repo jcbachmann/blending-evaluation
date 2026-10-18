@@ -16,8 +16,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from bmh.helpers.fronts import get_nondominated
 
-from bmh_ml.front_study.common import get_out, nondominated
+from bmh_ml.front_study.common import get_out
 
 OUT = get_out()
 # the colors of the page (light theme): coarser than the optimizer orange, the optimizer's level grey, finer a blue ramp
@@ -47,7 +48,7 @@ def main(material_index: int):
         cloud = relative[k].reshape(-1, 2)
         ax.scatter(cloud[:, 0], cloud[:, 1], s=0.6, color=COLORS[name], alpha=0.06, linewidths=0, rasterized=True)
     for k, name in enumerate(names):
-        front = means[k][nondominated(means[k])]
+        front = means[k][get_nondominated(means[k])]
         front = front[np.argsort(front[:, 0])]
         ax.step(front[:, 0], front[:, 1], where="post", color=COLORS[name], lw=0.9)
         ax.scatter(means[k][:, 0], means[k][:, 1], s=5, color=COLORS[name], edgecolors="white", linewidths=0.3, zorder=3,

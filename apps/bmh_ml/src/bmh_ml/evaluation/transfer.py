@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from bmh.helpers.fronts import get_hypervolume_2d, get_nondominated
 
 from bmh_ml.datasets.manifest import Dataset, make_features
 from bmh_ml.datasets.simulate import simulate
@@ -186,13 +187,6 @@ def run_simulator_fronts_many(
     return results
 
 
-def get_nondominated(objectives: np.ndarray) -> np.ndarray:
-    """The rows of the non-dominated solutions (both objectives are minimized)."""
-    from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
-
-    return np.sort(NonDominatedSorting().do(objectives, only_non_dominated_front=True))
-
-
 def get_reference_front(dataset: Dataset) -> np.ndarray:
     return dataset.y[get_nondominated(dataset.y)]
 
@@ -204,13 +198,7 @@ def normalize(objectives: np.ndarray, reference: np.ndarray) -> np.ndarray:
 
 def get_hypervolume(objectives: np.ndarray, reference: np.ndarray) -> float:
     """Hypervolume of the solutions in objectives normalized to the reference front, solutions beyond the reference point add nothing."""
-    from pymoo.indicators.hv import HV
-
-    points = normalize(objectives, reference)
-    points = points[np.all(points < REFERENCE_POINT, axis=1)]
-    if len(points) == 0:
-        return 0.0
-    return float(HV(ref_point=np.full(2, REFERENCE_POINT))(points))
+    return get_hypervolume_2d(normalize(objectives, reference), np.full(2, REFERENCE_POINT))
 
 
 def get_front_metrics(objectives: np.ndarray, reference: np.ndarray) -> dict[str, float]:

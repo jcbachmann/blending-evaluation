@@ -8,8 +8,9 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from bmh.helpers.fronts import get_nondominated
 
-from bmh_ml.front_study.common import get_out, nondominated
+from bmh_ml.front_study.common import get_out
 
 TEMPLATE = Path(__file__).parent / "templates" / "resolution.html"
 OUT = get_out()
@@ -53,7 +54,7 @@ def main(material_index: int):
     order = np.argsort(means[l1][:, 0])  # ids by F1 at L1, as in the interpolation chart
     ids = np.empty(len(order), dtype=int)
     ids[order] = np.arange(1, len(order) + 1)
-    fronts = [nondominated(m) for m in means]
+    fronts = [get_nondominated(m) for m in means]
     l1_front = set(fronts[l1].tolist())
 
     levels = []

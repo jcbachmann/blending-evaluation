@@ -9,7 +9,7 @@ from bmh_ml.evaluation import transfer as transfer_module
 from bmh_ml.evaluation.transfer import (
     TransferConfig,
     get_front_metrics,
-    get_nondominated,
+    get_hypervolume,
     get_reference_front,
     get_simulator_run_metrics,
     optimize_model,
@@ -34,10 +34,24 @@ def make_reference_dataset(n: int = 6, seed: int = 0) -> Dataset:
     return Dataset(name="ref", generator="test", seed=seed, repeats=2, material=random_materials(1, rng), deposition=deposition, y=y)
 
 
-def test_the_non_dominated_solutions_are_found():
-    objectives = np.array([[1.0, 1.0], [0.5, 2.0], [2.0, 2.0], [1.0, 1.0], [0.4, 3.0]])
+def test_fronts_and_hypervolumes_keep_the_values_of_pymoo():
+    from bmh.helpers.fronts import get_nondominated
+    from pymoo.indicators.hv import HV
+    from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
-    assert list(get_nondominated(objectives[[0, 1, 2, 4]])) == [0, 1, 3]
+    from bmh_ml.evaluation.chevron import get_chevron_hypervolume
+
+    rng = np.random.default_rng(0)
+    for _ in range(20):
+        objectives = np.round(rng.random((int(rng.integers(2, 60)), 2)) * 2, 1)  # with ties and duplicates
+        assert get_nondominated(objectives).tolist() == np.sort(NonDominatedSorting().do(objectives, only_non_dominated_front=True)).tolist()
+        relative = objectives[np.all(objectives < 1, axis=1)]
+        assert get_chevron_hypervolume(objectives) == pytest.approx(float(HV(ref_point=np.ones(2))(relative)) if len(relative) else 0.0)
+        reference = rng.random((5, 2))
+        points = transfer_module.normalize(objectives, reference)
+        points = points[np.all(points < transfer_module.REFERENCE_POINT, axis=1)]
+        expected = float(HV(ref_point=np.full(2, transfer_module.REFERENCE_POINT))(points)) if len(points) else 0.0
+        assert get_hypervolume(objectives, reference) == pytest.approx(expected)
 
 
 def test_the_reference_front_scores_one_and_worse_or_better_fronts_are_told_apart():

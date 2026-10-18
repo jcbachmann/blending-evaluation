@@ -12,12 +12,13 @@ import sys
 import time
 
 import numpy as np
+from bmh.helpers.fronts import get_nondominated
 
 from bmh_ml.datasets.generators import random_materials
 from bmh_ml.datasets.simulate import simulate
 from bmh_ml.datasets.store import load_bundle, load_dataset, use_bundle_simulator
 from bmh_ml.evaluation.chevron import chevron_deposition
-from bmh_ml.evaluation.transfer import TransferConfig, get_hypervolume, get_nondominated, run_simulator_fronts_many
+from bmh_ml.evaluation.transfer import TransferConfig, get_hypervolume, run_simulator_fronts_many
 from bmh_ml.front_study.common import get_out
 
 OUT = get_out()

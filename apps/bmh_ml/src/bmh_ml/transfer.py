@@ -126,7 +126,8 @@ def load_run_fronts(run_id: str, label: str = "") -> dict[bytes, np.ndarray]:
     the model predicts as non-dominated among all its optimization runs of that material. Only the model's predictions select them."""
     import tempfile
 
-    from bmh_ml.evaluation.transfer import get_nondominated
+    from bmh.helpers.fronts import get_nondominated
+
     from bmh_ml.settings import get_simulator_settings
 
     mlflow = configure_mlflow()

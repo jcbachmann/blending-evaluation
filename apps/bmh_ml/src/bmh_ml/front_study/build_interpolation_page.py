@@ -13,8 +13,9 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from bmh.helpers.fronts import dominated_by, get_nondominated
 
-from bmh_ml.front_study.common import dominated_by, get_out, nondominated
+from bmh_ml.front_study.common import get_out
 
 TEMPLATE = Path(__file__).parent / "templates" / "interpolation.html"
 OUT = get_out()
@@ -88,7 +89,7 @@ def main(material_index: int):
     level = list(c["ppm3"]).index(1.0)
     clouds, chevron_cloud = c["samples"][level], c["chevron"][level]
     labels, chevron = clouds.mean(axis=1), chevron_cloud.mean(axis=0)
-    front = nondominated(labels)
+    front = get_nondominated(labels)
     r = np.load(OUT / f"deep-material-{material_index}.npz")
     r = {k: r[k] for k in r.files}
     grid = int(r["position"].max())

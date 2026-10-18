@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 
 import numpy as np
 from bmh.helpers.chevron import stops_path
+from bmh.helpers.fronts import get_hypervolume_2d
 
 from bmh_ml.datasets.simulate import simulate
 from bmh_ml.parallel import get_cpu_count
@@ -117,12 +118,7 @@ def get_chevron_objectives(material: np.ndarray, repeats: int = CHEVRON_REPEATS,
 
 def get_chevron_hypervolume(relative: np.ndarray) -> float:
     """Hypervolume of solutions in objectives relative to Chevron, with the reference point (1, 1): only what beats Chevron in both counts."""
-    from pymoo.indicators.hv import HV
-
-    points = relative[np.all(relative < 1, axis=1)]
-    if len(points) == 0:
-        return 0.0
-    return float(HV(ref_point=np.ones(2))(points))
+    return get_hypervolume_2d(relative, np.ones(2))
 
 
 def get_chevron_metrics(objectives: np.ndarray, chevron: np.ndarray, prefix: str = "chevron_") -> dict[str, float]:

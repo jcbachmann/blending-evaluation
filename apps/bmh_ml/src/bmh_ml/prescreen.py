@@ -57,7 +57,7 @@ def record_refinement(material: np.ndarray, initial: np.ndarray | None, populati
 
 def joins_front(parents_f: np.ndarray, offspring_f: np.ndarray) -> np.ndarray:
     """For each offspring: is it non-dominated among the parents and all offspring?"""
-    from bmh_ml.evaluation.transfer import get_nondominated
+    from bmh.helpers.fronts import get_nondominated
 
     nondominated = get_nondominated(np.vstack([parents_f, offspring_f]))
     mask = np.zeros(len(offspring_f), dtype=bool)

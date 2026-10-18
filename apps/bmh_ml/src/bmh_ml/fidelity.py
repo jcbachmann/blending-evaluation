@@ -11,12 +11,13 @@ import argparse
 import logging
 
 import numpy as np
+from bmh.helpers.fronts import get_nondominated
 
 from bmh_ml.datasets.manifest import Dataset
 from bmh_ml.datasets.store import Bundle, get_bundle_simulator, load_bundle, load_dataset, use_bundle_simulator
 from bmh_ml.evaluation.chevron import get_chevron_hypervolume, get_chevron_objectives
 from bmh_ml.evaluation.noise import OBJECTIVES
-from bmh_ml.evaluation.transfer import get_hypervolume, get_nondominated, get_reference_front, split_by_material
+from bmh_ml.evaluation.transfer import get_hypervolume, get_reference_front, split_by_material
 from bmh_ml.tracking.runs import configure_mlflow, get_experiment_id, get_experiment_name, get_finite_metrics
 
 RANDOM_SETS = ("T1", "T3", "T5")

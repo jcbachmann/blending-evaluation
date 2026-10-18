@@ -8,9 +8,9 @@ import sys
 import time
 
 import numpy as np
+from bmh.helpers.fronts import get_nondominated
 
 from bmh_ml.datasets.simulate import simulate
-from bmh_ml.evaluation.transfer import get_nondominated
 from bmh_ml.front_study.common import get_out
 
 OUT = get_out()

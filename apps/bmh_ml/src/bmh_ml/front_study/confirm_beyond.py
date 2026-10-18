@@ -7,9 +7,10 @@ import sys
 import time
 
 import numpy as np
+from bmh.helpers.fronts import dominated_by, get_nondominated
 
 from bmh_ml.datasets.simulate import simulate
-from bmh_ml.front_study.common import dominated_by, get_out, nondominated
+from bmh_ml.front_study.common import get_out
 from bmh_ml.front_study.refine import GRID
 
 OUT = get_out()
@@ -22,7 +23,7 @@ def main(material_index: int):
     r = np.load(OUT / f"deep-material-{material_index}.npz")
     clouds = np.load(OUT / f"clouds-material-{material_index}.npz")
     labels = clouds["samples"][list(clouds["ppm3"]).index(1.0)].mean(axis=1)
-    front = nondominated(labels)
+    front = get_nondominated(labels)
     pairs, deposition = d["pairs"], d["deposition"]
     interior = np.flatnonzero((r["position"] > 0) & (r["position"] < GRID))
     beyond = interior[~dominated_by(r["f"][interior], labels)]

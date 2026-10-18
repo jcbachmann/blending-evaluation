@@ -6,14 +6,7 @@ import pytest
 
 from bmh_ml.front_study.build_interpolation_page import encode_lines, values_at
 from bmh_ml.front_study.build_resolution_page import quantize, spearman
-from bmh_ml.front_study.common import OUT_ENVIRONMENT_VARIABLE, dominated_by, get_out, nondominated
-
-
-def test_a_point_is_dominated_only_by_one_at_least_as_good_in_both_objectives_and_better_in_one():
-    points = np.array([[1.0, 1.0], [2.0, 2.0], [1.0, 2.0], [0.5, 3.0]])
-    assert dominated_by(points, points).tolist() == [False, True, True, False]
-    assert not dominated_by(np.array([[1.0, 1.0]]), np.array([[1.0, 1.0]]))[0]  # an equal point does not dominate
-    assert nondominated(points).tolist() == [0, 3]
+from bmh_ml.front_study.common import OUT_ENVIRONMENT_VARIABLE, get_out
 
 
 def test_the_output_directory_comes_from_the_environment_and_is_not_created_by_asking(tmp_path, monkeypatch):
