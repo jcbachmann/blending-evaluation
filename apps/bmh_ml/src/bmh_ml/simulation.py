@@ -2,8 +2,6 @@
 bundles record."""
 
 import numpy as np
-import pandas as pd
-from bmh.benchmark.material_deposition import Deposition, Material
 from bmh.helpers.bed_setup import STACKING_TIME, get_core_limits
 from bmh.helpers.continuous_drops import continuous_drops, drop_grid
 from bmh.helpers.stockpile_math import get_ideal_stockpile_volumes
@@ -12,40 +10,6 @@ from bmh.simulation.bsl_blending_simulator import simulate_batch
 from bmh_ml.settings import get_installed_simulator_version, get_simulator_settings
 
 MAX_TIMESTAMP = STACKING_TIME  # Duration of material and deposition; it has no influence on the results
-
-
-def generate_material(
-    material_variables: list[float],
-    total_volume: float,
-) -> Material:
-    return Material.from_data(
-        pd.DataFrame(
-            {
-                "timestamp": np.linspace(0, MAX_TIMESTAMP, len(material_variables)),
-                "volume": [total_volume / len(material_variables)] * len(material_variables),
-                "quality": material_variables,
-            }
-        )
-    )
-
-
-def generate_deposition(
-    deposition_variables: list[float],
-    bed_size_x: float,
-    bed_size_z: float,
-) -> Deposition:
-    return Deposition.from_data(
-        data=pd.DataFrame(
-            {
-                "timestamp": np.linspace(0, MAX_TIMESTAMP, len(deposition_variables)),
-                "x": deposition_variables,
-                "z": [0.5 * bed_size_z] * len(deposition_variables),
-            }
-        ),
-        bed_size_x=bed_size_x,
-        bed_size_z=bed_size_z,
-        reclaim_x_per_s=bed_size_x / MAX_TIMESTAMP,
-    )
 
 
 def evaluate_sim(

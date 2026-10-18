@@ -6,11 +6,12 @@ import pytest
 from bmh.benchmark.material_deposition import Material, MaterialDeposition
 from bmh.helpers.math import stdev
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
+from bmh.helpers.simple import generate_deposition, generate_material
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_slice_volume
 
 from bmh_ml import simulation
 from bmh_ml.settings import SimulatorSettings, simulator_settings
-from bmh_ml.simulation import evaluate_sim, evaluate_sim_with_profile, evaluate_sims_with_profiles, generate_deposition, generate_material
+from bmh_ml.simulation import evaluate_sim, evaluate_sim_with_profile, evaluate_sims_with_profiles
 
 BED_SIZE_X = 59.0
 BED_SIZE_Z = 20.0

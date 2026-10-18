@@ -7,11 +7,11 @@ import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition
 from bmh.helpers.bed_setup import X_MAX, X_MIN
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
+from bmh.helpers.simple import generate_deposition, generate_material
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
 from bmh_ml.front_study.common import get_out
 from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME
-from bmh_ml.simulation import generate_deposition, generate_material
 
 OUT = get_out()
 

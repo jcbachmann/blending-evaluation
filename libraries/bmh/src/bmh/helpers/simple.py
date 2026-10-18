@@ -6,6 +6,24 @@ from bmh.helpers.bed_setup import STACKING_TIME
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
 
+def generate_material(quality: list[float], total_volume: float, duration: float = STACKING_TIME) -> Material:
+    """A material of one portion per quality: equal shares of the total volume at evenly spaced timestamps from 0 to `duration`."""
+    n = len(quality)
+    return Material.from_data(pd.DataFrame({"timestamp": np.linspace(0, duration, n), "volume": [total_volume / n] * n, "quality": quality}))
+
+
+def generate_deposition(x_position: list[float], bed_size_x: float, bed_size_z: float, duration: float = STACKING_TIME) -> Deposition:
+    """A deposition of stacker positions at evenly spaced timestamps from 0 to `duration`, in the middle of the bed's depth. The reclaimer
+    covers the bed in the same time."""
+    n = len(x_position)
+    return Deposition.from_data(
+        data=pd.DataFrame({"timestamp": np.linspace(0, duration, n), "x": x_position, "z": [0.5 * bed_size_z] * n}),
+        bed_size_x=bed_size_x,
+        bed_size_z=bed_size_z,
+        reclaim_x_per_s=bed_size_x / duration,
+    )
+
+
 def generate_material_deposition(quality: list[float], total_volume: float, x_position: list[float], bed_size_x: int, bed_size_z: int) -> MaterialDeposition:
     """Helper function to generate material deposition from quality and x-position lists.
 
@@ -13,7 +31,8 @@ def generate_material_deposition(quality: list[float], total_volume: float, x_po
     blending simulation. It falls back on simple defaults: All variables are automatically matched in size. Timestamps are linearly spaced between 0 and max
     timestamp of 24 hours in seconds. The volume is divided equally among the qualities. The reclaimer covers the bed during the same 24
     hours. The z-position is set to be in the middle of the bed. Material quality is interpolated to up to 1000 chunks depending on the
-    total volume, with each chunk having a size of 100 units.
+    total volume, with each chunk having a size of 100 units. Without the interpolation, `generate_material` and `generate_deposition`
+    build the same material and deposition.
 
     :param quality: List of material qualities.
     :param total_volume: Total volume of material to be deposited.
@@ -23,7 +42,6 @@ def generate_material_deposition(quality: list[float], total_volume: float, x_po
 
     :return: MaterialDeposition object.
     """
-    max_timestamp = STACKING_TIME
     chunk_size = 100
     chunks = min(max(1, int(total_volume // chunk_size)), 1000)
     n = len(quality)
@@ -32,27 +50,8 @@ def generate_material_deposition(quality: list[float], total_volume: float, x_po
     interpolated_quality = np.interp(i_interpolated, i_quality, quality)
 
     return MaterialDeposition(
-        material=Material.from_data(
-            pd.DataFrame(
-                {
-                    "timestamp": np.linspace(0, max_timestamp, len(interpolated_quality)),
-                    "volume": [total_volume / len(interpolated_quality)] * len(interpolated_quality),
-                    "quality": interpolated_quality,
-                }
-            )
-        ),
-        deposition=Deposition.from_data(
-            data=pd.DataFrame(
-                {
-                    "timestamp": np.linspace(0, max_timestamp, len(x_position)),
-                    "x": x_position,
-                    "z": [0.5 * bed_size_z] * len(x_position),
-                }
-            ),
-            bed_size_x=bed_size_x,
-            bed_size_z=bed_size_z,
-            reclaim_x_per_s=bed_size_x / max_timestamp,
-        ),
+        material=generate_material(interpolated_quality, total_volume),
+        deposition=generate_deposition(x_position, bed_size_x, bed_size_z),
     )
 
 
