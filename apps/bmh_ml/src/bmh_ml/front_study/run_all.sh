@@ -11,6 +11,9 @@ MATERIAL="${1:-2}"
 : "${ENV:?set ENV to an environment made with: UV_PROJECT_ENVIRONMENT=\$ENV uv sync --locked --all-packages (never the repository .venv)}"
 export BMH_ML_STORE="${BMH_ML_STORE:-$REPO/workdir/bmh-ml-store}"
 cd "$REPO"
+# the simulator settings of the study (point drops, point rule of the ideal stockpile) for the steps that simulate at the default level
+BMH_ML_SIMULATOR="$("$ENV/bin/python" -c 'import json; from bmh_ml.front_study.common import get_study_settings; print(json.dumps(get_study_settings().as_dict()))')"
+export BMH_ML_SIMULATOR
 OUT="${BMH_ML_FRONT_STUDY_OUT:-workdir/front-interpolation/out}"
 # a full run starts these from scratch; refine, resolution and deepen alone resume where they were interrupted
 rm -f "$OUT/refined-material-$MATERIAL.npz" "$OUT/clouds-material-$MATERIAL.npz" "$OUT/deep-material-$MATERIAL.npz"

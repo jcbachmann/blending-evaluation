@@ -77,3 +77,17 @@ def test_simulations_are_quantized_as_the_pages_decode_them():
     assert quantize(samples) == [[1234, 4568, 2000, 5000]]
     assert spearman(np.array([1.0, 2.0, 3.0]), np.array([10.0, 20.0, 30.0])) == pytest.approx(1.0)
     assert spearman(np.array([1.0, 2.0, 3.0]), np.array([3.0, 2.0, 1.0])) == pytest.approx(-1.0)
+
+
+def test_the_study_simulates_with_point_drops_and_measures_against_the_constant_speed_chevron():
+    from bmh_ml.evaluation.chevron import chevron_deposition, chevron_path, get_default_variant
+    from bmh_ml.front_study.common import get_study_settings
+    from bmh_ml.settings import simulator_settings
+
+    settings = get_study_settings(4.0)
+
+    assert (settings.simulator, settings.ppm3, settings.reclaim_increment) == ("fast", 4.0, 1.0)
+    assert (settings.drops, settings.ideal_stockpile) == ("point", "point")
+    with simulator_settings(settings):
+        assert get_default_variant() == "constant-speed"
+        assert np.array_equal(chevron_path(get_default_variant())[1], chevron_deposition()[0])

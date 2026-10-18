@@ -36,7 +36,9 @@ CHEVRON_VARIANTS = ("stops-shrinking", "stops-fixed", "constant-speed")
 
 
 def chevron_deposition() -> np.ndarray:
-    """The constant-speed 19-pass Chevron in the 20 deposition variables, shape (1, 20): alternating between the two ends of the bed."""
+    """The constant-speed 19-pass Chevron in the 20 deposition variables, shape (1, 20): alternating between the two ends of the bed. The
+    reference of results with point drops; new results take `chevron_path` of their settings' variant (`get_default_variant`). The front
+    study uses it directly, as the reproduction of results made with point drops (`front_study.common`)."""
     return np.where(np.arange(DEPOSITION_LENGTH) % 2 == 0, X_MIN, X_MAX).astype(float)[None, :]
 
 

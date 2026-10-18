@@ -80,6 +80,16 @@ front: F1 0.768, F2 12.66 m³ (step 1's 64 simulations gave 0.769 and 12.63). Th
 better than Chevron in F1 (0.14 to 0.43 of it) and better in F2 (0.27 to 0.95). The interpolation lines never reach Chevron's F1 (at
 most 0.68 of it), but 58 % of the lines between front solutions (39 % of all lines) cross above Chevron's F2 somewhere along the way.
 
+**A reproduction of results with point drops.** The study was made before the simulators of `bmh` dropped the material continuously
+along the stacker path and before F2 integrated the ideal stockpile over each slice. It keeps the conditions of that time on purpose:
+every material portion is stacked at the stacker position of its timestamp (drops "point"), F2 compares with the ideal stockpile at the
+slice positions (rule "point"), and the reference is the constant-speed Chevron above, which the steps take directly from
+`chevron_deposition()` instead of the Chevron with stops and shrinking turning points that new results are measured against
+(`bmh_ml.evaluation.chevron.chevron_path`). `front_study.common.get_study_settings` holds these settings: `resolution.py` and
+`time_levels.py` simulate with them, `run_all.sh` exports them (`BMH_ML_SIMULATOR`) for the other steps, and `verify.py` takes those
+recorded with bundle `S2-v1`, which read as the same. A new study of the fronts would use the settings and the Chevron of the current
+code instead.
+
 ## 3. Recomputing
 
 Never use or sync the repository's `.venv`; make a separate environment once:

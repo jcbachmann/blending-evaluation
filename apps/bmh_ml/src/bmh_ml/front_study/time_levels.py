@@ -12,9 +12,9 @@ import time
 import numpy as np
 
 from bmh_ml.evaluation.chevron import chevron_deposition
-from bmh_ml.front_study.common import get_out
+from bmh_ml.front_study.common import get_out, get_study_settings
 from bmh_ml.front_study.resolution import LEVELS
-from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME, SimulatorSettings, simulator_settings
+from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME, simulator_settings
 from bmh_ml.simulation import evaluate_sim
 
 OUT = get_out()
@@ -34,7 +34,7 @@ def main(material_index: int):
     depositions = [list(d["deposition"][0]), list(chevron_deposition()[0])]
     result = {"cpu": cpu_name(), "python": platform.python_version(), "levels": {}}
     for name, ppm3 in LEVELS.items():
-        with simulator_settings(SimulatorSettings(ppm3=ppm3, reclaim_increment=1.0)):
+        with simulator_settings(get_study_settings(ppm3)):
             evaluate_sim(material, depositions[0], BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME)  # warm-up
             seconds = []
             for r in range(RUNS[name]):

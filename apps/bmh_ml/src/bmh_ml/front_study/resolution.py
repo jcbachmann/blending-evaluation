@@ -1,5 +1,6 @@
 """Simulates every final solution of one T6 material, and the reference (Chevron at maximum speed, 19 layers, `chevron_deposition`),
-REPEATS times at several particle resolutions (ppm3, particles per cubic meter; reclaim step fixed at 1 m) and keeps the single results.
+REPEATS times at several particle resolutions (ppm3, particles per cubic meter; reclaim step fixed at 1 m; point drops and the point rule
+of the ideal stockpile, as in the study, `common.get_study_settings`) and keeps the single results.
 
 Needs only verify.py (out/verify-material-<i>.npz: the material and the 83 final solutions of T6). The level L1 (ppm3 1) is the
 resolution of the optimization and of the interpolation lines: its clouds are the noise clouds of the
@@ -17,8 +18,8 @@ import numpy as np
 
 from bmh_ml.datasets.simulate import simulate_chunk
 from bmh_ml.evaluation.chevron import chevron_deposition
-from bmh_ml.front_study.common import get_out
-from bmh_ml.settings import SimulatorSettings, simulator_settings
+from bmh_ml.front_study.common import get_out, get_study_settings
+from bmh_ml.settings import simulator_settings
 
 OUT = get_out()
 N_JOBS = 14
@@ -33,7 +34,7 @@ def simulate_level(material: np.ndarray, deposition: np.ndarray, ppm3: float) ->
     rows = len(deposition)
     # the worker processes inherit the setting when they are spawned
     with (
-        simulator_settings(SimulatorSettings(ppm3=ppm3, reclaim_increment=1.0)),
+        simulator_settings(get_study_settings(ppm3)),
         ProcessPoolExecutor(max_workers=N_JOBS, mp_context=multiprocessing.get_context("spawn")) as executor,
     ):
         parts = list(executor.map(simulate_chunk, [material[None, :]] * rows, [row[None, :] for row in deposition], [REPEATS] * rows))
