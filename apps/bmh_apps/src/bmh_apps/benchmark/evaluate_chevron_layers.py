@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
+from bmh.helpers.bed_setup import get_core_limits
 from bmh.helpers.identifiers import get_identifier
 from bmh.helpers.math import weighted_avg_and_std
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
@@ -25,8 +26,7 @@ if TYPE_CHECKING:
 
 
 def simulate(layers, material: Material, bed_size_x: float, bed_size_z: float, ppm3: float) -> DataFrame:
-    x_min = 0.5 * bed_size_z
-    x_max = bed_size_x - x_min
+    x_min, x_max = get_core_limits(bed_size_x, bed_size_z)
 
     path = chevron_path(layers)
     max_part = path["part"].iloc[-1]

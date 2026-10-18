@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
+from bmh.helpers.bed_setup import STACKING_TIME
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
 
@@ -22,7 +23,7 @@ def generate_material_deposition(quality: list[float], total_volume: float, x_po
 
     :return: MaterialDeposition object.
     """
-    max_timestamp = 24 * 60 * 60
+    max_timestamp = STACKING_TIME
     chunk_size = 100
     chunks = min(max(1, int(total_volume // chunk_size)), 1000)
     n = len(quality)

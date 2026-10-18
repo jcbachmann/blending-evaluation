@@ -4,13 +4,14 @@ bundles record."""
 import numpy as np
 import pandas as pd
 from bmh.benchmark.material_deposition import Deposition, Material
+from bmh.helpers.bed_setup import STACKING_TIME, get_core_limits
 from bmh.helpers.continuous_drops import continuous_drops, drop_grid
 from bmh.helpers.stockpile_math import get_ideal_stockpile_volumes
 from bmh.simulation.bsl_blending_simulator import simulate_batch
 
 from bmh_ml.settings import get_installed_simulator_version, get_simulator_settings
 
-MAX_TIMESTAMP = 86400  # Duration of material and deposition; it has no influence on the results
+MAX_TIMESTAMP = STACKING_TIME  # Duration of material and deposition; it has no influence on the results
 
 
 def generate_material(
@@ -94,8 +95,7 @@ def evaluate_sims_with_profiles(
     material = np.atleast_2d(np.asarray(material_variables, dtype=float))
     deposition = np.atleast_2d(np.asarray(deposition_variables, dtype=float))
     inputs, count = material.shape
-    x_min = bed_size_z * 0.5
-    x_max = bed_size_x - x_min
+    x_min, x_max = get_core_limits(bed_size_x, bed_size_z)
 
     settings = get_simulator_settings()
     deposition_timestamps = np.linspace(0, MAX_TIMESTAMP, deposition.shape[1]) if deposition_times is None else np.asarray(deposition_times, float)

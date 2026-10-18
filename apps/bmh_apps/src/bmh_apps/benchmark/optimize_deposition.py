@@ -3,6 +3,7 @@
 import hydra
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import DepositionMeta
+from bmh.helpers.bed_setup import get_core_limits
 from bmh.optimization.homogenization_problem.generator import FixedRandomSpeedGenerator, FullSpeedGenerator, RandomEndGenerator, RandomSpeedGenerator
 from bmh.optimization.optimization import DepositionOptimizer
 from bmh_jmetalpy_extensions.util.generator import MultiGenerator
@@ -42,8 +43,7 @@ def main(cfg: DictConfig):
     material_meta = benchmark.get_material_meta(cfg.material_identifier)
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
-    x_min = 0.5 * bed_size_z
-    x_max = bed_size_x - x_min
+    x_min, x_max = get_core_limits(bed_size_x, bed_size_z)
     deposition_meta = DepositionMeta.create_empty(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,

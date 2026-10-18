@@ -5,6 +5,7 @@ import sys
 
 import numpy as np
 from bmh.benchmark.material_deposition import MaterialDeposition
+from bmh.helpers.bed_setup import X_MAX, X_MIN
 from bmh.helpers.reclaimed_material_evaluator import ReclaimedMaterialEvaluator
 from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
@@ -18,7 +19,7 @@ OUT = get_out()
 def seeded(material, deposition, seed: int) -> tuple[float, float]:
     md = MaterialDeposition(material=generate_material(list(material), TOTAL_VOLUME), deposition=generate_deposition(list(deposition), BED_SIZE_X, BED_SIZE_Z))
     sim = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=1.0, reclaimincrement=1.0, seed=seed)
-    e = ReclaimedMaterialEvaluator(reclaimed=sim.stack_reclaim(md), x_min=0.5 * BED_SIZE_Z, x_max=BED_SIZE_X - 0.5 * BED_SIZE_Z)
+    e = ReclaimedMaterialEvaluator(reclaimed=sim.stack_reclaim(md), x_min=X_MIN, x_max=X_MAX)
     return e.get_single_parameter_stdev("quality"), e.get_volume_stdev()
 
 

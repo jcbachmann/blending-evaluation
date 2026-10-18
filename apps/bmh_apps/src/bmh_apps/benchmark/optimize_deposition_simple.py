@@ -4,6 +4,7 @@ import os
 
 from bmh.benchmark.data import BenchmarkData
 from bmh.benchmark.material_deposition import DepositionMeta
+from bmh.helpers.bed_setup import get_core_limits
 from bmh.optimization.optimization import DepositionOptimizer
 
 from bmh_apps.helpers.bed_size import get_bed_size
@@ -21,6 +22,7 @@ def main():
     material_meta = benchmark.get_material_meta("scenario-mining-aae0")
     material = material_meta.get_material()
     bed_size_x, bed_size_z = get_bed_size(volume=material_meta.volume)
+    x_min, x_max = get_core_limits(bed_size_x, bed_size_z)
     deposition_meta = DepositionMeta.create_empty(
         bed_size_x=bed_size_x,
         bed_size_z=bed_size_z,
@@ -28,8 +30,8 @@ def main():
     )
     optimizer = DepositionOptimizer(
         deposition_meta=deposition_meta,
-        x_min=0.5 * bed_size_z,
-        x_max=bed_size_x - 0.5 * bed_size_z,
+        x_min=x_min,
+        x_max=x_max,
         population_size=500,
         max_evaluations=20000,
         offspring_size=30,

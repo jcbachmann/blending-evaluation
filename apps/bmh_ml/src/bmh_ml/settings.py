@@ -7,18 +7,14 @@ import re
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 
+# The bed, the volume and the core limits of the deposition positions (bmh.helpers.bed_setup)
+from bmh.helpers.bed_setup import BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME, X_MAX, X_MIN  # noqa: F401
+
 MATERIAL_LENGTH: int = 50  # Length of material variables array
 DEPOSITION_LENGTH: int = 20  # Length of deposition variables array
-BED_SIZE_X: int = 59  # Bed size in X dimension
-BED_SIZE_Z: int = 20  # Bed size in Z dimension
-TOTAL_VOLUME: int = 2500  # Total volume for simulation
 PROFILE_LENGTH: int = BED_SIZE_X + 1  # Reclaimed slices, one per unit of the bed length (positions 0 to BED_SIZE_X)
 MATERIAL_MIN: int = 5
 MATERIAL_MAX: int = 10
-
-# Deposition positions are limited to the core of the stockpile
-X_MIN: float = 0.5 * BED_SIZE_Z
-X_MAX: float = BED_SIZE_X - X_MIN
 
 
 SIMULATOR_ENVIRONMENT_VARIABLE = "BMH_ML_SIMULATOR"

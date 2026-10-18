@@ -13,14 +13,14 @@ or move inwards as the stockpile grows.
 import numpy as np
 import pandas as pd
 from bmh.benchmark.material_deposition import Deposition, Material, MaterialDeposition
+from bmh.helpers.bed_setup import get_core_limits
 from bmh.helpers.chevron import stops_path
 from bmh.helpers.stockpile_math import get_stockpile_height, get_stockpile_volume
 
 BED_SIZE_X = 60.0
 BED_SIZE_Z = 20.0
 RADIUS = 0.5 * BED_SIZE_Z
-X_MIN = RADIUS
-X_MAX = BED_SIZE_X - RADIUS
+X_MIN, X_MAX = get_core_limits(BED_SIZE_X, BED_SIZE_Z)
 # Material increments: at least STEPS, and enough for the stacker to cover a pass in about 80 increments
 STEPS = 4000
 STEPS_PER_LAYER = 80
