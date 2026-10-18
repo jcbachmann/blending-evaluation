@@ -26,13 +26,16 @@ _NUMPY_ONLY = False
 
 def drop_grid(simulator: str, ppm3: float, bed_size_x: float, bed_size_z: float) -> tuple[float, float]:
     """Cell size in x and z at which a simulator distinguishes drop positions: the particle size of the fast simulator, the column
-    spacing of the lattice, the grid cells of the cone simulator (about the particle size, adjusted to tile the bed exactly)."""
+    spacing of the lattice, the grid cells of the cone simulator (about the particle size, adjusted to tile the bed exactly), the cells of
+    the formula simulator along the bed (like the cone's) and one cell across it (it needs all drops on one line along the bed)."""
     size = ppm3 ** (-1.0 / 3.0)
     if simulator in ("fast", "detailed"):
         # the detailed simulation releases a stream of spheres of this size around each drop
         return size, size
     if simulator == "cone":
         return bed_size_x / max(1, round(bed_size_x / size)), bed_size_z / max(1, round(bed_size_z / size))
+    if simulator == "formula":
+        return bed_size_x / max(1, round(bed_size_x / size)), bed_size_z
     if simulator == "lattice":
         # BlendingSimulatorLattice: spheres of diameter d on rows sqrt(3) / 2 d apart, compressed vertically to a 45 degree pile
         vertical_scale = 1.0 / (4.0 / 3.0 * math.sqrt(math.pi / math.sqrt(3.0)))

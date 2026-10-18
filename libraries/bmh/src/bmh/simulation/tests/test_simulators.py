@@ -181,8 +181,47 @@ def test_cone_conserves_the_volume_and_is_deterministic():
 
 @cone_available
 def test_cone_needs_a_single_simulator():
-    with pytest.raises(ValueError, match="one of the detailed, the lattice and the cone"):
+    with pytest.raises(ValueError, match="one of the detailed, the lattice, the cone and the formula"):
         simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, lattice=True, cone=True)
+
+
+def formula_simulator_available() -> bool:
+    """Bindings built against a simulator release with the formula simulation (after 2026.3)"""
+    try:
+        simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, formula=True)
+    except (TypeError, RuntimeError):
+        return False
+    return True
+
+
+formula_available = pytest.mark.skipif(not formula_simulator_available(), reason="blending_simulator_lib built without the formula simulator")
+
+
+@formula_available
+def test_formula_conserves_the_volume_and_is_deterministic():
+    data = make_material_deposition().drops(*BslBlendingSimulator(BED_SIZE_X, BED_SIZE_Z, ppm3=8.0, formula=True).drop_grid())
+    columns = data.columns.to_list()
+    inputs = np.stack([data.to_numpy(), data.to_numpy()])
+    batch = simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=8.0, seed=1, formula=True, threads=2, reclaimincrement=1.0)
+    np.testing.assert_allclose(batch["volume"].sum(axis=1), TOTAL_VOLUME, rtol=1e-12)
+    np.testing.assert_array_equal(batch["volume"][0], batch["volume"][1])  # the seed changes nothing
+    single = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=8.0, formula=True, reclaimincrement=1.0)
+    expected = single.stack_reclaim_array(inputs[0], columns)
+    np.testing.assert_array_equal(batch["volume"][0], expected["volume"])
+    # the cone simulation, which the formula reduces to the stacker line, reclaims about the same volumes
+    cone = simulate_batch(inputs[:1], columns, BED_SIZE_X, BED_SIZE_Z, ppm3=8.0, cone=True, reclaimincrement=1.0)
+    assert np.sqrt(np.mean((cone["volume"][0] - batch["volume"][0]) ** 2)) < 0.03 * TOTAL_VOLUME / BED_SIZE_X
+
+
+@formula_available
+def test_formula_rejects_lateral_stacker_motion_and_a_second_simulator():
+    data = np.array([[[20.0, 5.0, 10.0, 1.0], [30.0, 6.0, 10.0, 1.0]]])
+    with pytest.raises(ValueError, match="one line along the bed"):
+        simulate_batch(data, ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, formula=True)
+    with pytest.raises(ValueError, match="one of the detailed, the lattice, the cone and the formula"):
+        simulate_batch(data, ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, cone=True, formula=True)
+    with pytest.raises(ValueError, match="circular"):
+        blending_simulator_lib.BlendingSimulatorLib(BED_SIZE_X, BED_SIZE_Z, 45.0, 1.0, True, 0.87, 1.0, 5.0, False, 1.0, formula=True)
 
 
 @pytest.mark.parametrize(

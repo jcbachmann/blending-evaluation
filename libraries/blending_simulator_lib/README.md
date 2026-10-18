@@ -24,7 +24,8 @@ sim = BlendingSimulatorLib(
     seed=1,  # optional, random if not given
     lattice=True,  # lattice simulation on a hexagonal close-packed lattice (angle of repose 45°) instead of the fast one
     record_particles=True,  # keep every particle for get_particles()
-    # cone=True would choose the cone simulation instead: no particles, every stacked row one portion forming a 45° cone over the pile
+    # cone=True would choose the cone simulation instead: no particles, every stacked row one portion forming a 45° cone over the pile;
+    # formula=True the formula simulation, the cone simulation reduced to the stacker line (all rows at one z, no circular beds)
 )
 sim.stack_list(data, ["timestamp", "x", "z", "volume", "quality"])  # numpy array, one row per increment; other columns are parameters
 sim.get_heights()  # height map, list of rows along z
@@ -35,7 +36,9 @@ sim.reclaim()  # dict of x, volume and the parameters per reclaimed slice
 The simulators are described in the README of the `blending-simulation` repository. `bmh.simulation.BslBlendingSimulator` wraps this
 class in the `BlendingSimulator` interface of `bmh`.
 
-`simulate_batch(data, columns, ..., lattice=False, threads=1, cone=False)` stacks and reclaims many inputs in one call.
+`simulate_batch(data, columns, ..., lattice=False, threads=1, cone=False, formula=False)` stacks and reclaims many inputs in one call.
+The formula simulation needs a simulator release after 2026.3; bindings built against an older one raise a `RuntimeError` for
+`formula=True`.
 `continuous_drops(volumes, parameters, portion_times, path_times, path_x, path_z, cell_x, cell_z)` turns a material that flows while the
 stacker moves along a piecewise linear path into rows (x, z, volume, parameters): one drop per grid cell the path crosses, with the volume
 of the time spent over it (`bmh.helpers.continuous_drops` wraps it, with the cell sizes of each simulator in `drop_grid`).

@@ -68,13 +68,15 @@ def test_lateral_motion_is_cut_at_the_cells_in_z():
     np.testing.assert_allclose(rows[:, 1], [1.75, 2.25, 2.75, 3.25])
 
 
-@pytest.mark.parametrize("simulator", ["fast", "cone", "lattice"])
+@pytest.mark.parametrize("simulator", ["fast", "cone", "formula", "lattice"])
 def test_the_drop_grid_of_each_simulator(simulator):
     cx, cz = drop_grid(simulator, 8.0, 59.0, 20.0)
     if simulator == "fast":
         assert cx == cz == pytest.approx(0.5)
     elif simulator == "cone":
         assert (cx, cz) == (pytest.approx(59.0 / 118), pytest.approx(0.5))
+    elif simulator == "formula":
+        assert (cx, cz) == (pytest.approx(59.0 / 118), 20.0)
     else:
         assert cz == pytest.approx(cx * np.sqrt(3) / 2)
     with pytest.raises(ValueError, match="unknown simulator"):

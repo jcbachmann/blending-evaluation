@@ -30,6 +30,7 @@ class BlendingSimulatorLib:
         record_particles: bool = False,
         cone: bool = False,
         detailed_parameters: dict | None = None,
+        formula: bool = False,
     ) -> None: ...
     def get_heights(self, finish_stacking: bool = True) -> list[list[float]]: ...
     def get_particles(self) -> dict: ...
@@ -60,6 +61,7 @@ def simulate_batch(
     cone: bool = False,
     detailed: bool = False,
     detailed_parameters: dict | None = None,
+    formula: bool = False,
 ) -> dict: ...
 def continuous_drops(
     volumes: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex],

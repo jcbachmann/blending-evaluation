@@ -62,6 +62,12 @@ target_link_libraries(
 
 target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_VERSION="${BLENDING_SIMULATOR_VERSION}")
 
+# Simulators after 2026.3 have the formula simulation (the cone simulation reduced to the stacker line)
+if(TARGET BlendingSimulator::FormulaLib)
+    target_link_libraries(_blending_simulator_lib PRIVATE BlendingSimulator::FormulaLib)
+    target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_FORMULA)
+endif()
+
 if(BUILD_DETAILED_SIMULATOR)
     target_link_libraries(_blending_simulator_lib PRIVATE BlendingSimulator::DetailedLib)
     target_compile_definitions(_blending_simulator_lib PRIVATE BUILD_DETAILED_SIMULATOR)

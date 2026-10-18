@@ -10,11 +10,17 @@ from .blending_simulator import BlendingSimulator, Material, MaterialDeposition
 
 
 def optional_arguments(
-    seed: int | None, lattice: bool, record_particles: bool, cone: bool = False, detailed_parameters: dict[str, float] | None = None
+    seed: int | None,
+    lattice: bool,
+    record_particles: bool,
+    cone: bool = False,
+    detailed_parameters: dict[str, float] | None = None,
+    formula: bool = False,
 ) -> tuple[tuple, dict]:
     """
     Arguments of newer simulator versions, only when used: bindings built against simulator v2026.1 have no seed, lattice and particle
-    recording, those before 2026.3 no cone simulator and no parameters of the detailed simulation (the discrete element method)
+    recording, those before 2026.3 no cone simulator and no parameters of the detailed simulation (the discrete element method), those
+    of 2026.3 no formula simulator
     """
     seed_argument = () if seed is None else (seed,)
     options: dict = {}
@@ -22,6 +28,8 @@ def optional_arguments(
         options["lattice"] = True
     if cone:
         options["cone"] = True
+    if formula:
+        options["formula"] = True
     if record_particles:
         options["record_particles"] = True
     if detailed_parameters:
@@ -59,6 +67,7 @@ def simulate_batch(
     cone: bool = False,
     detailed: bool = False,
     detailed_parameters: dict[str, float] | None = None,
+    formula: bool = False,
 ) -> dict[str, np.ndarray]:
     """
     Stack and reclaim many inputs at once like BslBlendingSimulator, in one call into the simulator: no Python per simulation,
@@ -68,6 +77,8 @@ def simulate_batch(
     :param seed: input i is seeded with seed + i; without a seed every simulation draws its own
     :param threads: simulations at the same time; 0 for one per core
     :param cone: the cone simulator (every row one portion, no particles) instead of the fast one
+    :param formula: the formula simulator (the cone simulation reduced to the stacker line: every row one portion, all rows of an input at
+        one z) instead of the fast one
     :param detailed: the detailed simulation (discrete element method) instead of the fast one
     :param detailed_parameters: parameters of the detailed simulation by their snake_case names (e.g. rolling_friction, flow_rate,
         threads for the threads of each simulation), see DetailedParameters in the simulator
@@ -79,6 +90,8 @@ def simulate_batch(
     batch = getattr(blending_simulator_lib, "simulate_batch", None)
     if batch is not None:
         extra: dict = {"cone": True} if cone else {}
+        if formula:
+            extra["formula"] = True
         if detailed:
             extra |= {"detailed": True, "detailed_parameters": detailed_parameters}
         result = batch(data, columns, bed_size_x, bed_size_z, reclaimangle, ppm3, False, eight, reclaimincrement, seed, lattice, threads, **extra)
@@ -103,6 +116,7 @@ def simulate_batch(
             cone=cone,
             detailed=detailed,
             detailed_parameters=detailed_parameters,
+            formula=formula,
         ).stack_reclaim_array(input_data, columns)
         for i, input_data in enumerate(data)
     ]
@@ -127,9 +141,11 @@ class BslBlendingSimulator(BlendingSimulator):
         record_particles: bool = False,
         cone: bool = False,
         detailed_parameters: dict[str, float] | None = None,
+        formula: bool = False,
     ):
         """bulkdensity and dropheight are not used by simulators from 2026.3 on; detailed_parameters sets the parameters of their detailed
-        simulation (discrete element method) by snake_case names, e.g. {"rolling_friction": 0.2, "threads": 4}"""
+        simulation (discrete element method) by snake_case names, e.g. {"rolling_friction": 0.2, "threads": 4}; formula chooses the formula
+        simulation (the cone simulation reduced to the stacker line; the stacker must not move across the bed, no circular beds)"""
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
             reclaimangle = DEFAULT_RECLAIM_ANGLE
@@ -148,10 +164,10 @@ class BslBlendingSimulator(BlendingSimulator):
         if reclaimincrement is None:
             reclaimincrement = default_reclaim_increment(ppm3)
 
-        self.simulator = "cone" if cone else "lattice" if lattice else "detailed" if detailed else "fast"
+        self.simulator = "cone" if cone else "formula" if formula else "lattice" if lattice else "detailed" if detailed else "fast"
         self.ppm3 = ppm3
 
-        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters)
+        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters, formula)
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
             bed_size_z,

@@ -18,6 +18,9 @@ using namespace pybind11::literals;
 
 #include "BlendingSimulator/BlendingSimulatorFast.h"
 #include "BlendingSimulator/BlendingSimulatorCone.h"
+#ifdef BLENDING_SIMULATOR_FORMULA
+#include "BlendingSimulator/BlendingSimulatorFormula.h"
+#endif
 #include "BlendingSimulator/ContinuousDrops.h"
 #include "BlendingSimulator/BlendingSimulatorLattice.h"
 #ifdef BUILD_DETAILED_SIMULATOR
@@ -70,6 +73,19 @@ void applyDetailedParameters(bs_::SimulationParameters& simulationParameters, co
 	}
 #endif
 }
+
+// Only one simulator can be chosen; the formula simulation exists in simulator releases after 2026.3
+void checkSimulatorChoice(bool detailed, bool lattice, bool cone, bool formula)
+{
+	if (int(detailed) + int(lattice) + int(cone) + int(formula) > 1) {
+		throw std::invalid_argument("choose one of the detailed, the lattice, the cone and the formula simulator");
+	}
+#ifndef BLENDING_SIMULATOR_FORMULA
+	if (formula) {
+		throw std::runtime_error("the formula simulator needs bindings built against a simulator release after 2026.3");
+	}
+#endif
+}
 }
 
 namespace bs = blendingsimulator;
@@ -79,7 +95,7 @@ class BlendingSimulatorLibPython
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
 			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
-			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters)
+			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters, bool formula)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -97,11 +113,13 @@ class BlendingSimulatorLibPython
 			simulationParameters.seed = seed;
 			applyDetailedParameters(simulationParameters, detailedParameters);
 
-			if (int(detailed) + int(lattice) + int(cone) > 1) {
-				throw std::invalid_argument("choose one of the detailed, the lattice and the cone simulator");
-			}
+			checkSimulatorChoice(detailed, lattice, cone, formula);
 			if (cone) {
 				simulator = new bs::BlendingSimulatorCone<bs::AveragedParameters>(simulationParameters);
+			} else if (formula) {
+#ifdef BLENDING_SIMULATOR_FORMULA
+				simulator = new bs::BlendingSimulatorFormula<bs::AveragedParameters>(simulationParameters);
+#endif
 			} else if (lattice) {
 				simulator = new bs::BlendingSimulatorLattice<bs::AveragedParameters>(simulationParameters);
 			} else if (detailed) {
@@ -310,11 +328,9 @@ class BlendingSimulatorLibPython
 py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array::forcecast>& data, const std::vector<std::string>& columns,
 	float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular, float eightLikelihood,
 	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads, bool cone, bool detailed,
-	std::optional<py::dict> detailedParameters)
+	std::optional<py::dict> detailedParameters, bool formula)
 {
-	if (int(detailed) + int(lattice) + int(cone) > 1) {
-		throw std::invalid_argument("choose one of the detailed, the lattice and the cone simulator");
-	}
+	checkSimulatorChoice(detailed, lattice, cone, formula);
 #ifndef BUILD_DETAILED_SIMULATOR
 	if (detailed) {
 		throw std::runtime_error("Detailed simulator not available on this platform.");
@@ -376,6 +392,10 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 		std::unique_ptr<bs::BlendingSimulator<bs::AveragedParameters>> simulator;
 		if (cone) {
 			simulator = std::make_unique<bs::BlendingSimulatorCone<bs::AveragedParameters>>(p);
+		} else if (formula) {
+#ifdef BLENDING_SIMULATOR_FORMULA
+			simulator = std::make_unique<bs::BlendingSimulatorFormula<bs::AveragedParameters>>(p);
+#endif
 		} else if (lattice) {
 			simulator = std::make_unique<bs::BlendingSimulatorLattice<bs::AveragedParameters>>(p);
 		} else if (detailed) {
@@ -510,7 +530,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
 			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool, bool,
-				std::optional<py::dict>>(),
+				std::optional<py::dict>, bool>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -525,7 +545,8 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"lattice"_a = false,
 			"record_particles"_a = false,
 			"cone"_a = false,
-			"detailed_parameters"_a = py::none()
+			"detailed_parameters"_a = py::none(),
+			"formula"_a = false
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
@@ -550,7 +571,8 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"threads"_a = 1,
 		"cone"_a = false,
 		"detailed"_a = false,
-		"detailed_parameters"_a = py::none()
+		"detailed_parameters"_a = py::none(),
+		"formula"_a = false
 	);
 
 	m.def(
