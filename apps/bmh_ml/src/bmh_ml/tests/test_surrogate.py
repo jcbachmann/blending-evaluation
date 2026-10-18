@@ -10,7 +10,8 @@ from sklearn.preprocessing import StandardScaler
 tf = pytest.importorskip("tensorflow")
 
 from bmh_ml import train_lstm_model  # noqa: E402
-from bmh_ml.optimize_model import HomogenizationProblemMl  # noqa: E402
+from bmh_ml.datasets.manifest import SCOPE_GENERAL_MATERIAL  # noqa: E402
+from bmh_ml.problems import ModelProblem  # noqa: E402
 from bmh_ml.settings import (  # noqa: E402
     DATA_DIR,
     DEPOSITION_LENGTH,
@@ -75,22 +76,21 @@ def test_f2_only_depends_on_the_deposition():
 def test_problem_fixes_the_material_and_bounds_the_deposition():
     material = np.linspace(5.0, 10.0, MATERIAL_LENGTH)
 
-    problem = HomogenizationProblemMl(surrogate=Surrogate.load(MODEL_SET), material_variables=material)
+    problem = ModelProblem(Surrogate.load(MODEL_SET), SCOPE_GENERAL_MATERIAL, material)
 
-    assert problem.n_var == FEATURES
-    assert np.array_equal(problem.xl[:MATERIAL_LENGTH], material)
-    assert np.array_equal(problem.xu[:MATERIAL_LENGTH], material)
-    assert np.all(problem.xl[MATERIAL_LENGTH:] == X_MIN)
-    assert np.all(problem.xu[MATERIAL_LENGTH:] == X_MAX)
+    assert problem.n_var == DEPOSITION_LENGTH
+    assert np.all(problem.xl == X_MIN)
+    assert np.all(problem.xu == X_MAX)
 
 
 @pytest.mark.usefixtures("surrogate_files")
-def test_problem_evaluates_with_the_surrogate():
+def test_problem_evaluates_with_the_surrogate_on_the_material_followed_by_the_deposition():
     surrogate = Surrogate.load(MODEL_SET)
-    problem = HomogenizationProblemMl(surrogate=surrogate, material_variables=np.linspace(5.0, 10.0, MATERIAL_LENGTH))
-    x = np.column_stack([np.tile(np.linspace(5.0, 10.0, MATERIAL_LENGTH), (4, 1)), np.random.default_rng(3).uniform(X_MIN, X_MAX, (4, DEPOSITION_LENGTH))])
+    material = np.linspace(5.0, 10.0, MATERIAL_LENGTH)
+    problem = ModelProblem(surrogate, SCOPE_GENERAL_MATERIAL, material)
+    deposition = np.random.default_rng(3).uniform(X_MIN, X_MAX, (4, DEPOSITION_LENGTH))
 
-    assert np.array_equal(problem.evaluate(x), surrogate.predict(x))
+    assert np.array_equal(problem.evaluate(deposition), surrogate.predict(np.column_stack([np.tile(material, (4, 1)), deposition])))
 
 
 def test_models_written_by_the_trainer_can_be_used_by_the_surrogate(tmp_path, monkeypatch):

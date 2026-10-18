@@ -14,12 +14,12 @@ from pathlib import Path
 import numpy as np
 from bmh.helpers.fronts import get_hypervolume_2d, get_nondominated
 
-from bmh_ml.datasets.manifest import Dataset, make_features
+from bmh_ml.datasets.manifest import Dataset
 from bmh_ml.datasets.simulate import simulate
 from bmh_ml.evaluation.chevron import get_chevron_metrics, get_chevron_objectives
 from bmh_ml.evaluation.noise import OBJECTIVES
 from bmh_ml.models.base import Model
-from bmh_ml.settings import DEPOSITION_LENGTH, X_MAX, X_MIN
+from bmh_ml.settings import DEPOSITION_LENGTH
 
 LOADED_MODELS: dict[Path, Model] = {}
 REFERENCE_POINT = 1.1  # in objectives normalized to the reference front (0 its best, 1 its worst value), so its extremes count as well
@@ -54,32 +54,17 @@ class TransferResult:
     reference_index: np.ndarray | None = None  # with several materials: the material of each row of `reference`
 
 
-def get_problem_class():
-    from pymoo.core.problem import Problem
-
-    class ModelProblem(Problem):
-        """Optimizes the deposition for a fixed material with the objectives predicted by a model of any scope."""
-
-        def __init__(self, model: Model, scope: str, material: np.ndarray):
-            self.model, self.scope, self.material = model, scope, material
-            super().__init__(n_var=DEPOSITION_LENGTH, n_obj=2, xl=np.full(DEPOSITION_LENGTH, X_MIN), xu=np.full(DEPOSITION_LENGTH, X_MAX))
-
-        def _evaluate(self, x, out, *_args, **_kwargs):
-            out["F"] = self.model.predict(make_features(self.scope, self.material, x))
-
-    return ModelProblem
-
-
 def optimize_once(model: Model | Path, scope: str, material: np.ndarray, seed: int, population_size: int, evaluations: int) -> tuple[np.ndarray, np.ndarray]:
     """The final front of one NSGA-III run on the model (or the model stored in a directory): depositions and predicted objectives."""
     from bmh_ml.experiment import optimize
     from bmh_ml.models.registry import load_model
+    from bmh_ml.problems import ModelProblem
 
     if isinstance(model, Path):
         if model not in LOADED_MODELS:  # a worker process runs many optimizations of the same model, it loads the model once
             LOADED_MODELS[model] = load_model(model)
         model = LOADED_MODELS[model]
-    problem = get_problem_class()(model, scope, np.atleast_2d(material))
+    problem = ModelProblem(model, scope, material)
     objectives, variables = optimize(problem, population_size, evaluations, seed)
     return np.atleast_2d(variables), np.atleast_2d(objectives)
 
@@ -116,22 +101,6 @@ def optimize_model_many(
     return results
 
 
-def get_simulator_problem_class():
-    from pymoo.core.problem import Problem
-
-    class SimulatorProblem(Problem):
-        """Optimizes the deposition for a fixed material with the objectives of single simulations, as an optimizer without a model would."""
-
-        def __init__(self, material: np.ndarray):
-            self.material = material
-            super().__init__(n_var=DEPOSITION_LENGTH, n_obj=2, xl=np.full(DEPOSITION_LENGTH, X_MIN), xu=np.full(DEPOSITION_LENGTH, X_MAX))
-
-        def _evaluate(self, x, out, *_args, **_kwargs):
-            out["F"] = simulate(self.material, x, 1, n_jobs=1)[0]
-
-    return SimulatorProblem
-
-
 def optimize_simulator_once(
     material: np.ndarray, seed: int, population_size: int, evaluations: int, initial: np.ndarray | None = None, prescreen=None
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -140,8 +109,9 @@ def optimize_simulator_once(
     offspring are simulated."""
     from bmh_ml.experiment import optimize
     from bmh_ml.prescreen import optimize_prescreened
+    from bmh_ml.problems import SimulatorProblem
 
-    problem = get_simulator_problem_class()(np.atleast_2d(material))
+    problem = SimulatorProblem(material)
     if prescreen is None:
         objectives, variables = optimize(problem, population_size, evaluations, seed, initial)
     else:

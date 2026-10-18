@@ -65,6 +65,22 @@ def get_initial_population(initial: np.ndarray, population_size: int, problem: P
     return np.vstack([given, random])
 
 
+def make_nsga3(problem: Problem, population_size: int, seed: int, initial: np.ndarray | None = None, n_offsprings: int | None = None) -> NSGA3:
+    """NSGA-III as every optimization of bmh_ml runs it: one reference direction per solution of the population (two objectives), SBX
+    crossover (probability 0.9, eta 15), polynomial mutation (eta 20), no duplicates. The first population is random, or starts from the
+    solutions `initial` (`get_initial_population`). `n_offsprings`: offspring per generation, default the population size."""
+    sampling = FloatRandomSampling() if initial is None else get_initial_population(initial, population_size, problem, seed)
+    return NSGA3(
+        pop_size=population_size,
+        n_offsprings=n_offsprings,
+        ref_dirs=UniformReferenceDirectionFactory(2, n_points=population_size).do(),
+        sampling=sampling,
+        crossover=SBX(prob=0.9, eta=15),
+        mutation=PM(eta=20),
+        eliminate_duplicates=True,
+    )
+
+
 def optimize(
     problem: Problem, population_size: int, evaluations: int, seed: int, initial: np.ndarray | None = None, callback=None
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -73,15 +89,7 @@ def optimize(
     generations = evaluations // population_size
     if generations < 1:
         raise ValueError(f"{evaluations} evaluations are not enough for one generation of {population_size} solutions")
-    sampling = FloatRandomSampling() if initial is None else get_initial_population(initial, population_size, problem, seed)
-    algorithm = NSGA3(
-        pop_size=population_size,
-        ref_dirs=UniformReferenceDirectionFactory(2, n_points=population_size).do(),
-        sampling=sampling,
-        crossover=SBX(prob=0.9, eta=15),
-        mutation=PM(eta=20),
-        eliminate_duplicates=True,
-    )
+    algorithm = make_nsga3(problem, population_size, seed, initial)
     options = {} if callback is None else {"callback": callback}  # None would replace pymoo's default callback
     result = minimize(problem, algorithm, ("n_gen", generations), seed=seed, verbose=False, **options)
     return result.F, result.X

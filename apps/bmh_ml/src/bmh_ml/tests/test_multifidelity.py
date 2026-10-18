@@ -74,11 +74,11 @@ def test_a_model_is_tested_against_the_references_of_another_level():
 
 def test_the_initial_population_takes_the_given_solutions_and_fills_up_at_random():
     pytest.importorskip("pymoo")
-    from bmh_ml.evaluation.transfer import get_simulator_problem_class
     from bmh_ml.experiment import get_initial_population
+    from bmh_ml.problems import SimulatorProblem
     from bmh_ml.settings import X_MAX, X_MIN
 
-    problem = get_simulator_problem_class()(random_materials(1, np.random.default_rng(0)))
+    problem = SimulatorProblem(random_materials(1, np.random.default_rng(0)))
     given = random_depositions(3, np.random.default_rng(1))
 
     population = get_initial_population(np.vstack([given, given[:1]]), 8, problem, seed=0)

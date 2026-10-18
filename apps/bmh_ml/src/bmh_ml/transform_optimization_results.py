@@ -174,7 +174,7 @@ def plot_metric_scatter(
 def get_result_material(data: dict) -> np.ndarray | None:
     """The material a result was made for.
 
-    Results store it and results on the surrogate contain it in their variables, older results of the simulation do not know it.
+    Results store it and older results on the surrogate contain it in their variables, older results of the simulation do not know it.
     """
     if "material_variables" in data:
         return np.asarray(data["material_variables"], dtype=float)
@@ -193,13 +193,13 @@ def get_fallback_material(training_data_file: str) -> np.ndarray:
     return load_fixed_material_variables(training_data_file)
 
 
-def load_result_file(path: str, expected_variable_length: int) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
+def load_result_file(path: str, expected_variable_lengths: tuple[int, ...]) -> tuple[np.ndarray, np.ndarray, np.ndarray | None]:
     """The variables, the objectives and the material of a result, which is None if the result does not know it."""
     with open(path) as f:
         data = json.load(f)
     variables = np.asarray(data["variables"], dtype=float)
     objectives = np.asarray(data["objectives"], dtype=float)
-    if variables.shape[1] != expected_variable_length:
+    if variables.shape[1] not in expected_variable_lengths:
         logging.warning(f"Unexpected variable length in {path}: {variables.shape[1]}")
     return variables, objectives, get_result_material(data)
 
@@ -245,8 +245,8 @@ def recompute_lstm_results_with_simulation() -> None:
 
     for path in iter_json_files(lstm_dir):
         try:
-            # variables here are full vectors (70): first 50 materials (fixed), last 20 depositions
-            variables, objectives, material_variables = load_result_file(path, MATERIAL_LENGTH + DEPOSITION_LENGTH)
+            # the depositions (20), in results from before 2026-10-18 after the fixed material (70 in all)
+            variables, objectives, material_variables = load_result_file(path, (DEPOSITION_LENGTH, MATERIAL_LENGTH + DEPOSITION_LENGTH))
             dep_vars = variables[:, -DEPOSITION_LENGTH:]
             context = get_cache_context(material_variables, model_set=None)
             recomputed = recompute_cached(path, "sim", dep_vars, partial(compute_with_simulation, material_variables=material_variables), context)
@@ -270,7 +270,7 @@ def recompute_simulation_results_with_lstm(model_set: str, training_data_file: s
     for path in iter_json_files(sim_dir):
         try:
             # variables here are deposition-only (20)
-            variables, objectives, material_variables = load_result_file(path, DEPOSITION_LENGTH)
+            variables, objectives, material_variables = load_result_file(path, (DEPOSITION_LENGTH,))
             if material_variables is None:
                 material_variables = get_fallback_material(training_data_file)
             context = get_cache_context(material_variables, model_set=model_set)

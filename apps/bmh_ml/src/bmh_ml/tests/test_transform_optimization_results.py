@@ -122,6 +122,21 @@ def test_results_on_the_surrogate_are_recomputed_for_the_material_they_were_made
     assert all(material.tolist() == OTHER_MATERIAL.tolist() for material in used)
 
 
+@pytest.mark.usefixtures("no_plots")
+def test_results_on_the_surrogate_with_only_the_depositions_are_recomputed_for_their_stored_material(tmp_path, monkeypatch, caplog):
+    monkeypatch.chdir(tmp_path)
+    used = []
+    monkeypatch.setattr(transform, "evaluate_sim", lambda material_variables, **_kwargs: (used.append(np.array(material_variables)), (0.5, 5.0))[1])
+    write_result(tmp_path / "output" / "lstm_model", "new_format.json", variables=deposition_variables(), material_variables=OTHER_MATERIAL.tolist())
+
+    with caplog.at_level(logging.WARNING):
+        transform.recompute_lstm_results_with_simulation()
+
+    assert len(used) == SOLUTIONS
+    assert all(material.tolist() == OTHER_MATERIAL.tolist() for material in used)
+    assert "Unexpected variable length" not in caplog.text
+
+
 class FakeSurrogate:
     model_set = "fake_set"
 

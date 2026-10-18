@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 from pymoo.problems import get_problem
 
-from bmh_ml.experiment import add_experiment_arguments, get_design, run_experiments
+from bmh_ml.experiment import add_experiment_arguments, get_design, make_nsga3, optimize, run_experiments
 
 MATERIAL = np.linspace(5.0, 10.0, 50)
 
@@ -127,3 +127,34 @@ def test_run_experiments_rejects_less_evaluations_than_one_generation(tmp_path, 
 
     with pytest.raises(ValueError, match="5 evaluations are not enough for one generation of 10 solutions"):
         run_experiments(get_problem("zdt1", n_var=5), "test_model", args, MATERIAL)
+
+
+def test_nsga3_has_one_reference_direction_per_solution_and_as_many_offspring_unless_told_otherwise():
+    problem = get_problem("zdt1", n_var=5)
+
+    algorithm = make_nsga3(problem, 12, seed=1)
+    fewer = make_nsga3(problem, 12, seed=1, n_offsprings=4)
+
+    assert algorithm.pop_size == 12
+    assert len(algorithm.ref_dirs) == 12
+    assert algorithm.n_offsprings == 12
+    assert fewer.n_offsprings == 4
+
+
+def test_nsga3_starts_from_the_given_solutions():
+    problem = get_problem("zdt1", n_var=5)
+    given = np.full((3, 5), 0.25)
+
+    algorithm = make_nsga3(problem, 8, seed=1, initial=given)
+
+    assert algorithm.initialization.sampling.shape == (8, 5)
+    assert np.array_equal(algorithm.initialization.sampling[0], given[0])
+
+
+def test_the_optimization_is_reproducible_with_its_seed():
+    problem = get_problem("zdt1", n_var=5)
+
+    first, second = optimize(problem, 10, 50, seed=3), optimize(problem, 10, 50, seed=3)
+
+    assert np.array_equal(first[0], second[0])
+    assert np.array_equal(first[1], second[1])

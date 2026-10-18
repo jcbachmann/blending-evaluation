@@ -57,7 +57,8 @@ different random seeds, to cover the randomness of the algorithm (and, for the s
   seed. The simulation is random itself, so its results differ slightly from run to run.
 * A result file `output/<model>/run_<id>_evals<n>_pop<n>_replicate<n>.json` contains the fronts (`objectives`, `variables`), the fixed
   `material_variables`, and the `parameters` of the run (`run_id`, `replicate`, `population_size`, `n_evaluations`, and the `model_set`
-  for results on the surrogate). Older result files (`instance_<n>_run_<n>_pop<n>.json`) have an `instance_id` that is the same as a
+  for results on the surrogate). Results on the surrogate written before 2026-10-18 hold the fixed material before the depositions
+  in `variables` (70 values instead of 20). Older result files (`instance_<n>_run_<n>_pop<n>.json`) have an `instance_id` that is the same as a
   replicate number and do not contain the material of the simulation results.
 * `transform_optimization_results` recomputes every result for the material it was made for. Older results of the simulation do not
   know it, they are recomputed for the first row of `--training-data` and a warning says so. Its cache files (`*_recomputed_*.json`)

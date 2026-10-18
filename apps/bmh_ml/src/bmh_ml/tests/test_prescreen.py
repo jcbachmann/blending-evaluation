@@ -74,22 +74,22 @@ def test_the_refinement_records_parents_and_offspring_of_every_generation(tmp_pa
 def test_the_prescreened_optimizer_simulates_only_the_models_picks_within_the_budget(tmp_path, monkeypatch):
     pytest.importorskip("pymoo")
     pytest.importorskip("sklearn")
+    from bmh_ml import problems
     from bmh_ml.datasets.manifest import make_features
-    from bmh_ml.evaluation import transfer
     from bmh_ml.models.registry import create_model
     from bmh_ml.prescreen import Prescreen, optimize_prescreened
 
     rng = np.random.default_rng(3)
     material, depositions = random_materials(1, rng), random_depositions(40, rng)
     model = create_model("ridge")
-    y = transfer.simulate(material, depositions, 1, n_jobs=1)[0]
+    y = problems.simulate(material, depositions, 1, n_jobs=1)[0]
     x = make_features("S2", np.repeat(material, 40, axis=0), depositions)
     model.fit(x, y, x, y, seed=0)
     model.save(tmp_path / "model")
     simulated = []
-    original = transfer.simulate
-    monkeypatch.setattr(transfer, "simulate", lambda m, d, *a, **k: (simulated.append(len(d)), original(m, d, *a, **k))[1])
-    problem = transfer.get_simulator_problem_class()(material)
+    original = problems.simulate
+    monkeypatch.setattr(problems, "simulate", lambda m, d, *a, **k: (simulated.append(len(d)), original(m, d, *a, **k))[1])
+    problem = problems.SimulatorProblem(material)
 
     objectives, variables = optimize_prescreened(problem, Prescreen((str(tmp_path / "model"),), (str(tmp_path / "model"),), "S2", 16, 4), 8, 30, 1)
 

@@ -3,15 +3,15 @@ import json
 
 import numpy as np
 
-from bmh_ml import optimize_simulation
-from bmh_ml.optimize_simulation import HomogenizationProblemSimulation
+from bmh_ml import optimize_simulation, problems
+from bmh_ml.problems import SimulatorProblem
 from bmh_ml.settings import DEPOSITION_LENGTH, X_MAX, X_MIN
 
 MATERIAL = np.linspace(5.0, 10.0, 50)
 
 
 def test_problem_optimizes_the_deposition_within_the_stockpile_core():
-    problem = HomogenizationProblemSimulation(material_variables=MATERIAL, threads=1)
+    problem = SimulatorProblem(MATERIAL, threads=1)
 
     assert problem.n_var == DEPOSITION_LENGTH
     assert problem.n_obj == 2
@@ -21,14 +21,14 @@ def test_problem_optimizes_the_deposition_within_the_stockpile_core():
 
 def test_problem_simulates_a_generation_in_one_call(monkeypatch):
     calls = []
-    original = optimize_simulation.evaluate_sims_with_profiles
+    original = problems.simulate
 
     def counting(material, deposition, *args, **kwargs):
-        calls.append((len(deposition), kwargs["threads"]))
+        calls.append((len(deposition), kwargs["n_jobs"]))
         return original(material, deposition, *args, **kwargs)
 
-    monkeypatch.setattr(optimize_simulation, "evaluate_sims_with_profiles", counting)
-    problem = HomogenizationProblemSimulation(material_variables=MATERIAL, threads=2)
+    monkeypatch.setattr(problems, "simulate", counting)
+    problem = SimulatorProblem(MATERIAL, threads=2)
     rng = np.random.default_rng(0)
 
     first = problem.evaluate(rng.uniform(X_MIN, X_MAX, (4, DEPOSITION_LENGTH)))

@@ -47,11 +47,11 @@ class GenerationRecorder(Callback):
 
 def record_refinement(material: np.ndarray, initial: np.ndarray | None, population_size: int, evaluations: int, seed: int) -> list[Generation]:
     """NSGA-III on the simulator at the active level for one material, started from `initial`; its generations."""
-    from bmh_ml.evaluation.transfer import get_simulator_problem_class
     from bmh_ml.experiment import optimize
+    from bmh_ml.problems import SimulatorProblem
 
     recorder = GenerationRecorder()
-    optimize(get_simulator_problem_class()(np.atleast_2d(material)), population_size, evaluations, seed, initial, recorder)
+    optimize(SimulatorProblem(material), population_size, evaluations, seed, initial, recorder)
     return recorder.generations
 
 
@@ -139,27 +139,13 @@ def optimize_prescreened(problem, prescreen: Prescreen, population_size: int, ev
     """NSGA-III like `experiment.optimize` with `evaluations` simulations in all: the first population is simulated completely, after that
     each generation simulates only the offspring the models rate best (`Prescreen`). Returns the objectives and depositions of the final
     non-dominated solutions."""
-    from pymoo.algorithms.moo.nsga3 import NSGA3
     from pymoo.core.termination import NoTermination
-    from pymoo.operators.crossover.sbx import SBX
-    from pymoo.operators.mutation.pm import PM
-    from pymoo.operators.sampling.rnd import FloatRandomSampling
-    from pymoo.util.reference_direction import UniformReferenceDirectionFactory
 
-    from bmh_ml.experiment import get_initial_population
+    from bmh_ml.experiment import make_nsga3
 
     if evaluations < population_size:
         raise ValueError(f"{evaluations} evaluations are not enough for the first population of {population_size}")
-    sampling = FloatRandomSampling() if initial is None else get_initial_population(initial, population_size, problem, seed)
-    algorithm = NSGA3(
-        pop_size=population_size,
-        n_offsprings=prescreen.candidates,
-        ref_dirs=UniformReferenceDirectionFactory(2, n_points=population_size).do(),
-        sampling=sampling,
-        crossover=SBX(prob=0.9, eta=15),
-        mutation=PM(eta=20),
-        eliminate_duplicates=True,
-    )
+    algorithm = make_nsga3(problem, population_size, seed, initial, n_offsprings=prescreen.candidates)
     algorithm.setup(problem, termination=NoTermination(), seed=seed, verbose=False)
     predict = prescreen.predictor(problem.material)
     rng = np.random.default_rng(seed)
