@@ -498,25 +498,41 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 }
 
 // Drops of a material flowing while the stacker moves (BlendingSimulator/ContinuousDrops.h): rows x, z, volume and the parameters of each
-// drop's portion, shape (drops, 3 + parameters)
+// drop's portion, shape (drops, 3 + parameters). With withTimes a first column holds the volume-weighted mean time of each drop's
+// material: a portion flows at a constant rate and its drops follow each other without gaps from its start, so that time is the middle
+// of the time span the drop's volume takes.
 py::array_t<double> continuousDropsArray(const std::vector<double>& volumes,
 	const py::array_t<double, py::array::c_style | py::array::forcecast>& parameters, const std::vector<double>& portionTimes,
-	const std::vector<double>& pathTimes, const std::vector<double>& pathX, const std::vector<double>& pathZ, double cellX, double cellZ)
+	const std::vector<double>& pathTimes, const std::vector<double>& pathX, const std::vector<double>& pathZ, double cellX, double cellZ,
+	bool withTimes)
 {
 	if (parameters.ndim() != 2 || parameters.shape(0) != py::ssize_t(volumes.size())) {
 		throw std::invalid_argument("parameters must have the shape (portions, parameters)");
 	}
 	const std::vector<bs::ContinuousDrop> drops = bs::continuousDrops(volumes, portionTimes, pathTimes, pathX, pathZ, cellX, cellZ);
 	const py::ssize_t k = parameters.shape(1);
-	py::array_t<double> result({py::ssize_t(drops.size()), 3 + k});
+	const py::ssize_t first = withTimes ? 1 : 0;
+	py::array_t<double> result({py::ssize_t(drops.size()), first + 3 + k});
 	auto out = result.mutable_unchecked<2>();
 	auto in = parameters.unchecked<2>();
+	int portion = -1;
+	double flowed = 0.0; // volume of the portion's earlier drops
 	for (py::ssize_t r = 0; r < py::ssize_t(drops.size()); r++) {
-		out(r, 0) = drops[r].x;
-		out(r, 1) = drops[r].z;
-		out(r, 2) = drops[r].volume;
+		const bs::ContinuousDrop& drop = drops[r];
+		if (withTimes) {
+			if (drop.portion != portion) {
+				portion = drop.portion;
+				flowed = 0.0;
+			}
+			const double duration = portionTimes[portion + 1] - portionTimes[portion];
+			out(r, 0) = portionTimes[portion] + duration * (flowed + 0.5 * drop.volume) / volumes[portion];
+			flowed += drop.volume;
+		}
+		out(r, first) = drop.x;
+		out(r, first + 1) = drop.z;
+		out(r, first + 2) = drop.volume;
 		for (py::ssize_t j = 0; j < k; j++) {
-			out(r, 3 + j) = in(drops[r].portion, j);
+			out(r, first + 3 + j) = in(drop.portion, j);
 		}
 	}
 	return result;
@@ -585,6 +601,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"path_x"_a,
 		"path_z"_a,
 		"cell_x"_a,
-		"cell_z"_a
+		"cell_z"_a,
+		"with_times"_a = false
 	);
 }

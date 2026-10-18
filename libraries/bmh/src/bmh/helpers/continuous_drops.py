@@ -15,6 +15,7 @@ know it. Merging only pieces of the same path segment removes the jumps but appr
 (measured 2026-10-17).
 """
 
+import contextlib
 import math
 
 import blending_simulator_lib
@@ -69,7 +70,7 @@ def continuous_drops(
     :param cell_x: cell size of the simulator's grid in x (`drop_grid`)
     :param cell_z: cell size in z
     :param z: the constant z if path_z is None
-    :param with_times: also return the time of every drop (numpy code only, for callers that stack up to given times)
+    :param with_times: also return the time of every drop (for callers that stack up to given times)
     """
     volumes = np.asarray(volumes, dtype=float)
     parameters = np.asarray(parameters, dtype=float)
@@ -83,9 +84,12 @@ def continuous_drops(
     if len(bounds_t) != n + 1 or len(parameters) != n:
         raise ValueError("need n + 1 portion times and n parameter rows for n portions")
     native = getattr(blending_simulator_lib, "continuous_drops", None)
-    if native is not None and not _NUMPY_ONLY and not with_times:
+    if native is not None and not _NUMPY_ONLY:
         # the same algorithm in C++, about 50 times faster than the numpy code below, which stays for bindings built before it
-        return np.asarray(native(volumes, parameters, bounds_t, tx, x, zs, cell_x, cell_z))
+        if not with_times:
+            return np.asarray(native(volumes, parameters, bounds_t, tx, x, zs, cell_x, cell_z))
+        with contextlib.suppress(TypeError):  # bindings built before the drop times have no with_times
+            return np.asarray(native(volumes, parameters, bounds_t, tx, x, zs, cell_x, cell_z, with_times=True))
 
     start, end = bounds_t[0], bounds_t[-1]
     times = np.unique(np.concatenate([tx, bounds_t]))

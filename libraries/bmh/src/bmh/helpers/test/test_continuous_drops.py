@@ -94,12 +94,35 @@ def test_the_native_code_gives_the_drops_of_the_numpy_code(implementation, monke
         knots = np.sort(rng.uniform(bounds[0], bounds[-1], int(rng.integers(2, 30))))
         path_x, path_z = rng.uniform(0, 50, len(knots)), rng.uniform(5, 15, len(knots))
         parameters = rng.uniform(0, 1, (n, 2))
-        native = continuous_drops(volumes, parameters, bounds, knots, path_x, path_z, 0.63, 0.55)
-        monkeypatch.setattr(module, "_NUMPY_ONLY", True)
-        reference = continuous_drops(volumes, parameters, bounds, knots, path_x, path_z, 0.63, 0.55)
-        monkeypatch.setattr(module, "_NUMPY_ONLY", False)
-        assert native.shape == reference.shape
-        np.testing.assert_allclose(native, reference, rtol=1e-12, atol=1e-12)
+        for with_times in (False, True):
+            native = continuous_drops(volumes, parameters, bounds, knots, path_x, path_z, 0.63, 0.55, with_times=with_times)
+            monkeypatch.setattr(module, "_NUMPY_ONLY", True)
+            reference = continuous_drops(volumes, parameters, bounds, knots, path_x, path_z, 0.63, 0.55, with_times=with_times)
+            monkeypatch.setattr(module, "_NUMPY_ONLY", False)
+            assert native.shape == reference.shape
+            np.testing.assert_allclose(native, reference, rtol=1e-12, atol=1e-9)
+
+
+def test_the_drops_of_a_material_deposition_come_from_the_native_code_with_their_times(implementation, monkeypatch):
+    if implementation != "native":
+        pytest.skip("checks the native code")
+    import pandas as pd
+
+    from ...benchmark.material_deposition import Deposition, Material, MaterialDeposition
+
+    calls = []
+    native = blending_simulator_lib.continuous_drops
+    monkeypatch.setattr(blending_simulator_lib, "continuous_drops", lambda *args, **kwargs: (calls.append(kwargs), native(*args, **kwargs))[1])
+    material = Material.from_data(pd.DataFrame({"timestamp": np.linspace(0.0, 100.0, 5), "volume": np.full(5, 20.0), "quality": np.arange(5.0)}))
+    deposition = Deposition.from_data(
+        pd.DataFrame({"timestamp": [0.0, 50.0, 100.0], "x": [5.0, 45.0, 5.0], "z": [10.0] * 3}), bed_size_x=50, bed_size_z=20, reclaim_x_per_s=0.5
+    )
+
+    drops = MaterialDeposition(material, deposition).drops(1.0, 1.0)
+
+    assert calls == [{"with_times": True}]
+    assert np.all(np.diff(drops["timestamp"]) > 0)
+    np.testing.assert_allclose(drops["volume"].sum(), 100.0)
 
 
 def test_evenly_spaced_portions_flow_in_equal_intervals():

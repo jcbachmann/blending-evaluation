@@ -72,6 +72,7 @@ def continuous_drops(
     path_z: collections.abc.Sequence[typing.SupportsFloat | typing.SupportsIndex],
     cell_x: typing.SupportsFloat | typing.SupportsIndex,
     cell_z: typing.SupportsFloat | typing.SupportsIndex,
+    with_times: bool = False,
 ) -> numpy.typing.NDArray[numpy.float64]: ...
 
 simulator_version: str
