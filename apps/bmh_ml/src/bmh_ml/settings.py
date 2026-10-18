@@ -32,7 +32,7 @@ def get_installed_simulator_version() -> str:
     return get_simulator_version() or UNRECORDED_SIMULATOR_VERSION
 
 
-SIMULATORS = ("fast", "lattice", "cone")
+SIMULATORS = ("fast", "lattice", "cone", "formula")
 DROPS = ("point", "cells")
 IDEAL_STOCKPILE_RULES = ("integrated", "point")
 
@@ -45,10 +45,11 @@ class SimulatorSettings:
     different releases must not be mixed. Settings read from records without a release, angle or likelihood are those of all data before
     2026-10-15 (`from_dict`), the defaults of ppm3 and the reclaim step those of all data before 2026-10-04.
 
-    `simulator` chooses the simulation ("fast", "lattice" or "cone"; ppm3 sets the particle or cell size of each), `drops` how the stacker's
-    path becomes simulator input: "cells" (new results) lets the material flow while the stacker moves and drops it proportionally in
-    every grid cell the path crosses (`bmh.helpers.continuous_drops`), "point" stacks every material portion at the one stacker position
-    of its time, as all data before 2026-10-17 did. Records without them read as the fast simulator with point drops. `ideal_stockpile`
+    `simulator` chooses the simulation ("fast", "lattice", "cone" or "formula", the cone simulation reduced to the stacker line; ppm3 sets
+    the particle or cell size of each), `drops` how the stacker's path becomes simulator input: "cells" (new results) lets the material
+    flow while the stacker moves and drops it proportionally in every grid cell the path crosses (`bmh.helpers.continuous_drops`), "point"
+    stacks every material portion at the one stacker position of its time, as all data before 2026-10-17 did. Records without them read as
+    the fast simulator with point drops. `ideal_stockpile`
     is the rule of the ideal slice volumes in F2 (`bmh.helpers.stockpile_math.get_ideal_stockpile_volumes`): "integrated" (new results)
     integrates the cut area over each slice, "point" takes it at the slice position, as all data before 2026-10-18; records without it read
     as "point"."""

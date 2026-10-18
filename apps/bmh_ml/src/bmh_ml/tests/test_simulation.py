@@ -112,17 +112,24 @@ def test_evaluate_sim_of_the_real_simulation_is_plausible():
     assert 5.0 < f2 < 40.0
 
 
-def test_a_batch_evaluates_like_single_inputs():
-    from blending_simulator_lib import simulate_batch
+def skip_unless_built_with(simulator: str):
+    from bmh.simulation.bsl_blending_simulator import simulate_batch
 
-    if "cone" not in (simulate_batch.__doc__ or ""):
-        pytest.skip("blending_simulator_lib built without the cone simulator")
+    try:
+        simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, **{simulator: True})
+    except (TypeError, RuntimeError):
+        pytest.skip(f"blending_simulator_lib built without the {simulator} simulator")
+
+
+@pytest.mark.parametrize("simulator", ["cone", "formula"])
+def test_a_batch_evaluates_like_single_inputs(simulator):
+    skip_unless_built_with(simulator)
     rng = np.random.default_rng(6)
     materials = rng.uniform(5, 10, (3, 50))
     depositions = rng.uniform(X_MIN, X_MAX, (3, 20))
-    # The cone simulation is deterministic, so the batch must give exactly the results of single inputs (single runs of the stochastic
-    # fast simulation differ by up to about 0.08 in F1 with continuous drops)
-    with simulator_settings(SimulatorSettings(simulator="cone")):
+    # The cone and the formula simulation are deterministic, so the batch must give exactly the results of single inputs (single runs of
+    # the stochastic fast simulation differ by up to about 0.08 in F1 with continuous drops)
+    with simulator_settings(SimulatorSettings(simulator=simulator)):
         f, profiles = evaluate_sims_with_profiles(materials, depositions, BED_SIZE_X, BED_SIZE_Z, 2500.0, threads=2)
         single = [evaluate_sim_with_profile(materials[i], depositions[i], BED_SIZE_X, BED_SIZE_Z, 2500.0) for i in range(3)]
 
@@ -143,12 +150,10 @@ def test_generated_material_and_deposition_have_the_requested_length():
     assert len(deposition.data) == 20
 
 
-@pytest.mark.parametrize("simulator", ["fast", "lattice", "cone"])
+@pytest.mark.parametrize("simulator", ["fast", "lattice", "cone", "formula"])
 def test_continuous_drops_conserve_the_volume_of_every_simulator(simulator):
-    from blending_simulator_lib import simulate_batch
-
-    if simulator == "cone" and "cone" not in (simulate_batch.__doc__ or ""):
-        pytest.skip("blending_simulator_lib built without the cone simulator")
+    if simulator in ("cone", "formula"):
+        skip_unless_built_with(simulator)
     rng = np.random.default_rng(3)
     materials = rng.uniform(5, 10, (2, 50))
     depositions = rng.uniform(10, 49, (2, 20))
@@ -160,23 +165,21 @@ def test_continuous_drops_conserve_the_volume_of_every_simulator(simulator):
     np.testing.assert_allclose(profiles[:, 0].sum(axis=1), 2500.0, atol=0.25 + 1e-6)
 
 
-def test_bmh_stack_reclaim_drops_like_bmh_ml():
-    from blending_simulator_lib import simulate_batch
-
-    if "cone" not in (simulate_batch.__doc__ or ""):
-        pytest.skip("blending_simulator_lib built without the cone simulator")
+@pytest.mark.parametrize("simulator", ["cone", "formula"])
+def test_bmh_stack_reclaim_drops_like_bmh_ml(simulator):
+    skip_unless_built_with(simulator)
     from bmh.simulation.bsl_blending_simulator import BslBlendingSimulator
 
     rng = np.random.default_rng(8)
     material_variables = list(rng.uniform(5, 10, 50))
     deposition_variables = list(rng.uniform(X_MIN, X_MAX, 20))
-    with simulator_settings(SimulatorSettings(simulator="cone")):
+    with simulator_settings(SimulatorSettings(simulator=simulator)):
         _, _, profile = evaluate_sim_with_profile(material_variables, deposition_variables, BED_SIZE_X, BED_SIZE_Z, 2500.0)
     material_deposition = MaterialDeposition(
         material=generate_material(material_variables, total_volume=2500.0),
         deposition=generate_deposition(deposition_variables, bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z),
     )
-    reclaimed = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, cone=True, reclaimincrement=1.0).stack_reclaim(material_deposition)
+    reclaimed = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, reclaimincrement=1.0, **{simulator: True}).stack_reclaim(material_deposition)
     volume = reclaimed.data["volume"].to_numpy()
     # the same drops give the same reclaimed volumes; bmh_ml evaluates the slices between x = 0 and the bed length
     np.testing.assert_allclose(volume[volume > 0].sum(), profile[0].sum())

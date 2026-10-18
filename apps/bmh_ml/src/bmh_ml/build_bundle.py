@@ -47,7 +47,7 @@ def get_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--new-val", action="store_true", help="With --tests-from: generate a new validation set, keep only the test sets")
     parser.add_argument("--profiles", action="store_true", help="Store the reclaimed profiles of the training and validation data (for profile models)")
     parser.add_argument("--ppm3", type=float, default=1.0, help="Detail level of the simulator: particles per cubic meter (reclaim step fixed at 1 m)")
-    parser.add_argument("--simulator", choices=SIMULATORS, default="fast", help="Simulation: fast (default), lattice or cone (ppm3 sets its cell size)")
+    parser.add_argument("--simulator", choices=SIMULATORS, default="fast", help="Simulation: fast (default), lattice, cone or formula (ppm3: the cell size)")
     parser.add_argument("--drops", choices=DROPS, default="cells", help="Continuous flow in the simulator's cells (default) or point drops")
     parser.add_argument("--cross-from", help="Also label the inputs of test sets of this bundle at this bundle's level, as test sets <set>x")
     parser.add_argument("--cross-sets", nargs="+", default=["T6"], help="The test sets of --cross-from to label again (default: T6)")

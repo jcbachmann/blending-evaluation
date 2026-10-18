@@ -104,6 +104,7 @@ def evaluate_sims_with_profiles(
         eight=settings.eight_likelihood,
         lattice=settings.simulator == "lattice",
         cone=settings.simulator == "cone",
+        formula=settings.simulator == "formula",
     )
 
     volume, quality = reclaimed["volume"], reclaimed["quality"]
