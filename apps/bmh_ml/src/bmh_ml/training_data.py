@@ -9,7 +9,7 @@ from bmh_ml.settings import MATERIAL_LENGTH, TRAINING_DATA_FILE
 
 
 def get_params_file(training_data_file: str) -> str:
-    # The name of the file generate_training_data writes its parameters to
+    # The name of the file the generator of the training data (retired) wrote its parameters to
     return training_data_file.rsplit(".", 1)[0] + "_params.json"
 
 

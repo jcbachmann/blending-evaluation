@@ -9,8 +9,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import plotly.graph_objects as go
 
+from bmh_ml.parallel import get_cpu_count
 from bmh_ml.settings import BED_SIZE_X, BED_SIZE_Z, DEPOSITION_LENGTH, MATERIAL_LENGTH, TOTAL_VOLUME, TRAINING_DATA_FILE, add_model_set_argument
-from bmh_ml.simulation import evaluate_sim
+from bmh_ml.simulation import evaluate_sims_with_profiles
 from bmh_ml.training_data import load_fixed_material_variables
 
 if TYPE_CHECKING:
@@ -43,18 +44,9 @@ def load_recomputed_results(path: str, context: dict) -> tuple[np.ndarray, np.nd
 
 
 def compute_with_simulation(dep_batch: np.ndarray, material_variables) -> np.ndarray:
-    # dep_batch shape: (n, 20). Deposition variables are absolute positions (no scaling).
-    results: list[tuple[float, float]] = []
-    for dep in dep_batch:
-        f1, f2 = evaluate_sim(
-            material_variables=material_variables,
-            deposition_variables=dep,
-            bed_size_x=BED_SIZE_X,
-            bed_size_z=BED_SIZE_Z,
-            total_volume=TOTAL_VOLUME,
-        )
-        results.append((float(f1), float(f2)))
-    return np.array(results, dtype=float)
+    """F1 and F2 of one simulation of each deposition (absolute positions, shape (n, 20)), all in one call to the simulator."""
+    materials = np.broadcast_to(np.asarray(material_variables, dtype=float), (len(dep_batch), MATERIAL_LENGTH))
+    return evaluate_sims_with_profiles(materials, dep_batch, BED_SIZE_X, BED_SIZE_Z, TOTAL_VOLUME, threads=get_cpu_count())[0]
 
 
 def compute_with_lstm(dep_batch: np.ndarray, material_variables, surrogate: "Surrogate") -> np.ndarray:

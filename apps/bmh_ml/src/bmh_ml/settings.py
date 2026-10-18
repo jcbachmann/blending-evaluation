@@ -1,4 +1,4 @@
-"""Settings shared by all scripts, they must match the parameters the training data was generated with (see the defaults of generate_training_data)."""
+"""Settings shared by all scripts, they must match the parameters the training data was generated with."""
 
 import argparse
 import json

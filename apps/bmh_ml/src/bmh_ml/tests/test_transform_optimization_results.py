@@ -109,11 +109,16 @@ def write_result(directory, name: str, **data):
     (directory / name).write_text(json.dumps({"objectives": objectives(), **data}))
 
 
+def fake_simulation(used: list, materials: np.ndarray, depositions: np.ndarray) -> tuple[np.ndarray, None]:
+    used.extend(np.array(material) for material in materials)
+    return np.tile([0.5, 5.0], (len(depositions), 1)), None
+
+
 @pytest.mark.usefixtures("no_plots")
 def test_results_on_the_surrogate_are_recomputed_for_the_material_they_were_made_for(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     used = []
-    monkeypatch.setattr(transform, "evaluate_sim", lambda material_variables, **_kwargs: (used.append(np.array(material_variables)), (0.5, 5.0))[1])
+    monkeypatch.setattr(transform, "evaluate_sims_with_profiles", lambda materials, depositions, *_a, **_k: fake_simulation(used, materials, depositions))
     write_result(tmp_path / "output" / "lstm_model", "old_format.json", variables=surrogate_variables(OTHER_MATERIAL))  # no stored material
 
     transform.recompute_lstm_results_with_simulation()
@@ -126,7 +131,7 @@ def test_results_on_the_surrogate_are_recomputed_for_the_material_they_were_made
 def test_results_on_the_surrogate_with_only_the_depositions_are_recomputed_for_their_stored_material(tmp_path, monkeypatch, caplog):
     monkeypatch.chdir(tmp_path)
     used = []
-    monkeypatch.setattr(transform, "evaluate_sim", lambda material_variables, **_kwargs: (used.append(np.array(material_variables)), (0.5, 5.0))[1])
+    monkeypatch.setattr(transform, "evaluate_sims_with_profiles", lambda materials, depositions, *_a, **_k: fake_simulation(used, materials, depositions))
     write_result(tmp_path / "output" / "lstm_model", "new_format.json", variables=deposition_variables(), material_variables=OTHER_MATERIAL.tolist())
 
     with caplog.at_level(logging.WARNING):
@@ -171,3 +176,15 @@ def test_results_on_the_simulation_use_their_stored_material_and_the_fallback_on
     assert old_cache["material_variables"] == OTHER_MATERIAL.tolist()  # the first row of the given training data
     assert new_cache["model_set"] == old_cache["model_set"] == "fake_set"
     assert caplog.text.count("without their material") == 1
+
+
+def test_the_simulation_recomputes_all_depositions_of_a_result_in_one_call(monkeypatch):
+    calls = []
+    original = transform.evaluate_sims_with_profiles
+    monkeypatch.setattr(transform, "evaluate_sims_with_profiles", lambda m, d, *a, **k: (calls.append(len(d)), original(m, d, *a, **k))[1])
+
+    recomputed = transform.compute_with_simulation(np.array(deposition_variables()), MATERIAL)
+
+    assert calls == [SOLUTIONS]
+    assert recomputed.shape == (SOLUTIONS, 2)
+    assert np.isfinite(recomputed).all()

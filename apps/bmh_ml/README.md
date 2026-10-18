@@ -12,13 +12,11 @@ uv sync --all-packages
 
 ## Usage
 
-The scripts read and write `data/` and `output/` relative to the working directory (both are git-ignored), so run all of them from the same directory. Any directory works, for example one outside of the repository: `uv run --project <path of the repository> --package bmh_ml python -m bmh_ml.<script>`. The typical order is:
+The scripts read and write `data/` and `output/` relative to the working directory (both are git-ignored), so run all of them from the same directory. Any directory works, for example one outside of the repository: `uv run --project <path of the repository> --package bmh_ml python -m bmh_ml.<script>`. They start from the training data of the first experiments, `data/training_data.csv` (its generator and the script that compared the LSTM with the simulator are retired; new data and evaluations come from the training and evaluation pipeline below). The typical order is:
 
 ```shell
-uv run --package bmh_ml python -m bmh_ml.generate_training_data                              # data/training_data.csv
 uv run --package bmh_ml python -m bmh_ml.plot_training_data                                  # optional: F1/F2 scatter of the training data
 uv run --package bmh_ml python -m bmh_ml.train_lstm_model --model-set random_training_data   # data/scaler_<set>.pkl, data/lstm_model_f{1,2}_<set>.keras
-uv run --package bmh_ml python -m bmh_ml.evaluate_model                                      # LSTM predictions vs. simulator, prints R2 and the error
 uv run --package bmh_ml python -m bmh_ml.optimize_model                                      # NSGA-III on the LSTM, writes output/lstm_model/
 uv run --package bmh_ml python -m bmh_ml.optimize_simulation                                 # NSGA-III on the simulator, writes output/simulation/
 uv run --package bmh_ml python -m bmh_ml.transform_optimization_results                      # recompute each result with the other model and plot
@@ -36,7 +34,7 @@ The scaler belongs to the models it was fitted with, so it is part of the set.
 
 * `train_lstm_model` needs `--model-set` and `--training-data` (default `data/training_data.csv`). The name is required on purpose, so
   a set is never trained or overwritten by accident and models are never stored under the name of another dataset.
-* The scripts that use models (`optimize_model`, `evaluate_model`, `transform_optimization_results`) take `--model-set`. Its default is
+* The scripts that use models (`optimize_model`, `transform_optimization_results`) take `--model-set`. Its default is
   `random_training_data`, the set of the experiments made so far (`DEFAULT_MODEL_SET` in `settings.py`). This is a deliberate choice, not a leftover.
   Results on the surrogate record the set they were made with.
 
@@ -66,8 +64,8 @@ different random seeds, to cover the randomness of the algorithm (and, for the s
 
 ## Other options
 
-The optimization scripts accept `--runs 4 --evaluations 400 1000 --population-sizes 10 20 40` for a quick test. The simulation is evaluated
-in parallel by one process pool for all runs. `train_lstm_model` takes `--epochs` (default 100).
+The optimization scripts accept `--runs 4 --evaluations 400 1000 --population-sizes 10 20 40` for a quick test. The simulation evaluates a
+generation in one call to the simulator, one simulation per core at a time. `train_lstm_model` takes `--epochs` (default 100).
 
 The training data is checked when it is loaded: a truncated last row (e.g. from an interrupted or size limited write) is ignored with a warning, other incomplete rows are an error, and a warning is logged if the file has fewer rows than `training_data_params.json` says were generated.
 
