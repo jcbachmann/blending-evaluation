@@ -11,6 +11,15 @@ Scripts that need machine specific locations read them from environment variable
 | `BMH_BENCHMARK_PATH` | `bmh_apps.benchmark.optimize_deposition`, `bmh_apps.benchmark.optimize_deposition_simple` | Directory of the simulator benchmark (materials, depositions, simulators) |
 | `BMH_EXPERIMENTS_PATH` | `bmh_apps.funvar.*` (`plot_fun`, `export_fun`, ...) | Root directory searched for experiment directories, so experiments can be given by id (e.g. `E1234abcd`) instead of a path |
 
+## The jMetal benchmark stack (frozen)
+
+`bmh_apps.benchmark` (`optimize_deposition`, `optimize_deposition_simple`, the Hydra configurations in `benchmark/conf` and the
+`experiment_scripts`) and `bmh.optimization` (`HomogenizationProblem`, `DepositionOptimizer`) reproduce the benchmark experiments of
+2021 and 2022: their deposition encoding, F2 relative to a sixth of the volume per slice, the full-speed Chevron as reference and point
+drops. They are kept unchanged so that those results can be reproduced; new optimization work uses `bmh_ml` (continuous drops, the
+integrated ideal stockpile, the scheduled Chevron and the current objectives). The Hydra configurations keep their names, also where two
+of them are identical, because the stored results are named after them.
+
 ## Comparing simulation methods
 
 `bmh_apps.simulator_comparison` runs the stockpile simulation methods on the same deposition patterns and shows the results in a
