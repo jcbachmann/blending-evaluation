@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_allclose, assert_array_equal
 
 from ...benchmark.material_deposition import Material
 from ..math import stdev
@@ -44,7 +44,7 @@ def test_ideal_volumes_equal_the_rowwise_reference():
 
         ideal = get_ideal_stockpile_volumes(reclaimed.data["x"].to_numpy(), reclaimed.data["volume"].sum(), X_MIN, X_MAX, rule="point")
 
-        assert_array_equal(ideal, reference_ideal_volumes(reclaimed))
+        assert_allclose(ideal, reference_ideal_volumes(reclaimed), rtol=1e-12)  # two computations: equal up to rounding
 
 
 def test_volume_stdev_equals_the_rowwise_reference():
@@ -64,7 +64,7 @@ def test_ideal_reclaimed_material_is_homogeneous_with_the_ideal_volume_curve():
     for parameter in ("quality", "other"):
         expected = np.average(original[parameter], weights=original["volume"])
         assert_array_equal(ideal.data[parameter].to_numpy(), np.full(len(original), expected))
-    assert_array_equal(ideal.data["volume"].to_numpy(), reference_ideal_volumes(reclaimed))
+    assert_allclose(ideal.data["volume"].to_numpy(), reference_ideal_volumes(reclaimed), rtol=1e-12)
     assert_array_equal(ideal.data["x"].to_numpy(), original["x"].to_numpy())
     assert_array_equal(ideal.data["timestamp"].to_numpy(), original["timestamp"].to_numpy())
 
