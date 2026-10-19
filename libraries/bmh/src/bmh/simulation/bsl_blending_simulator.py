@@ -17,11 +17,13 @@ def optional_arguments(
     detailed_parameters: dict[str, float] | None = None,
     formula: bool = False,
     eight_height_scale: float = 0.0,
+    cone_footprint_x: float = 0.0,
+    cone_footprint_z: float = 0.0,
 ) -> tuple[tuple, dict]:
     """
     Arguments of newer simulator versions, only when used: bindings built against simulator v2026.1 have no seed, lattice and particle
     recording, those before 2026.3 no cone simulator and no parameters of the detailed simulation (the discrete element method), those
-    of 2026.3 no formula simulator and no eight likelihood scaled with the pile height
+    of 2026.3 no formula simulator and no eight likelihood scaled with the pile height, those of 2026.4 no footprint of the cone simulation
     """
     seed_argument = () if seed is None else (seed,)
     options: dict = {}
@@ -33,11 +35,19 @@ def optional_arguments(
         options["formula"] = True
     if eight_height_scale:
         options["eight_height_scale"] = eight_height_scale
+    options |= cone_footprint_options(cone_footprint_x, cone_footprint_z)
     if record_particles:
         options["record_particles"] = True
     if detailed_parameters:
         options["detailed_parameters"] = detailed_parameters
     return seed_argument, options
+
+
+def cone_footprint_options(cone_footprint_x: float, cone_footprint_z: float) -> dict:
+    """The footprint of the cone simulation as keyword arguments of the bindings, only when it is not the point source (0, 0)"""
+    if cone_footprint_x or cone_footprint_z:
+        return {"cone_footprint_x": cone_footprint_x, "cone_footprint_z": cone_footprint_z}
+    return {}
 
 
 DEFAULT_RECLAIM_ANGLE = 45.0
@@ -84,6 +94,8 @@ def simulate_batch(
     detailed_parameters: dict[str, float] | None = None,
     formula: bool = False,
     eight_height_scale: float = 0.0,
+    cone_footprint_x: float = 0.0,
+    cone_footprint_z: float = 0.0,
 ) -> dict[str, np.ndarray]:
     """
     Stack and reclaim many inputs at once like BslBlendingSimulator, in one call into the simulator: no Python per simulation,
@@ -100,6 +112,9 @@ def simulate_batch(
         threads for the threads of each simulation), see DetailedParameters in the simulator
     :param eight_height_scale: if positive, the fast simulation's eight likelihood is max(0, 1 - eight_height_scale / h) for a particle
         dropped on a pile h particles high instead of `eight`, which keeps round 45° piles at every ppm3 (6.5; simulator after 2026.3)
+    :param cone_footprint_x: with cone, half size in m along the bed of the rectangle every portion lands on instead of a point (a cone
+        with a flat top; 0.31 fitted to the calibrated detailed simulation at 0.25 m particles with 1 m cells; simulator after 2026.4)
+    :param cone_footprint_z: the same across the bed (fitted: 0); 0 and 0, the default, is the point source of the released cone
     :param eight: the fast simulation's eight likelihood; None for the value fitted to the particle size (`fitted_eight_likelihood`)
     :param reclaimincrement: the reclaimer's step, None for 1 m (`particle_reclaim_increment` gives the particle size)
     :return: reclaimer positions x, shape (slices,), and the reclaimed volume and the volume weighted average of each parameter, shape
@@ -116,6 +131,7 @@ def simulate_batch(
             extra["formula"] = True
         if eight_height_scale:
             extra["eight_height_scale"] = eight_height_scale
+        extra |= cone_footprint_options(cone_footprint_x, cone_footprint_z)
         if detailed:
             extra |= {"detailed": True, "detailed_parameters": detailed_parameters}
         result = batch(data, columns, bed_size_x, bed_size_z, reclaimangle, ppm3, False, eight, reclaimincrement, seed, lattice, threads, **extra)
@@ -142,6 +158,8 @@ def simulate_batch(
             detailed_parameters=detailed_parameters,
             formula=formula,
             eight_height_scale=eight_height_scale,
+            cone_footprint_x=cone_footprint_x,
+            cone_footprint_z=cone_footprint_z,
         ).stack_reclaim_array(input_data, columns)
         for i, input_data in enumerate(data)
     ]
@@ -168,12 +186,15 @@ class BslBlendingSimulator(BlendingSimulator):
         detailed_parameters: dict[str, float] | None = None,
         formula: bool = False,
         eight_height_scale: float = 0.0,
+        cone_footprint_x: float = 0.0,
+        cone_footprint_z: float = 0.0,
     ):
         """bulkdensity and dropheight are not used by simulators from 2026.3 on; detailed_parameters sets the parameters of their detailed
         simulation (discrete element method) by snake_case names, e.g. {"rolling_friction": 0.2, "threads": 4}; formula chooses the formula
         simulation (the cone simulation reduced to the stacker line; the stacker must not move across the bed, no circular beds);
         eight_height_scale replaces the fast simulation's constant eight likelihood by one scaled with the pile height (see simulate_batch);
-        eight None is the eight likelihood fitted to the particle size (`fitted_eight_likelihood`)"""
+        cone_footprint_x and cone_footprint_z spread every portion of the cone simulation over a rectangle (see simulate_batch); eight None
+        is the eight likelihood fitted to the particle size (`fitted_eight_likelihood`)"""
         super().__init__(bed_size_x, bed_size_z)
         if reclaimangle is None:
             reclaimangle = DEFAULT_RECLAIM_ANGLE
@@ -195,7 +216,9 @@ class BslBlendingSimulator(BlendingSimulator):
         self.simulator = "cone" if cone else "formula" if formula else "lattice" if lattice else "detailed" if detailed else "fast"
         self.ppm3 = ppm3
 
-        seed_argument, options = optional_arguments(seed, lattice, record_particles, cone, detailed_parameters, formula, eight_height_scale)
+        seed_argument, options = optional_arguments(
+            seed, lattice, record_particles, cone, detailed_parameters, formula, eight_height_scale, cone_footprint_x, cone_footprint_z
+        )
         self.bsl = BlendingSimulatorLib(
             bed_size_x,
             bed_size_z,

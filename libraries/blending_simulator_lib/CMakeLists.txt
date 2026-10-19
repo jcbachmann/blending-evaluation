@@ -74,6 +74,11 @@ if(SIMULATION_PARAMETERS MATCHES "eightHeightScale")
     target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_EIGHT_HEIGHT_SCALE)
 endif()
 
+# Simulators after 2026.4 can spread a portion of the cone simulation over a footprint (cone_footprint_x, cone_footprint_z)
+if(SIMULATION_PARAMETERS MATCHES "coneFootprintX")
+    target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_CONE_FOOTPRINT)
+endif()
+
 # Simulators from 2026.4 on fit the fast simulation's eight likelihood to the particle size (fitted_eight_likelihood)
 if(SIMULATION_PARAMETERS MATCHES "fittedEightLikelihood")
     target_compile_definitions(_blending_simulator_lib PRIVATE BLENDING_SIMULATOR_FITTED_EIGHT)

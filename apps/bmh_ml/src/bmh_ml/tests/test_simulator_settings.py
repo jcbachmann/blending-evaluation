@@ -214,3 +214,33 @@ def test_the_eight_height_scale_reaches_the_simulator_and_old_records_read_as_th
     scaled_key = get_reference_key(material, 4)
     use_simulator_settings(SimulatorSettings(ppm3=64.0))
     assert get_reference_key(material, 4) != scaled_key  # the scaled likelihood simulates its own Chevron references
+
+
+def test_the_cone_footprint_reaches_the_simulator_and_old_records_read_as_the_point_source(monkeypatch):
+    from bmh_ml import simulation
+    from bmh_ml.evaluation.chevron import get_reference_key
+
+    created = []
+
+    def recording(*_args, **kwargs):
+        created.append(kwargs)
+        return {"x": np.arange(60.0), "volume": np.full((1, 60), 2500.0 / 60), "quality": np.ones((1, 60))}
+
+    monkeypatch.setattr(simulation, "simulate_batch", recording)
+    rng = np.random.default_rng(0)
+    material, deposition = random_materials(1, rng)[0], random_depositions(1, rng)[0]
+    use_simulator_settings(SimulatorSettings(simulator="cone"))
+    simulation.evaluate_sim(material, deposition, 59, 20, 2500)
+    point_key = get_reference_key(material, 4)
+    use_simulator_settings(SimulatorSettings(simulator="cone", cone_footprint_x=0.31))
+    simulation.evaluate_sim(material, deposition, 59, 20, 2500)
+
+    assert [(c["cone_footprint_x"], c["cone_footprint_z"]) for c in created] == [(0.0, 0.0), (0.31, 0.0)]
+    assert get_reference_key(material, 4) != point_key  # a footprint is a setting of its own with its own Chevron references
+    old = SimulatorSettings.from_dict({"ppm3": 1.0, "reclaim_increment": 1.0, "simulator": "cone", "drops": "cells"})
+    assert (old.cone_footprint_x, old.cone_footprint_z) == (0.0, 0.0)
+    assert old == SimulatorSettings.from_dict({**old.as_dict(), "cone_footprint_x": 0.0, "cone_footprint_z": 0.0})
+    with pytest.raises(ValueError, match="must not be negative"):
+        SimulatorSettings(simulator="cone", cone_footprint_z=-1.0)
+    with pytest.raises(ValueError, match="cone simulation only"):
+        SimulatorSettings(simulator="formula", cone_footprint_x=0.31)

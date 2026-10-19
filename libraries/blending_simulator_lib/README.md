@@ -27,7 +27,8 @@ sim = BlendingSimulatorLib(
     # cone=True would choose the cone simulation instead: no particles, every stacked row one portion forming a 45° cone over the pile;
     # formula=True the formula simulation, the cone simulation reduced to the stacker line (all rows at one z, no circular beds);
     # eight_height_scale=6.5 would replace the fast simulation's constant eight likelihood by one scaled with the pile height, which
-    # keeps round 45° piles at every particles_per_cubic_meter
+    # keeps round 45° piles at every particles_per_cubic_meter; with cone=True, cone_footprint_x=0.31 (and cone_footprint_z) would spread
+    # every portion over a rectangle of these half sizes along and across the bed (a cone with a flat top) instead of a point
 )
 sim.stack_list(data, ["timestamp", "x", "z", "volume", "quality"])  # numpy array, one row per increment; other columns are parameters
 sim.get_heights()  # height map, list of rows along z
@@ -38,9 +39,13 @@ sim.reclaim()  # dict of x, volume and the parameters per reclaimed slice
 The simulators are described in the README of the `blending-simulation` repository. `bmh.simulation.BslBlendingSimulator` wraps this
 class in the `BlendingSimulator` interface of `bmh`.
 
-`simulate_batch(data, columns, ..., lattice=False, threads=1, cone=False, formula=False, eight_height_scale=0.0)` stacks and reclaims
-many inputs in one call. The formula simulation and the eight likelihood scaled with the pile height need a simulator release after
-2026.3; bindings built against an older one raise a `RuntimeError` for `formula=True` or a nonzero `eight_height_scale`.
+`simulate_batch(data, columns, ..., lattice=False, threads=1, cone=False, formula=False, eight_height_scale=0.0, cone_footprint_x=0.0,
+cone_footprint_z=0.0)` stacks and reclaims many inputs in one call. The formula simulation and the eight likelihood scaled with the pile
+height need a simulator release after 2026.3, the cone simulation's footprint one after 2026.4; bindings built against an older one raise
+a `RuntimeError` for `formula=True`, a nonzero `eight_height_scale` or a nonzero footprint. The footprint (half sizes in m along and across
+the bed, 0 by default: the point source of the released cone, bit for bit) applies to `cone=True` only (`ValueError` otherwise); 0.31 m
+along the bed was fitted to the calibrated detailed simulation at 0.25 m particles with 1 m cells. The formula simulation has no
+footprint.
 `continuous_drops(volumes, parameters, portion_times, path_times, path_x, path_z, cell_x, cell_z)` turns a material that flows while the
 stacker moves along a piecewise linear path into rows (x, z, volume, parameters): one drop per grid cell the path crosses, with the volume
 of the time spent over it (`bmh.helpers.continuous_drops` wraps it, with the cell sizes of each simulator in `drop_grid`).

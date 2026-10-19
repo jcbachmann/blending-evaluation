@@ -56,13 +56,19 @@ class SimulatorSettings:
     max(0, 1 - eight_height_scale / h) for a particle dropped on a pile h particles high, which keeps round 45° piles at every ppm3 (6.5);
     0, the default and the reading of records without it, is the constant likelihood. `eight_likelihood` defaults to the value fitted
     to the detailed simulation for the particle size (simulator 2026.4 on, `bmh.simulation.bsl_blending_simulator.fitted_eight_likelihood`:
-    0.60 at ppm3 1 up to 0.85 at 1,024); records without it read as 0.87, the value of all fast simulations before."""
+    0.60 at ppm3 1 up to 0.85 at 1,024); records without it read as 0.87, the value of all fast simulations before.
+    `cone_footprint_x` / `cone_footprint_z` (cone simulation, simulator after 2026.4): half sizes in m of the rectangle along / across the
+    bed that every portion lands on instead of a point, which gives the cone a flat top (0.31 / 0 fitted to the calibrated detailed
+    simulation at 0.25 m particles with 1 m cells); 0, the default and the reading of records without them, is the point source of the
+    released cone, so a footprint makes a setting of its own. The formula simulation has no footprint."""
 
     ppm3: float = 1.0
     reclaim_increment: float = 1.0
     reclaim_angle: float = 45.0
     eight_likelihood: float | None = None
     eight_height_scale: float = 0.0
+    cone_footprint_x: float = 0.0
+    cone_footprint_z: float = 0.0
     version: str = field(default_factory=get_installed_simulator_version)
     simulator: str = "fast"
     drops: str = "cells"
@@ -80,6 +86,10 @@ class SimulatorSettings:
             raise ValueError(f"unknown drops {self.drops!r}, one of {DROPS}")
         if self.eight_height_scale < 0.0:
             raise ValueError(f"eight_height_scale must not be negative, got {self.eight_height_scale}")
+        if self.cone_footprint_x < 0.0 or self.cone_footprint_z < 0.0:
+            raise ValueError(f"the cone footprint must not be negative, got {self.cone_footprint_x}, {self.cone_footprint_z}")
+        if (self.cone_footprint_x or self.cone_footprint_z) and self.simulator != "cone":
+            raise ValueError(f"the cone footprint applies to the cone simulation only, not to {self.simulator!r}")
         if self.ideal_stockpile not in IDEAL_STOCKPILE_RULES:
             raise ValueError(f"unknown ideal stockpile rule {self.ideal_stockpile!r}, one of {IDEAL_STOCKPILE_RULES}")
 

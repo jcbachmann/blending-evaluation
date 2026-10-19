@@ -283,3 +283,42 @@ def test_eight_height_scale_reaches_the_simulator():
     np.testing.assert_allclose(reclaimed(eight_height_scale=6.5).sum(), TOTAL_VOLUME, rtol=1e-9)
     single = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=8.0, seed=3, reclaimincrement=1.0, eight_height_scale=6.5)
     np.testing.assert_array_equal(single.stack_reclaim_array(inputs[0], columns)["volume"], reclaimed(eight_height_scale=6.5))
+
+
+def cone_footprint_available() -> bool:
+    """Bindings built against a simulator release with the footprint of the cone simulation (after 2026.4)"""
+    try:
+        simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, cone=True, cone_footprint_x=0.31)
+    except (TypeError, RuntimeError):
+        return False
+    return True
+
+
+@pytest.mark.skipif(not cone_footprint_available(), reason="blending_simulator_lib built without the footprint of the cone simulation")
+def test_cone_footprint_reaches_the_cone_simulation():
+    data = make_material_deposition().drops(1.0, 1.0)
+    inputs = data.to_numpy()[None]
+    columns = data.columns.to_list()
+
+    def reclaimed(**options):
+        return simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=1.0, cone=True, **options)["volume"][0]
+
+    # A zero footprint is the point source bit for bit; a footprint changes the pile and keeps its volume
+    np.testing.assert_array_equal(reclaimed(cone_footprint_x=0.0, cone_footprint_z=0.0), reclaimed())
+    assert not np.array_equal(reclaimed(cone_footprint_x=0.31), reclaimed())
+    np.testing.assert_allclose(reclaimed(cone_footprint_x=0.31, cone_footprint_z=0.2).sum(), TOTAL_VOLUME, rtol=1e-9)
+    single = BslBlendingSimulator(bed_size_x=BED_SIZE_X, bed_size_z=BED_SIZE_Z, ppm3=1.0, cone=True, cone_footprint_x=0.31)
+    np.testing.assert_array_equal(single.stack_reclaim_array(inputs[0], columns)["volume"], reclaimed(cone_footprint_x=0.31))
+    # Only the cone simulation has a footprint
+    with pytest.raises(ValueError, match="cone simulation only"):
+        simulate_batch(inputs, columns, BED_SIZE_X, BED_SIZE_Z, ppm3=1.0, cone_footprint_x=0.31)
+    with pytest.raises(ValueError, match="must not be negative"):
+        reclaimed(cone_footprint_x=-0.1)
+
+
+@pytest.mark.skipif(cone_footprint_available(), reason="blending_simulator_lib built with the footprint of the cone simulation")
+def test_cone_footprint_needs_a_simulator_after_2026_4():
+    with pytest.raises((TypeError, RuntimeError)):
+        simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, cone=True, cone_footprint_x=0.31)
+    # the point source needs no newer simulator: no footprint arguments reach the bindings
+    simulate_batch(np.zeros((1, 1, 4)), ["x", "z", "volume", "quality"], BED_SIZE_X, BED_SIZE_Z, cone=True, cone_footprint_x=0.0)

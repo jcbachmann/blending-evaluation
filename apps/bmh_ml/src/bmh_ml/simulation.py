@@ -128,6 +128,8 @@ def reclaim_paths(
         reclaimangle=settings.reclaim_angle,
         eight=settings.eight_likelihood,
         eight_height_scale=settings.eight_height_scale,
+        cone_footprint_x=settings.cone_footprint_x,
+        cone_footprint_z=settings.cone_footprint_z,
         lattice=settings.simulator == "lattice",
         cone=settings.simulator == "cone",
         formula=settings.simulator == "formula",

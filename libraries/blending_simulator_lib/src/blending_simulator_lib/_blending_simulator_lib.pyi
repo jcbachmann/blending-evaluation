@@ -32,6 +32,8 @@ class BlendingSimulatorLib:
         detailed_parameters: dict | None = None,
         formula: bool = False,
         eight_height_scale: typing.SupportsFloat | typing.SupportsIndex = 0.0,
+        cone_footprint_x: typing.SupportsFloat | typing.SupportsIndex = 0.0,
+        cone_footprint_z: typing.SupportsFloat | typing.SupportsIndex = 0.0,
     ) -> None: ...
     def get_heights(self, finish_stacking: bool = True) -> list[list[float]]: ...
     def get_particles(self) -> dict: ...
@@ -64,6 +66,8 @@ def simulate_batch(
     detailed_parameters: dict | None = None,
     formula: bool = False,
     eight_height_scale: typing.SupportsFloat | typing.SupportsIndex = 0.0,
+    cone_footprint_x: typing.SupportsFloat | typing.SupportsIndex = 0.0,
+    cone_footprint_z: typing.SupportsFloat | typing.SupportsIndex = 0.0,
 ) -> dict: ...
 def fitted_eight_likelihood(particles_per_cubic_meter: typing.SupportsFloat | typing.SupportsIndex) -> float: ...
 def continuous_drops(

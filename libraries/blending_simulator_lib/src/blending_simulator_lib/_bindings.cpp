@@ -99,6 +99,26 @@ void applyEightHeightScale(bs_::SimulationParameters& simulationParameters, floa
 	}
 #endif
 }
+
+// The cone simulation's stream footprint exists in simulator releases after 2026.4
+void applyConeFootprint(bs_::SimulationParameters& simulationParameters, float footprintX, float footprintZ, bool cone)
+{
+	if (footprintX < 0.0f || footprintZ < 0.0f) {
+		throw std::invalid_argument("cone_footprint_x and cone_footprint_z must not be negative");
+	}
+	if ((footprintX != 0.0f || footprintZ != 0.0f) && !cone) {
+		throw std::invalid_argument("cone_footprint_x and cone_footprint_z apply to the cone simulation only");
+	}
+#ifdef BLENDING_SIMULATOR_CONE_FOOTPRINT
+	simulationParameters.coneFootprintX = footprintX;
+	simulationParameters.coneFootprintZ = footprintZ;
+#else
+	(void)simulationParameters;
+	if (footprintX != 0.0f || footprintZ != 0.0f) {
+		throw std::runtime_error("cone_footprint_x and cone_footprint_z need bindings built against a simulator release after 2026.4");
+	}
+#endif
+}
 }
 
 namespace bs = blendingsimulator;
@@ -108,7 +128,8 @@ class BlendingSimulatorLibPython
 	public:
 		BlendingSimulatorLibPython(float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular,
 			float eightLikelihood, float bulkDensityFactor, float dropHeight, bool detailed, float reclaimIncrement, std::optional<std::uint32_t> seed,
-			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters, bool formula, float eightHeightScale)
+			bool lattice, bool recordParticles, bool cone, std::optional<py::dict> detailedParameters, bool formula, float eightHeightScale,
+			float coneFootprintX, float coneFootprintZ)
 			: reclaimIncrement(reclaimIncrement)
 			, verbose(false)
 		{
@@ -126,6 +147,7 @@ class BlendingSimulatorLibPython
 			simulationParameters.seed = seed;
 			applyDetailedParameters(simulationParameters, detailedParameters);
 			applyEightHeightScale(simulationParameters, eightHeightScale);
+			applyConeFootprint(simulationParameters, coneFootprintX, coneFootprintZ, cone);
 
 			checkSimulatorChoice(detailed, lattice, cone, formula);
 			if (cone) {
@@ -342,7 +364,7 @@ class BlendingSimulatorLibPython
 py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array::forcecast>& data, const std::vector<std::string>& columns,
 	float heapWorldSizeX, float heapWorldSizeZ, float reclaimAngle, float particlesPerCubicMeter, bool circular, float eightLikelihood,
 	float reclaimIncrement, std::optional<std::uint32_t> seed, bool lattice, int threads, bool cone, bool detailed,
-	std::optional<py::dict> detailedParameters, bool formula, float eightHeightScale)
+	std::optional<py::dict> detailedParameters, bool formula, float eightHeightScale, float coneFootprintX, float coneFootprintZ)
 {
 	checkSimulatorChoice(detailed, lattice, cone, formula);
 #ifndef BUILD_DETAILED_SIMULATOR
@@ -393,6 +415,7 @@ py::dict simulateBatch(const py::array_t<double, py::array::c_style | py::array:
 	simulationParameters.eightLikelihood = eightLikelihood;
 	applyDetailedParameters(simulationParameters, detailedParameters);
 	applyEightHeightScale(simulationParameters, eightHeightScale);
+	applyConeFootprint(simulationParameters, coneFootprintX, coneFootprintZ, cone);
 
 	// Per input: reclaimed volume per slice, then the parameters per slice (slice-major)
 	std::vector<std::vector<double>> volumes(inputs);
@@ -561,7 +584,7 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 	py::class_<BlendingSimulatorLibPython>(m, "BlendingSimulatorLib")
 		.def(
 			py::init<float, float, float, float, bool, float, float, float, bool, float, std::optional<std::uint32_t>, bool, bool, bool,
-				std::optional<py::dict>, bool, float>(),
+				std::optional<py::dict>, bool, float, float, float>(),
 			"heap_world_size_x"_a,
 			"heap_world_size_z"_a,
 			"reclaim_angle"_a,
@@ -578,7 +601,9 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 			"cone"_a = false,
 			"detailed_parameters"_a = py::none(),
 			"formula"_a = false,
-			"eight_height_scale"_a = 0.0f
+			"eight_height_scale"_a = 0.0f,
+			"cone_footprint_x"_a = 0.0f,
+			"cone_footprint_z"_a = 0.0f
 		)
 		.def("stack", &BlendingSimulatorLibPython::stack)
 		.def("stack_list", &BlendingSimulatorLibPython::stackList)
@@ -605,7 +630,9 @@ PYBIND11_MODULE(_blending_simulator_lib, m)
 		"detailed"_a = false,
 		"detailed_parameters"_a = py::none(),
 		"formula"_a = false,
-		"eight_height_scale"_a = 0.0f
+		"eight_height_scale"_a = 0.0f,
+		"cone_footprint_x"_a = 0.0f,
+		"cone_footprint_z"_a = 0.0f
 	);
 
 #ifdef BLENDING_SIMULATOR_FITTED_EIGHT
