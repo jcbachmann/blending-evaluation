@@ -32,7 +32,9 @@ jobs:
         run: python -m cibuildwheel --output-dir dist libraries/blending_simulator_lib
         env:
           CIBW_BUILD: "cp312-* cp313-* cp314-*"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          # each macOS runner builds its own architecture (macos-15-intel x86_64, macos-latest arm64); both building both gave every
+          # macOS wheel twice with different contents, which the merged download garbled
+          CIBW_ARCHS_MACOS: "native"
           CIBW_OUTPUT_DIR: dist
 
       - name: Upload wheels
@@ -84,11 +86,15 @@ jobs:
       - name: Download all distributions
         uses: actions/download-artifact@v4
         with:
-          path: dist
-          merge-multiple: true
+          path: artifacts
 
-      - name: Remove .gitignore from dist directory
-        run: rm -f dist/.gitignore
+      - name: Collect the distributions, failing on a file built by more than one job
+        run: |
+          duplicates=$(find artifacts -type f ! -name .gitignore -printf '%f\n' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then echo "built by more than one job: $duplicates"; exit 1; fi
+          mkdir -p dist
+          find artifacts -type f ! -name .gitignore -exec mv {} dist/ \;
+          ls -l dist
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
