@@ -68,7 +68,8 @@ def get_reference_key(material: np.ndarray, repeats: int, variant: str | None = 
         values = {key: value for key, value in simulator.as_dict().items() if key in ("ppm3", "reclaim_increment") or value != getattr(unrecorded, key)}
         digest.update(json.dumps(values, sort_keys=True).encode())
     if variant != "constant-speed":
-        digest.update(json.dumps({"chevron": variant, "layers": CHEVRON_LAYERS}).encode())
+        # the moves between layers follow the travel speed (before: one second of the day): new references for these variants
+        digest.update(json.dumps({"chevron": variant, "layers": CHEVRON_LAYERS, "moves": "travel speed"}).encode())
     return digest.hexdigest()[:16]
 
 

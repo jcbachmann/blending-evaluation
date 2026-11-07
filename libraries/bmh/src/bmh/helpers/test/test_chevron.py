@@ -87,6 +87,18 @@ def test_stops_path(shrinking):
     assert x.max() <= X_MAX + RADIUS + 1e-9
 
 
+@pytest.mark.parametrize("layers", [5, 19, 100])
+def test_stops_path_moves_between_layers_no_faster_than_the_layers(layers):
+    def top_speed(timestamps, x):
+        dt = np.diff(timestamps)
+        return np.max(np.abs(np.diff(x))[dt > 0] / dt[dt > 0])
+
+    fixed = top_speed(*stops_path(VOLUME, DURATION, X_MIN, X_MAX, layers, shrinking=False)[:2])
+    shrinking = top_speed(*stops_path(VOLUME, DURATION, X_MIN, X_MAX, layers, shrinking=True)[:2])
+    # the fixed limits have no moves between layers; the shrinking ones travel a little faster than them, never by a factor
+    assert shrinking <= 1.2 * fixed
+
+
 @pytest.mark.parametrize("duration", [1.0, 2500.0, DURATION])
 def test_stops_path_does_not_depend_on_the_unit_of_time(duration):
     reference, x_reference, _ = stops_path(VOLUME, DURATION, X_MIN, X_MAX, 19, shrinking=True)
