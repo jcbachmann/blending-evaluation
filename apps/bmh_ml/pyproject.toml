@@ -1,6 +1,6 @@
 [project]
 name = "bmh_ml"
-version = "2026.2.1.dev0"
+version = "2026.2.1"
 description = "Machine learning experiments"
 readme = "README.md"
 authors = [
