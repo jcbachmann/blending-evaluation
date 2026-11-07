@@ -1,6 +1,6 @@
 [project]
 name = "data_explorer"
-version = "2026.2.1"
+version = "2026.2.2.dev0"
 description = "Data Explorer"
 readme = "README.md"
 authors = [
