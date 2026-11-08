@@ -63,6 +63,17 @@ def test_a_chevron_with_stops_encodes_with_its_turning_points_and_stops(shrinkin
     assert decoded_x.min() == pytest.approx(x.min(), abs=1e-9 if not shrinking else 1.0)
 
 
+def test_a_chevron_with_shrinking_turning_points_keeps_its_outer_stops_between_the_turning_points():
+    # the stops at a layer's turning point and at the next layer's first one merge into one stop at their time-weighted mean position,
+    # so the outermost stops sit between the two turning points they merge, not at the inner one (which left the ends short of material)
+    times, x, _ = stops_path(TOTAL_VOLUME, DAY, X_MIN, X_MAX, 19, shrinking=True)
+    encoding = StopEncoding(travel=True)
+    ((_, decoded_x),) = encoding.decode(encoding.encode(times, x))[0]
+    positions = np.sort(np.unique(x))
+    assert positions[-2] < decoded_x.max() < positions[-1]
+    assert decoded_x.min() == pytest.approx(positions[0])  # the first stop merges nothing
+
+
 def test_a_constant_speed_chevron_encodes_without_stops():
     deposition = np.where(np.arange(20) % 2 == 0, X_MIN, X_MAX).astype(float)
     variables = StopEncoding().encode(np.linspace(0, DAY, 20), deposition)

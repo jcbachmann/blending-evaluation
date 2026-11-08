@@ -88,11 +88,14 @@ class StopEncoding:
     def encode(self, times: np.ndarray, x: np.ndarray, merge: float = 1e-3, duration: float = STACKING_TIME) -> np.ndarray:
         """Variables of a stacker path, e.g. a Chevron schedule (`bmh.helpers.chevron.stops_path`), for a start population or to check
         what the encoding can express. The path is reduced to its turning points and stops; moves shorter than `merge` of the duration (the
-        steps between the turning points of a Chevron with shrinking turning points) become part of the stop at their end, and with equal
-        travel times every pass takes the mean travel time. Paths with fewer turning points than knots get collinear knots in their
+        steps between the turning points of a Chevron with shrinking turning points) become part of one stop with the stands around them,
+        placed at their time-weighted mean position, so that the material stacked there keeps its center (placing the whole stop at the
+        end of the move left the outer ends of such a Chevron short of material); with equal travel times every pass takes the mean travel
+        time. Paths with fewer turning points than knots get collinear knots in their
         longest passes. Raises ValueError for more turning points than knots; values beyond the bounds are clipped."""
         times, x = np.asarray(times, dtype=float), np.asarray(x, dtype=float)
         knots_x, dwell, travel = [x[0]], [0.0], []
+        moment = [0.0]  # time-weighted position sum of the stands and short moves merged into each knot's stop
         direction = 0.0
         for i in range(1, len(times)):
             dt, dx = times[i] - times[i - 1], x[i] - x[i - 1]
@@ -100,7 +103,8 @@ class StopEncoding:
                 continue
             if abs(dx) < 1e-9 or dt < merge * duration:
                 dwell[-1] += dt
-                knots_x[-1] = x[i]
+                moment[-1] += dt * 0.5 * (x[i] + x[i - 1])
+                knots_x[-1] = moment[-1] / dwell[-1]
                 direction = 0.0 if abs(dx) < 1e-9 else direction
                 continue
             sign = math.copysign(1.0, dx)
@@ -112,6 +116,7 @@ class StopEncoding:
                 travel.append(dt)
                 knots_x.append(x[i])
                 dwell.append(0.0)
+                moment.append(0.0)
             direction = sign
         while len(knots_x) < self.knots:
             j = int(np.argmax(travel))  # split the longest pass in the middle
